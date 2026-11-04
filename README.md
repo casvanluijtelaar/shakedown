@@ -21,7 +21,9 @@ Every markdown document in the bundles is an Open Knowledge Format (OKF v0.2) co
 1. **Research** the domain into `research/`.
 2. **Specify** the system and its user stories in `spec/`.
 3. **Plan** the milestones in `plan/`.
-4. **Implement** and 5. **test**, as a loop per milestone: a backend developer builds, a test developer checks the result against the stories without seeing the code and writes findings, the backend fixes, a fresh tester verifies.
+4. **Implement** and 5. **test**, as a loop per milestone: a framework developer builds, a test developer checks the result against the stories without seeing the code and writes findings, the developer fixes, a fresh tester verifies.
+
+The project is MVP first and local first: each milestone takes the shortest path to its demo, and everything that starts the game runs on the Windows test machine. GitHub Actions runs only the gates that need no game. `CLAUDE.md` has the details.
 
 A coordinator session can drive the loop. Start it with:
 

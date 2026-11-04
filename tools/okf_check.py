@@ -35,8 +35,8 @@ STORY_KINDS = {"feature", "error", "mistake", "system fail", "malicious intent"}
 MILESTONE_STATES = {"planned", "in-progress", "complete"}
 DEFERRED_STATES = {"open", "planned", "done"}
 COVERAGE_STATES = {"pass", "partial", "fail", "unchecked"}
-FINDING_ROLES_RAISE = {"test", "backend", "frontend", "writer"}
-FINDING_ROLES_FOR = {"backend", "frontend", "writer"}
+FINDING_ROLES_RAISE = {"test", "developer", "writer"}
+FINDING_ROLES_FOR = {"developer", "writer"}
 
 # A requirement ID is defined where it is written in bold at the start of a
 # list item, heading or table row in a top-level spec file: `- **R-01**`,

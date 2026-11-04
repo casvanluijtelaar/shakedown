@@ -25,8 +25,8 @@ id: m02-4
 milestone: M2
 title: The board hides every order that has no planned date
 description: The unassigned column filters on plannedDate, so an order nobody has planned never appears.
-raised_by: test        # test, backend, frontend or writer
-for: backend           # the role that answers it: backend, frontend or writer
+raised_by: test        # test, developer or writer
+for: developer         # the role that answers it: developer or writer
 checks: ["US-206 an unplanned order shows in the unassigned column"]
 stories: [US-206]
 generated: { by: "claude-code/tester", at: 2026-09-01T14:20:00+02:00 }
@@ -63,7 +63,7 @@ Entries are added and never rewritten or removed. A finding is never deleted.
 
 ```yaml
 addressed:
-  - { by: "claude-code/backend", at: 2026-09-02T09:00:00+02:00, note: "The unassigned column lists every order with no technician, dated or not. The planning board integration test proves it." }
+  - { by: "claude-code/developer", at: 2026-09-02T09:00:00+02:00, note: "The unassigned column lists every order with no technician, dated or not. The planning board integration test proves it." }
 verified:
   - { by: "claude-code/tester", at: 2026-09-02T11:30:00+02:00 }
 ```
