@@ -125,7 +125,7 @@ pending ──▶ preparing ──▶ executing ──▶ done(outcome)
   - `reset-failed` - the reset before the check did not complete.
   - `reload-failed` - the reload the check needed did not complete.
   - `run-stopped` - the run was stopped by hand or by its runner ceiling.
-  - `unhealthy` - the health watch (`HLT-01`, after the MVP) flagged a machine during the check.
+  - `unhealthy` - the clock watch (`HLT-02`) flagged a machine during the check: its mission time or its frame number stopped while it still answered.
   - `explicit` - the check called `skd_fnc_invalid`.
 - **DM-06** When causes for both `fail` and `invalid` are present in one check execution, `invalid` wins only if its cause came first in wall-clock time; otherwise the first cause decides. A machine lost after an assertion already failed does not hide the failure, and a failure that follows a lost machine is not trusted (`CR-31`, G3).
 - **DM-07** A wait that reaches its in-game ceiling is `fail`. A wait that reaches its runner ceiling with no answer from the machine is `invalid` with reason kind `machine-lost` (`CR-20`, `CR-31`; gap H5).

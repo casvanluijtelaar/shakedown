@@ -23,3 +23,4 @@ As a test author, I want to get pass, fail or invalid with a reason for every ch
 
 - [US-015](US-015-machine-stops-answering.md) (system fail): a machine stops answering.
 - [US-016](US-016-game-crashes-during-check.md) (system fail): the game crashes.
+- [US-059](US-059-game-clock-stops.md) (system fail): a machine's game clock stops.

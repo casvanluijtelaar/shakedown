@@ -120,7 +120,8 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 ## Outcomes and health
 
 - **OUT-01** (must) Every check execution ends `pass`, `fail` or `invalid` by the rules `DM-01` to `DM-08`, with a reason kind and a message for every outcome that is not `pass` (`CR-31`).
-- **HLT-01** (should) Watch each machine's health with a heartbeat (mission time against real time, frame rate, answer time) and process and window checks, and end a check that overlaps an unhealthy interval `invalid` / `unhealthy` (`CR-30`; conflict C6). See `OQ-03`.
+- **HLT-01** (should) Watch each machine's health with a heartbeat (mission time against real time, frame rate, answer time) and process and window checks, and end a check that overlaps an unhealthy interval `invalid` / `unhealthy` (`CR-30`; conflict C6). Its clock watch is `HLT-02`, a must.
+- **HLT-02** (must) From the moment a machine is `ready`, its in-game agent sends a heartbeat every second of real time carrying the clocks of `OBS-05`. The runner flags the machine unhealthy while, over the last 5 s of real time, its mission time advanced less than half as much as its real time or its frame number did not advance (thresholds until `SPK-15`). A check execution that overlaps a flagged interval ends `invalid` / `unhealthy`, naming the machine and which clock stopped, unless a cause for `fail` came first (`DM-06`). `status` shows the flag on the machine (`CR-30`, G3; conflict C6).
 - **OUT-02** (should) Repeat each selected check N times and summarise each by `DM-09`, with the count of each outcome (`CR-32`).
 - **OUT-03** (could) Run a check marked as expected to fail against a build where its promise is broken, and report it as proven when it fails (`CR-33`).
 - **OUT-04** (could) Measure a baseline of the game's own behaviour in the same run and conditions as a check that compares against it (`CR-34`).
@@ -205,7 +206,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 | CR-25 | could | SHT-01 |
 | CR-26 | could | PRF-01 |
 | CR-27 | must | INS-01 to INS-03, RST-03, RST-07 |
-| CR-30 | should | HLT-01 |
+| CR-30 | should | HLT-01; its clock watch HLT-02 is a must |
 | CR-31 | must | OUT-01, CTL-04, ACT-03, ERR-03, RST-04, OBS-03, RUN-05 |
 | CR-32 | should | OUT-02 |
 | CR-33 | could | OUT-03 |

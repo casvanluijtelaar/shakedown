@@ -32,7 +32,7 @@ Versions were looked up on 2026-11-04 from crates.io, GitHub releases, `static.r
 | ACE3 | 3.21.2 (2026-08-18) | Full heal at reset, when ACE medical is loaded (`INT-ACE-02`). | GitHub release |
 | HEMTT | 1.23.1 (2026-10-25) | Building the framework's addon; the mod under test's dev build (`INT-HEM-01`). | GitHub release |
 | Rust | 1.99.1 stable (2026-10-15), edition 2024 | The runner, command line, MCP server and extension. | `channel-rust-stable.toml` |
-| `arma-rs` | 1.13.0 (crates.io, MIT declared; see `OQ-01`) | The extension's entry points, callback and retry. | crates.io |
+| `arma-rs` | 1.13.0, taken from crates.io under its declared MIT license (its repository's LICENSE file says GPL-2.0; research `20-licenses-and-rules.md`) | The extension's entry points, callback and retry. | crates.io |
 | `rmcp` | 3.8.0 | The MCP server over stdio; protocol 2026-07-28 with negotiation of earlier revisions (`INT-MCP-01`). | crates.io, GitHub release |
 | `tokio` | 1.54.1 | The runner's sockets, timers and process waits. | crates.io |
 | `serde`, `serde_json` | 1.0.229, 1.0.154 | Every message, the result file, the runner files. | crates.io |
@@ -82,7 +82,7 @@ The one cost: SQF cannot be unit-tested outside the game (EP-09). The in-game ag
 |---|---|---|
 | Intercept (C++ host over an extension) | The channel | It is patched per game build and bypasses SQF the framework needs to run (EP-01, EP-02; research `12-remote-execution.md`). |
 | The named pipe (`-command=`), `serverCommand`, the debug console, files read with file patching | The channel | None carries arbitrary SQF and a result back: five fixed commands, server commands, a UI for a person, a one-way read (research `12-remote-execution.md`). |
-| C or C++ with the engine's header for the extension | The extension | It means writing the callback retry, typed calls and the test harness `arma-rs` has, and splits the toolchain (EP-03, EP-08). It stays the answer if `OQ-01` goes against `arma-rs`. |
+| C or C++ with the engine's header for the extension | The extension | It means writing the callback retry, typed calls and the test harness `arma-rs` has, and splits the toolchain (EP-03, EP-08). |
 | C# with an export tool for the extension | The extension | A second runtime inside the game process and a third language (EP-03). |
 | Logic in the extension | The extension | `freeExtension` works only on the development branch, so every change would be a game restart (EP-02). |
 | Python, Node or PowerShell for the runner | The runner | A second toolchain beside the extension's Rust, and weaker control of Windows job objects and process creation (EP-03; gap H11). |
@@ -130,4 +130,4 @@ The contract is the framework's public interface. The test developer works from 
 
 ## The acceptance harness
 
-The language of the test developer's acceptance harness is `OQ-02`. Until the owner answers, no harness code is written.
+The test developer writes the acceptance checks in SQF against the check API, as a test author does, and runs them through the `shakedown` command line. Python 3, already required by the bundle check, drives the command line and the MCP server for what no SQF check can reach and validates every result file against [contract/result.schema.json](contract/result.schema.json). The harness shares no code with the framework's source, which keeps the tester in a different language from it.
