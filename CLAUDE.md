@@ -1,6 +1,6 @@
-# Arma automation framework
+# Shakedown
 
-A test automation framework for Arma 3 addons and mods, in singleplayer and on a dedicated server: Playwright for the game. This repository is built with agentic engineering, following the Eidra agentic engineering guide (`git.aurora.eidra.com/Eidra/agentic-engineering-guide`) as adapted below: the specs, user stories and contract are the source, and models write all of the code. This file is the map, which document answers which question, and the working rules. It does not restate the specs, and it holds no status. The state of each milestone lives in its concept in `plan/milestones/`.
+Shakedown is a test automation framework for Arma 3 addons and mods, in singleplayer and on a dedicated server: Playwright for the game. This repository is built with agentic engineering, following the Eidra agentic engineering guide (`git.aurora.eidra.com/Eidra/agentic-engineering-guide`) as adapted below: the specs, user stories and contract are the source, and models write all of the code. This file is the map, which document answers which question, and the working rules. It does not restate the specs, and it holds no status. The state of each milestone lives in its concept in `plan/milestones/`.
 
 ## How this project runs
 
@@ -97,5 +97,5 @@ Every `by` value is an OKF actor: `human:casvanluijtelaar` for the owner, `claud
 
 - **The Windows test machine** is a cloud VM with Arma 3 and Steam. Every session that starts the game runs there. A game client window renders only while the owner is connected through Shadow PC. A dedicated server and headless clients need no window.
 - **The Mac** runs sessions that need no game: research, spec, plan, documents.
-- `origin` (`github.com/casvanluijtelaar/arma-automation-framework`) carries work between the two. Pull before you start a session on either machine.
+- `origin` (`github.com/casvanluijtelaar/shakedown`) carries work between the two. Pull before you start a session on either machine.
 - Steam must be running and logged in before any run. Without it the game exits at once.

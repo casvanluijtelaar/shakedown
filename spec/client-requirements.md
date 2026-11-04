@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: Client requirements
-description: The product requirements for the Arma automation framework - the problem, the goals, the users, the scope and what the first release must do.
+description: The product requirements for Shakedown, a test automation framework for Arma 3 mods - the problem, the goals, the users, the scope and what the first release must do.
 status: stable
 verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T21:37:06+01:00 }]
 ---
@@ -180,7 +180,7 @@ A working MVP early beats a careful product late. The plan puts a usable framewo
 - Checks must not depend on the mod's source. The framework may load the mod and call its public functions, events and actions.
 - The framework is for non-commercial mod testing only. The Arma 3 EULA allows the game's use for entertainment and recreation, and Bohemia's tools license names testing non-commercial content as its purpose.
 - The project is private. It may be open-sourced later, so code copied from another project must carry a license that allows that. Reading any project, whatever its license or lack of one, and writing our own implementation of its ideas is allowed.
-- The project's name does not contain "Arma" or any other Bohemia Interactive trademark. The repository and the framework get a new name before anything is published.
+- The project is named Shakedown, after a ship's first test voyage. Its name contains no Bohemia Interactive trademark; "Arma 3" appears only to say which game it tests. The repository carries the name before anything is published.
 - The extension is written in Rust with `arma-rs`, the library Arma extensions are commonly built with.
 - Every dependency version is looked up at install time, not recalled.
 

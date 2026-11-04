@@ -1,6 +1,6 @@
-# Arma automation framework
+# Shakedown
 
-An automation framework for Arma, built with agentic engineering: the specifications, user stories and contract in this repository are the source, and language models write the code, the tests and the documentation against them. The method follows the Eidra agentic engineering guide.
+Shakedown is a test automation framework for Arma 3 addons and mods, in singleplayer and on a dedicated server, built with agentic engineering: the specifications, user stories and contract in this repository are the source, and language models write the code, the tests and the documentation against them. The method follows the Eidra agentic engineering guide.
 
 ## Where things are
 
