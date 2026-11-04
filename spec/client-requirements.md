@@ -2,7 +2,8 @@
 type: Specification
 title: Client requirements
 description: The product requirements for the Arma automation framework - the problem, the goals, the users, the scope and what the first release must do.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T21:37:06+01:00 }]
 ---
 
 # Client requirements
@@ -31,10 +32,10 @@ The first mod the framework serves is `arma-grappling-hook`: a CBA-based mod wit
 
 | # | Goal | Measure | Target |
 |---|---|---|---|
-| G1 | A mod's behaviour in the game is checked by machine, not by a person playing it. | Share of a mod's user stories with an automated in-game acceptance check. | _To decide (proposal: 80 percent)._ |
-| G2 | The edit-and-check loop is fast. | Time from changing a check or the mod's code to that check's verdict, with the game already running. | _To decide (proposal: under 30 seconds)._ |
-| G3 | A verdict can be trusted. | Share of failed verdicts caused by the environment instead of the mod (a stall, a crash, a dead Steam). | _To decide (proposal: none; those runs are reported invalid, not failed)._ |
-| G4 | Multiplayer behaviour is tested as routinely as singleplayer. | Checks that run on a dedicated server with several clients, in one command. | _To decide._ |
+| G1 | A mod's behaviour in the game is checked by machine, not by a person playing it. | Share of a mod's user stories with an automated in-game acceptance check. | 80 percent. |
+| G2 | The edit-and-check loop is fast. | Time from changing a check or the mod's code to that check's verdict, with the game already running, for a change that reloads inside the mission. | Under 30 seconds, in singleplayer and on a dedicated server. A change that needs a mission restart gets its target once a spike has measured it. |
+| G3 | A verdict can be trusted. | Share of failed verdicts caused by the environment instead of the mod (a stall, a crash, a dead Steam). | None. Those runs are reported invalid, not failed. |
+| G4 | Multiplayer behaviour is tested as routinely as singleplayer. | Checks that run on a dedicated server with several clients, in one command. | Every multiplayer check starts its dedicated session with one command. |
 
 ### How we build it
 
@@ -83,7 +84,7 @@ A working MVP early beats a careful product late. The plan puts a usable framewo
 |---|---|---|---|
 | CR-01 | Start a session once (singleplayer, or a dedicated server with a chosen number of clients and headless clients) and run many checks against it without restarting. | Test author | must |
 | CR-02 | Reset the game state between checks in a session, so one check cannot affect the next. | Test author | must |
-| CR-03 | Reload the mod's changed code and the checks into a running session without a restart. | Mod developer | must |
+| CR-03 | Reload the mod's changed code and the checks into a running session at the lowest level the change allows: inside the mission, by a mission restart within the session, or by a game restart. Report the level used and why. Checks always reload inside the mission. | Mod developer | must |
 | CR-04 | Make any machine join, leave or rejoin during a session, including a late joiner and a server restart. | Test author | should |
 | CR-05 | Stop every process a run started, whether the run passed, failed or the runner itself crashed. | Test author | must |
 | CR-06 | Check the environment before a run (game installed, Steam running and logged in, mods present in the right versions) and say exactly what is missing. | Test author | should |
@@ -177,7 +178,10 @@ A working MVP early beats a careful product late. The plan puts a usable framewo
 - Checks are written in SQF. The framework's own internals may use whatever the game requires to talk to it from outside, but a test author never needs another language.
 - The game's EULA and Bohemia Interactive's rules for tools and mods apply.
 - Checks must not depend on the mod's source. The framework may load the mod and call its public functions, events and actions.
-- The project is private. It may be open-sourced later, so any code taken from other projects must carry a license that allows that.
+- The framework is for non-commercial mod testing only. The Arma 3 EULA allows the game's use for entertainment and recreation, and Bohemia's tools license names testing non-commercial content as its purpose.
+- The project is private. It may be open-sourced later, so code copied from another project must carry a license that allows that. Reading any project, whatever its license or lack of one, and writing our own implementation of its ideas is allowed.
+- The project's name does not contain "Arma" or any other Bohemia Interactive trademark. The repository and the framework get a new name before anything is published.
+- The extension is written in Rust with `arma-rs`, the library Arma extensions are commonly built with.
 - Every dependency version is looked up at install time, not recalled.
 
 ## 8. Assumptions and dependencies

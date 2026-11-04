@@ -135,4 +135,4 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 ## State at the end of the last session
 
-- 2026-11-04: Repository set up and the PRD drafted in `spec/client-requirements.md`. Next is step 1, research.
+- 2026-11-04: The PRD is approved and stable. Step 1, research, is done and frozen: `research/01-best-of-breed.md` and `research/02-gaps.md` with the owner's answers. Next is step 2, the specification. The project's new name is still open.

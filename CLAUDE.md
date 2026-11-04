@@ -84,6 +84,7 @@ Every `by` value is an OKF actor: `human:casvanluijtelaar` for the owner, `claud
 - **Nothing is left running.** A run stops every game, server and helper process it started, passed or failed, by process id, never by name. Before a turn ends, list the `arma3_x64` and `arma3server_x64` processes and stop any you started. If something has to stay up, such as a session the owner will use, say so and give the command that stops it. Bound every wait with a counted loop.
 - **One game at a time.** The test machine has one Steam session, one set of game ports and limited memory. Never start the game while another session's run holds it.
 - **Never take over the desktop.** No code moves the machine's mouse or types on its keyboard. Input goes to the game only.
+- **Fetch the web cheaply.** Search with WebSearch, read pages with WebFetch or `curl`, and read GitHub with `gh`. Use the Firecrawl tools only for a page none of those can read; their credits are limited.
 - **Look up versions instead of recalling them.** Every dependency version, including Arma 3, CBA and ACE3, is looked up at the time of the change.
 - **Run only the tests the turn touched.** Before a turn ends, run the tests of the parts you changed and `python3 tools/okf_check.py` if you touched a document. The full acceptance suite runs only when the driver asks for it.
 - **Never sleep a fixed time in a test or a check.** Poll for the outcome with a ceiling.
