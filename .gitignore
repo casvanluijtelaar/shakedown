@@ -1,0 +1,21 @@
+# The owner's local Claude Code settings
+.claude/settings.local.json
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+target/
+__pycache__/
+*.pyc
+
+# Local environment
+.env
+.env.*
+!.env.example
