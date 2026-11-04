@@ -2,11 +2,12 @@
 type: User Story
 title: "An AI agent uses every capability as tools, with the same results as the command line"
 description: "An AI agent drives every capability of the command line through the `shakedown` MCP server, and gets the same JSON a person gets with `--json`."
-status: draft
+status: stable
 id: US-048
 role: test-author
 kind: feature
 requirements: [AGT-01, AGT-02, AGT-06, AGT-07, NFR-US-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-048 An AI agent uses every capability as tools, with the same results as the command line

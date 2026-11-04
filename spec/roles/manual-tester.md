@@ -2,9 +2,10 @@
 type: Role
 title: Manual tester
 description: A person who does the visual and feel checks no script can judge, put at the right spot in the right situation by the framework with a list of what to look for.
-status: draft
+status: stable
 id: manual-tester
 group: person
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Manual tester

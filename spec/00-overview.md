@@ -2,7 +2,8 @@
 type: Specification
 title: Overview
 description: What Shakedown is for, who uses it, what is in and out of its scope, its parts, and the words it uses with a fixed meaning.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Overview

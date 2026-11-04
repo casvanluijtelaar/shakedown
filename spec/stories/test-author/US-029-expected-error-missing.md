@@ -2,11 +2,12 @@
 type: User Story
 title: "An expected script error never comes"
 description: "A check that expects a script error that never happens fails at its end, saying which error it waited for."
-status: draft
+status: stable
 id: US-029
 role: test-author
 kind: error
 requirements: [ERR-04, DM-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-029 An expected script error never comes

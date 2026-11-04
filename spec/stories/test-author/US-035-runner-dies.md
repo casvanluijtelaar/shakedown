@@ -2,11 +2,12 @@
 type: User Story
 title: "The runner dies"
 description: "When the runner process is killed, every game process it started ends within seconds, and the next start finds no process, port or file left from it."
-status: draft
+status: stable
 id: US-035
 role: test-author
 kind: system fail
 requirements: [STP-01, STP-03, STP-04, NFR-RL-03, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-035 The runner dies

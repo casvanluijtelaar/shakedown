@@ -2,11 +2,12 @@
 type: User Story
 title: "A game process crashes during a check"
 description: "When a game process exits during a check, the check is invalid naming the machine, its exit code and any crash dump, and the run still writes its result file."
-status: draft
+status: stable
 id: US-016
 role: test-author
 kind: system fail
 requirements: [P-09, OUT-01, RES-01, NFR-RL-01, INS-04, RES-05, FIX-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-016 A game process crashes during a check

@@ -2,11 +2,12 @@
 type: User Story
 title: "A condition that is never met"
 description: "A wait whose condition never holds ends the check fail at its ceiling, with what was awaited, the ceiling, and the last value seen on each machine."
-status: draft
+status: stable
 id: US-024
 role: test-author
 kind: error
 requirements: [OBS-04, DM-07, RES-03, NFR-PF-06]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-024 A condition that is never met

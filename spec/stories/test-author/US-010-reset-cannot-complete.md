@@ -2,11 +2,12 @@
 type: User Story
 title: "A reset that cannot complete makes the next check invalid"
 description: "When the reset before a check does not complete within its ceiling, that check is invalid with what did not match, and the session is broken instead of running checks on a dirty state."
-status: draft
+status: stable
 id: US-010
 role: test-author
 kind: system fail
 requirements: [RST-04, RST-03, P-07]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-010 A reset that cannot complete makes the next check invalid

@@ -2,11 +2,12 @@
 type: User Story
 title: "A keybind that is not registered, or a setup without CBA"
 description: "Pressing a keybind that is not registered, or on a machine without CBA, ends the check as the author's mistake, listing the keybinds that exist; checks that press no key run without CBA."
-status: draft
+status: stable
 id: US-022
 role: test-author
 kind: mistake
 requirements: [ACT-03, API-05, NFR-US-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-022 A keybind that is not registered, or a setup without CBA

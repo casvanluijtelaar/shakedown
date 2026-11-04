@@ -2,11 +2,12 @@
 type: User Story
 title: "Write a check in SQF with steps, named by the story it proves"
 description: "A test author writes a check as one SQF file with a short header and named steps, using only the check API, and the result shows each step with its times."
-status: draft
+status: stable
 id: US-037
 role: test-author
 kind: feature
 requirements: [API-01, API-02, API-03, API-04, OBS-05, NFR-US-02]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-037 Write a check in SQF with steps, named by the story it proves

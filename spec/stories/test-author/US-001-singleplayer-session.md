@@ -2,11 +2,12 @@
 type: User Story
 title: "Start a singleplayer session once and run many checks against it"
 description: "A test author starts one singleplayer session and runs many checks and runs against it without the game restarting."
-status: draft
+status: stable
 id: US-001
 role: test-author
 kind: feature
 requirements: [SES-01, SES-05, SES-09, CFG-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-001 Start a singleplayer session once and run many checks against it

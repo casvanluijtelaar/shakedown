@@ -2,11 +2,12 @@
 type: User Story
 title: "Build a scene: objects, units, a player's position and facing, time and weather"
 description: "A test author places objects, units and vehicles, moves a player to an exact spot facing an exact way and sets the date and weather, and every machine sees the same scene, from one check that runs in singleplayer and on a dedicated server."
-status: draft
+status: stable
 id: US-017
 role: test-author
 kind: feature
 requirements: [SCN-01, SCN-02, SCN-03, API-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-017 Build a scene: objects, units, a player's position and facing, time and weather

@@ -2,11 +2,12 @@
 type: User Story
 title: "One machine disagrees with the others"
 description: "When one machine's value differs from the others, the check fails naming that machine and showing every machine's value."
-status: draft
+status: stable
 id: US-026
 role: test-author
 kind: error
 requirements: [OBS-06, OBS-04, RES-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-026 One machine disagrees with the others

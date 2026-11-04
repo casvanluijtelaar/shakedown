@@ -2,11 +2,12 @@
 type: User Story
 title: "A process without the token cannot run code in the session"
 description: "A local process that connects to the runner or poses as a game process without the right token, or from a process the runner did not start, runs no code, and the refusal is logged."
-status: draft
+status: stable
 id: US-053
 role: test-author
 kind: malicious intent
 requirements: [SEC-01, SEC-03, NFR-SC-02]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-053 A process without the token cannot run code in the session

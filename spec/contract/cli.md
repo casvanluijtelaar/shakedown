@@ -2,7 +2,8 @@
 type: Specification
 title: Command line
 description: The contract for the shakedown command line - the project file, every command with its options, its human and JSON output, and the exit codes.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Command line

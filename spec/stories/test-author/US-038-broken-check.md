@@ -2,11 +2,12 @@
 type: User Story
 title: "A broken check is the author's to fix"
 description: "A check whose header is malformed, whose body does not compile, or that calls the check API wrongly ends fail with reason check-error saying what to fix, never invalid, and the run goes on."
-status: draft
+status: stable
 id: US-038
 role: test-author
 kind: mistake
 requirements: [DM-04, API-01, OUT-01, NFR-US-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-038 A broken check is the author's to fix

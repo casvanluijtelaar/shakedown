@@ -2,11 +2,12 @@
 type: User Story
 title: "A cancelled tool call stops the work it started in the game"
 description: "When the AI agent's client cancels a tool call, the work it started in the game stops, so a dropped call does not leave code running in the session."
-status: draft
+status: stable
 id: US-051
 role: test-author
 kind: system fail
 requirements: [AGT-04, INS-02]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-051 A cancelled tool call stops the work it started in the game

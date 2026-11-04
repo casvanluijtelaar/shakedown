@@ -2,11 +2,12 @@
 type: User Story
 title: "Start a dedicated server with clients and headless clients in one command"
 description: "A test author starts a dedicated server with a chosen number of game clients and headless clients with one command and addresses each machine by its name."
-status: draft
+status: stable
 id: US-002
 role: test-author
 kind: feature
 requirements: [SES-01, SES-05, CTL-01, RES-02, DM-10, DM-12]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-002 Start a dedicated server with clients and headless clients in one command

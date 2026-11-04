@@ -2,11 +2,12 @@
 type: User Story
 title: "A second session start while one runs is refused"
 description: "Starting a session while another one runs is refused, naming the running session and how to stop it, and leaves the running session untouched."
-status: draft
+status: stable
 id: US-005
 role: test-author
 kind: mistake
 requirements: [SES-02, NFR-US-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-005 A second session start while one runs is refused

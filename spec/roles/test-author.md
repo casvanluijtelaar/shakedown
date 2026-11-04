@@ -2,9 +2,10 @@
 type: Role
 title: Test author
 description: Writes acceptance checks in SQF for a mod from its user stories, without reading the mod's source, runs them and reads the verdicts; a person or an AI agent.
-status: draft
+status: stable
 id: test-author
 group: person-or-agent
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Test author

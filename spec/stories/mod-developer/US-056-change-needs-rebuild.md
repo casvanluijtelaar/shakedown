@@ -2,11 +2,12 @@
 type: User Story
 title: "A change that needs a rebuild and a game restart"
 description: "A new or deleted file, or a config change, is reloaded by a game restart, and the reload says that the mod must be rebuilt first."
-status: draft
+status: stable
 id: US-056
 role: mod-developer
 kind: mistake
 requirements: [RLD-02, RLD-06, NFR-US-01, FIX-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-056 A change that needs a rebuild and a game restart

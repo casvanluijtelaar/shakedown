@@ -2,11 +2,12 @@
 type: User Story
 title: "Wait for an outcome on a machine with a ceiling, never a fixed sleep"
 description: "A test author waits for a condition on a named machine until it holds or a ceiling passes, and the check goes on as soon as it holds."
-status: draft
+status: stable
 id: US-023
 role: test-author
 kind: feature
 requirements: [OBS-01, OBS-02, OBS-07]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-023 Wait for an outcome on a machine with a ceiling, never a fixed sleep

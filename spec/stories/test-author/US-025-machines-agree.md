@@ -2,11 +2,12 @@
 type: User Story
 title: "Assert that every machine agrees with the server"
 description: "A test author reads one value on several machines and asserts that each meets an expectation, or that every machine agrees with the first one named."
-status: draft
+status: stable
 id: US-025
 role: test-author
 kind: feature
 requirements: [OBS-06, CTL-01, API-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-025 Assert that every machine agrees with the server

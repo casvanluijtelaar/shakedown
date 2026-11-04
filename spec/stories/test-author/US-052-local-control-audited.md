@@ -2,11 +2,12 @@
 type: User Story
 title: "Only the local user controls the session, and every piece of code sent to it is recorded"
 description: "The framework listens on loopback only, keeps its tokens out of every command line, file and output, and records every piece of code sent to a machine."
-status: draft
+status: stable
 id: US-052
 role: test-author
 kind: feature
 requirements: [SEC-01, SEC-02, SEC-04, NFR-SC-01, NFR-SC-03, SEC-06]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-052 Only the local user controls the session, and every piece of code sent to it is recorded

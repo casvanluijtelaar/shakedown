@@ -2,11 +2,12 @@
 type: User Story
 title: "A start that never becomes ready ends failed and leaves nothing running"
 description: "A session start in which a machine exits or does not become ready within the start ceiling ends failed, names the machine and its last log lines, and stops every process it started."
-status: draft
+status: stable
 id: US-004
 role: test-author
 kind: system fail
 requirements: [SES-04, STP-02, NFR-US-01, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-004 A start that never becomes ready ends failed and leaves nothing running

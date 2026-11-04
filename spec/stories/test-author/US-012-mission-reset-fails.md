@@ -2,11 +2,12 @@
 type: User Story
 title: "A mission restart before a check does not bring every machine back"
 description: "When the mission restart a check asked for does not bring every machine back, the check is invalid naming the machine, and the session is broken."
-status: draft
+status: stable
 id: US-012
 role: test-author
 kind: system fail
 requirements: [RST-06, P-05, NFR-RL-01, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-012 A mission restart before a check does not bring every machine back

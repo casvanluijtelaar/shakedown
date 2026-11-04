@@ -2,11 +2,12 @@
 type: User Story
 title: "Each machine's log is kept with the run and can be filtered"
 description: "Each machine's log is kept with the run and per check, without Steam IDs, and a test author reads a machine's lines filtered by run, check, pattern and count."
-status: draft
+status: stable
 id: US-042
 role: test-author
 kind: feature
 requirements: [LOG-01, LOG-02, LOG-03, LOG-04, SES-09, NFR-PV-01, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-042 Each machine's log is kept with the run and can be filtered

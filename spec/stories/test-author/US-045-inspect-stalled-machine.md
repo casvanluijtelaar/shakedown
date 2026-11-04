@@ -2,11 +2,12 @@
 type: User Story
 title: "Inspecting a machine that stopped answering"
 description: "Asking a machine that stopped answering returns, within its ceiling, that the machine is lost, instead of hanging the person or AI agent who asked."
-status: draft
+status: stable
 id: US-045
 role: test-author
 kind: system fail
 requirements: [INS-01, OBS-03, P-07, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-045 Inspecting a machine that stopped answering

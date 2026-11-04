@@ -2,11 +2,12 @@
 type: User Story
 title: "An AI agent follows a long run without a tool call timing out"
 description: "A run started through MCP returns a handle at once and is followed with calls that each stay under a minute, so a long suite never hits the agent's tool timeout."
-status: draft
+status: stable
 id: US-050
 role: test-author
 kind: feature
 requirements: [AGT-03, RUN-04, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-050 An AI agent follows a long run without a tool call timing out

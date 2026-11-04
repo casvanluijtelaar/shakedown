@@ -2,11 +2,12 @@
 type: User Story
 title: "Make a player use a mod's action and check the result on every machine"
 description: "A test author makes the player of a named machine use an action the mod added to an object, through the mod's real path, and asserts the outcome on the server and on every client."
-status: draft
+status: stable
 id: US-019
 role: test-author
 kind: feature
 requirements: [ACT-01, OBS-06, CTL-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-019 Make a player use a mod's action and check the result on every machine

@@ -2,7 +2,8 @@
 type: Specification
 title: Open questions
 description: The decisions the specification leaves to the owner, each with options, a recommendation and its reason, and the spikes whose measurements settle the rest, each with its pass condition and what the spec does if it fails.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Open questions

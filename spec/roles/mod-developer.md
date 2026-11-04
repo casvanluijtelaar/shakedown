@@ -2,9 +2,10 @@
 type: Role
 title: Mod developer
 description: Changes a mod's code and wants to know at once whether it still does what it promised, by reloading the change into a running session and rerunning the checks a finding or story names; a person or an AI agent.
-status: draft
+status: stable
 id: mod-developer
 group: person-or-agent
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Mod developer

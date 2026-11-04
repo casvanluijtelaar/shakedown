@@ -2,11 +2,12 @@
 type: User Story
 title: "See the runner, the session and the active run at any time"
 description: "`status` answers at once with the runner, the session with each machine's state and last answer time, the active run's progress and the last reload, and works where no game or runner runs."
-status: draft
+status: stable
 id: US-046
 role: test-author
 kind: feature
 requirements: [INS-02, AGT-05, NFR-PT-02, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-046 See the runner, the session and the active run at any time

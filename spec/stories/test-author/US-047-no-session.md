@@ -2,11 +2,12 @@
 type: User Story
 title: "A command that needs a session when none runs"
 description: "A command or tool that needs a running session, called when none runs, is refused with what to do next, and starts no game."
-status: draft
+status: stable
 id: US-047
 role: test-author
 kind: mistake
 requirements: [AGT-02, NFR-US-01, SES-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-047 A command that needs a session when none runs

@@ -2,11 +2,12 @@
 type: User Story
 title: "Ask a running game what is going on"
 description: "A person or an AI agent asks a running machine for its state, the player and the objects around it, its running scripts and its last errors, at any time, including during a check and after one failed, without stopping anything."
-status: draft
+status: stable
 id: US-044
 role: test-author
 kind: feature
 requirements: [INS-01, INS-03, RST-07, ERR-05, CTL-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-044 Ask a running game what is going on

@@ -2,7 +2,8 @@
 type: Specification
 title: Domain model
 description: The entities Shakedown works with, their attributes and relations, the status machine of each one that changes state, and the rules that decide a check's outcome.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Domain model

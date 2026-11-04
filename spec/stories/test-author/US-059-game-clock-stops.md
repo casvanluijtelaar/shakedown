@@ -2,11 +2,12 @@
 type: User Story
 title: "A machine's game clock stops while it still answers"
 description: "When a machine's mission time or frame number stops while it still answers, as when a rendering client's Shadow stream is cut, the checks it overlaps are invalid naming the machine and the clock, not failed."
-status: draft
+status: stable
 id: US-059
 role: test-author
 kind: system fail
 requirements: [HLT-02, DM-05, DM-06, NFR-RL-01, FIX-02, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-059 A machine's game clock stops while it still answers

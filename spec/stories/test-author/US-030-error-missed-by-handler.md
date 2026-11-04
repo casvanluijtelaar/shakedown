@@ -2,11 +2,12 @@
 type: User Story
 title: "A script error the in-game handler misses still reaches the result"
 description: "A script error that reaches a machine's log without passing the in-game error handler is still caught from the log and fails the check like any other."
-status: draft
+status: stable
 id: US-030
 role: test-author
 kind: system fail
 requirements: [ERR-02, INT-AR-07, NFR-RL-05]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-030 A script error the in-game handler misses still reaches the result

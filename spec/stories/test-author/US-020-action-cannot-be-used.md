@@ -2,11 +2,12 @@
 type: User Story
 title: "The action cannot be used"
 description: "When the action a check asks for is missing, its condition is false or the player is out of its radius, the check fails at the ceiling saying which of the three it was, with the facts."
-status: draft
+status: stable
 id: US-020
 role: test-author
 kind: error
 requirements: [ACT-01, NFR-US-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-020 The action cannot be used

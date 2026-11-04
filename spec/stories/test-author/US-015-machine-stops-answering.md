@@ -2,11 +2,12 @@
 type: User Story
 title: "A machine stops answering during a check"
 description: "When a machine stops answering in the middle of a check, the check is invalid naming the machine, not failed, and the following checks are invalid because the session is broken."
-status: draft
+status: stable
 id: US-015
 role: test-author
 kind: system fail
 requirements: [OBS-03, DM-07, P-07, NFR-RL-01, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-015 A machine stops answering during a check

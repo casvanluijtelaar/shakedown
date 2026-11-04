@@ -2,11 +2,12 @@
 type: User Story
 title: "Run one check, a list of checks, or the checks a story or finding names"
 description: "A test author or mod developer runs a single check, a list of checks in a given order, or every check whose header carries a story or finding tag, and lists the selection without starting the game."
-status: draft
+status: stable
 id: US-031
 role: test-author
 kind: feature
 requirements: [RUN-01, RUN-02, RUN-03, API-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-031 Run one check, a list of checks, or the checks a story or finding names

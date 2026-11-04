@@ -2,11 +2,12 @@
 type: User Story
 title: "An AI agent's fixable mistake gets a code and the next step"
 description: "When an AI agent calls a tool wrongly, the tool returns an error with a fixed code, what is wrong and what to do next, so the agent corrects itself without a person."
-status: draft
+status: stable
 id: US-049
 role: test-author
 kind: mistake
 requirements: [AGT-02, NFR-US-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-049 An AI agent's fixable mistake gets a code and the next step

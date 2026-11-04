@@ -2,11 +2,12 @@
 type: User Story
 title: "A check that changes what a reset cannot name gets a mission restart"
 description: "A check whose header says `@reset mission` starts in a freshly restarted session mission, for state such as global variables and mod settings that a reset in place cannot restore."
-status: draft
+status: stable
 id: US-011
 role: test-author
 kind: feature
 requirements: [RST-06, RST-02, API-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-011 A check that changes what a reset cannot name gets a mission restart

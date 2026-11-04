@@ -2,11 +2,12 @@
 type: User Story
 title: "An unknown class name or a wrong argument to the check API"
 description: "A check that creates an unknown class or calls a check API function with an argument of the wrong type or out of range ends as the author's mistake, naming the function, the argument and what it expected."
-status: draft
+status: stable
 id: US-018
 role: test-author
 kind: mistake
 requirements: [SCN-01, DM-04, API-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-018 An unknown class name or a wrong argument to the check API

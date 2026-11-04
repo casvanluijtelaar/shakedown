@@ -2,11 +2,12 @@
 type: User Story
 title: "Stopping a session leaves nothing running"
 description: "`session stop` stops every process of the session and returns only when none is left, with no port held and no mission copy left."
-status: draft
+status: stable
 id: US-036
 role: test-author
 kind: feature
 requirements: [SES-07, STP-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-036 Stopping a session leaves nothing running

@@ -2,11 +2,12 @@
 type: User Story
 title: "The logs of a machine that crashed are kept"
 description: "When a machine's process exits during a run, its log lines up to the exit and its crash dump are kept with the run."
-status: draft
+status: stable
 id: US-043
 role: test-author
 kind: system fail
 requirements: [LOG-01, LOG-04, P-09, INS-04, FIX-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-043 The logs of a machine that crashed are kept

@@ -2,7 +2,8 @@
 type: Specification
 title: Functional requirements
 description: What Shakedown must do, as numbered requirements traced to the PRD - the must requirements in full, and one entry per should and could that keeps its door open.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Functional requirements

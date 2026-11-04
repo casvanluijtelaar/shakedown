@@ -2,11 +2,12 @@
 type: User Story
 title: "Code for a machine the session does not have, or code that does not compile"
 description: "Code sent to a machine the session does not have, or that does not compile there, ends a check as the author's mistake, naming the machine or the engine's message, and is refused by the command line and the tools."
-status: draft
+status: stable
 id: US-014
 role: test-author
 kind: mistake
 requirements: [CTL-04, DM-04, AGT-02]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-014 Code for a machine the session does not have, or code that does not compile

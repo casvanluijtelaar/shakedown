@@ -2,11 +2,12 @@
 type: User Story
 title: "Run the full suite and walk away"
 description: "A test author runs every check in a setup with one command that starts the session, runs, and stops it, leaving one result file, the logs, and nothing running."
-status: draft
+status: stable
 id: US-033
 role: test-author
 kind: feature
 requirements: [RUN-04, STP-02, RES-01, RES-04, LOG-04, CFG-02, NFR-PV-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-033 Run the full suite and walk away

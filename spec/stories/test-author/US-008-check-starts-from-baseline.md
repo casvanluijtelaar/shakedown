@@ -2,11 +2,12 @@
 type: User Story
 title: "Every check starts from the session's start state"
 description: "Before every check the framework resets the session, so a check sees the session's start state on every machine whatever the previous check created or changed."
-status: draft
+status: stable
 id: US-008
 role: test-author
 kind: feature
 requirements: [RST-01, RST-02, SCN-04, NFR-RL-02, NFR-PF-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-008 Every check starts from the session's start state

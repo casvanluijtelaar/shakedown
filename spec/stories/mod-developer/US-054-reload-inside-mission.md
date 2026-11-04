@@ -2,11 +2,12 @@
 type: User Story
 title: "Reload a changed function inside the mission and rerun the checks a finding names"
 description: "A mod developer changes one function, reloads it into the running session without a restart, and reruns the checks a finding names, with the verdict in seconds."
-status: draft
+status: stable
 id: US-054
 role: mod-developer
 kind: feature
 requirements: [RLD-01, RLD-02, RLD-03, RLD-05, RUN-01, NFR-PF-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-054 Reload a changed function inside the mission and rerun the checks a finding names

@@ -2,11 +2,12 @@
 type: User Story
 title: "The previous check killed the player"
 description: "A check that ends with a player dead is followed by a check in which that player is alive at the start position, in singleplayer and on a dedicated session."
-status: draft
+status: stable
 id: US-009
 role: test-author
 kind: error
 requirements: [RST-05, RST-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-009 The previous check killed the player

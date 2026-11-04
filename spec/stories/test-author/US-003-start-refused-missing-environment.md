@@ -2,11 +2,12 @@
 type: User Story
 title: "A start is refused before any process starts when Steam, the game or a mod is missing"
 description: "A session start whose environment is incomplete is refused before any game process starts, naming exactly what is missing."
-status: draft
+status: stable
 id: US-003
 role: test-author
 kind: system fail
 requirements: [SES-03, INT-STM-01, NFR-US-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-003 A start is refused before any process starts when Steam, the game or a mod is missing

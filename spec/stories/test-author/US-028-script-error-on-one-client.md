@@ -2,11 +2,12 @@
 type: User Story
 title: "The mod throws a script error on one client only"
 description: "A script error on one machine during a check fails it, and the result names the machine, the error, its file and line, and the step that caused it."
-status: draft
+status: stable
 id: US-028
 role: test-author
 kind: error
 requirements: [ERR-01, ERR-03, OBS-05, RES-02]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-028 The mod throws a script error on one client only

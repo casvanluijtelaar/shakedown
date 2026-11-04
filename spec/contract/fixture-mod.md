@@ -2,7 +2,8 @@
 type: Specification
 title: Fixture mods
 description: The contract for the two small mods the framework's own tests and the acceptance suite run against - what each one does, where, what a check can observe, the failures a test causes with them on purpose and the files a test may change - so neither tester nor writer needs their source.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Fixture mods

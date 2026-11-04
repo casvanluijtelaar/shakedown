@@ -2,11 +2,12 @@
 type: User Story
 title: "Edit a check and rerun it with no reload"
 description: "A test author edits a check file and reruns it against the running session; the new text runs at once, with no reload and no restart."
-status: draft
+status: stable
 id: US-040
 role: test-author
 kind: feature
 requirements: [RLD-04, API-02, NFR-PF-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-040 Edit a check and rerun it with no reload

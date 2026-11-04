@@ -2,11 +2,12 @@
 type: User Story
 title: "A check of an error path expects a script error"
 description: "A test author declares that a block of code is expected to raise a script error containing a text, and the check passes when it does, on any machine."
-status: draft
+status: stable
 id: US-027
 role: test-author
 kind: feature
 requirements: [ERR-04, ERR-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-027 A check of an error path expects a script error

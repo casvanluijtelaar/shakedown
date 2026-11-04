@@ -2,7 +2,8 @@
 type: Specification
 title: Result file
 description: The contract for what a run leaves behind - the run folder, the result file and what each of its fields means; the JSON Schema is result.schema.json.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Result file

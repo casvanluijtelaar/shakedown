@@ -2,11 +2,12 @@
 type: User Story
 title: "A check runs past its timeout"
 description: "A check whose body runs past its header's timeout while every machine still answers is ended and fails with reason check-timeout, naming the step it was in."
-status: draft
+status: stable
 id: US-039
 role: test-author
 kind: error
 requirements: [DM-03, API-01, OBS-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-039 A check runs past its timeout

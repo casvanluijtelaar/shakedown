@@ -2,7 +2,8 @@
 type: Specification
 title: Check API
 description: The contract for writing a check - the check file and its header, where the body runs, and every skd_fnc function a check may call, with its arguments, result, ceilings and the outcome it causes when it fails.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Check API

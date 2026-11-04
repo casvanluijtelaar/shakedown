@@ -2,11 +2,12 @@
 type: User Story
 title: "A run is stopped by hand"
 description: "A run stopped with Ctrl+C or `run stop` ends its executing check invalid, lists the rest as not run, writes its result file, and leaves nothing of its own running."
-status: draft
+status: stable
 id: US-034
 role: test-author
 kind: system fail
 requirements: [RUN-05, RES-01, STP-02]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-034 A run is stopped by hand

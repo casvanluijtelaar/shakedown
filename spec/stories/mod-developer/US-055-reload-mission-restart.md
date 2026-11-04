@@ -2,11 +2,12 @@
 type: User Story
 title: "Reload a change that needs a mission restart"
 description: "A change to a function that is final, such as a CBA `PREP` function, is reloaded by a mission restart within the running session, and the reload says why it needed one."
-status: draft
+status: stable
 id: US-055
 role: mod-developer
 kind: feature
 requirements: [RLD-02, RLD-03, RST-02, NFR-PF-02, NFR-RL-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-055 Reload a change that needs a mission restart

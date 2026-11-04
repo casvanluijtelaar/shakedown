@@ -2,11 +2,12 @@
 type: User Story
 title: "A reload that does not complete"
 description: "When a reload does not reach every machine, it fails naming the step and the machine, the session is broken, and the checks after it are invalid rather than run on mixed code."
-status: draft
+status: stable
 id: US-057
 role: mod-developer
 kind: system fail
 requirements: [RLD-03, DM-05, P-08, NFR-RL-01, INS-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-057 A reload that does not complete

@@ -2,11 +2,12 @@
 type: User Story
 title: "Every check ends pass, fail or invalid with its reason"
 description: "Every check execution ends with exactly one outcome, and every outcome that is not pass carries a reason kind and a message, so a test author knows whether the mod or the environment is at fault."
-status: draft
+status: stable
 id: US-041
 role: test-author
 kind: feature
 requirements: [OUT-01, DM-01, DM-02, DM-05, DM-06, RES-05, FIX-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-041 Every check ends pass, fail or invalid with its reason

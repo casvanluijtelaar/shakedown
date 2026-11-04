@@ -2,7 +2,8 @@
 type: Specification
 title: Non-functional requirements
 description: The qualities Shakedown must have - speed, reliability, security, privacy, portability, legal limits and maintainability - each measurable and traced to the PRD's goals and requirements.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Non-functional requirements

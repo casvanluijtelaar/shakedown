@@ -2,11 +2,12 @@
 type: User Story
 title: "Make a player press a mod's CBA keybind"
 description: "A test author makes the player of a named machine press a keybind a mod registered with CBA, running the mod's own key-down and key-up code on that machine."
-status: draft
+status: stable
 id: US-021
 role: test-author
 kind: feature
 requirements: [ACT-02, API-03]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-021 Make a player press a mod's CBA keybind

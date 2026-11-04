@@ -2,7 +2,8 @@
 type: Specification
 title: Tech stack
 description: The engineering principles behind Shakedown, what it is built from with the version of each component, how each choice serves each principle, the alternatives rejected, the source code folders and the contract files.
-status: draft
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # Tech stack

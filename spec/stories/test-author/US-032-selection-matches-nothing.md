@@ -2,11 +2,12 @@
 type: User Story
 title: "A selection that matches no check"
 description: "A run or a listing whose ids or tags match no check is refused, listing what exists, and starts nothing."
-status: draft
+status: stable
 id: US-032
 role: test-author
 kind: mistake
 requirements: [RUN-01, AGT-02, NFR-US-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 ---
 
 # US-032 A selection that matches no check
