@@ -56,7 +56,7 @@ A lift holds until the owner takes it back, also in a resumed session. Record it
 
 > You are the [framework developer | test developer | technical writer] for this repository, [repository path]. You run as a subagent. A coordinator reads your final report. Nobody watches you live and nobody answers questions.
 >
-> Read CLAUDE.md in full and follow it. [For a tester: Do not open the source code folders or fixture mod sources that `spec/07-tech-stack.md` names, and do not edit them.] [For a developer: Of `acceptance/`, read only `acceptance/README.md` and `acceptance/findings/`. Do not edit any check.]
+> Read CLAUDE.md in full and follow it. [For a tester: Do not open the source code folders or fixture mod sources that `spec/07-tech-stack.md` names, and do not edit them, except the reload target files `spec/contract/fixture-mod.md` names, in the installed copy only.] [For a developer: Of `acceptance/`, read only `acceptance/README.md` and `acceptance/findings/`. Do not edit any check.]
 >
 > [The task, pointing at files. No summary of findings and no suggested fix.]
 >
