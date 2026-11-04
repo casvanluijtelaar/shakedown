@@ -16,6 +16,7 @@ Every run writes exactly one result file, also when it was stopped or its sessio
   result.json            the result file
   logs/<machine>.log     each machine's log lines for the run's time span, redacted
   checks/<n>/<machine>.log   each machine's log lines for check execution n (1-based, in run order), redacted
+  dumps/<machine>/<file>     each crash dump a machine lost during the run left in its profile folder
 ```
 
 Every path in `result.json` is relative to the run folder (`RES-04`). The folder is under `.shakedown/`, which git ignores (`CFG-02`). Nothing in it holds a Steam ID or a token (`NFR-PV-01`, `NFR-SC-03`).
@@ -28,7 +29,7 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
 | `framework_version` | The version of the `shakedown` binary that wrote the file. |
 | `run` | The run's id, its end state (`finished`, or `stopped` with `stopped_reason`), its wall-clock start, end and duration, and the selection it was given. |
 | `session.setup` | The setup the session ran: its name, mode, client and headless client counts, world and mod names. |
-| `session.machines` | Every machine start that took part in the run: name, kind, start number, the game version and the version of each mod with a `patch` key as that machine loaded it, and its state at the end of the run. A machine that was `lost` says whether it exited (with its exit code and crash dumps, as paths) or stopped answering. |
+| `session.machines` | Every machine start that took part in the run: name, kind, start number, the game version and the version of each mod with a `patch` key as that machine loaded it, and its state at the end of the run. A machine that was `lost` says whether it exited (with its exit code and the paths of its crash dumps under `dumps/`) or stopped answering. |
 | `summary` | The count of check executions per outcome, and of checks not run. `total` is `pass + fail + invalid + not_run`. |
 | `checks` | One entry per check execution, in run order (below). |
 | `not_run` | Selected checks that were not executed: `setup` when the check's `@setups` excludes the session's setup, `run-stopped` when the run stopped first. |

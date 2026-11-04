@@ -103,7 +103,7 @@ The command line has no ceiling of 60 s per call; `run`, `session start`, `reloa
 | `1` | `run`: at least one check `fail`. |
 | `2` | `run`: no check `fail`, at least one `invalid`. |
 | `3` | The request is wrong: an unknown command, option, check, machine or setup, a malformed project file, SQF that does not compile. The message says what to fix. |
-| `4` | The request is right but cannot be done now: no session, a session already running, a precondition of `SES-03` failed, the session is `broken`, the runner refused. The message says what to do. |
+| `4` | The request is right but cannot be done now: no session, a session already running, a precondition of `SES-03` failed, a session start that ended `failed`, a reload that ended `failed`, the session is `broken` or busy with a run, a reload or a reset, the runner refused. The message says what to do. |
 | `5` | The framework itself failed. The message gives the path of `runner.log`. |
 
 `exec`, `wait` and `expect` exit 0 when they got an answer, whatever the answer: `wait` that ended at its ceiling and `expect` that did not hold report it in their output, with exit code 0.

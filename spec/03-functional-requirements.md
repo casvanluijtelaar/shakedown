@@ -32,7 +32,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 - **RST-01** (must) Before every check whose reset mode is `in-place`, the framework resets the session as process `P-06` says: runs the previous check's cleanups, deletes every entity created since the baseline (whatever created it), restores every player's unit (alive, position, direction, velocity, damage, loadout, animation, out of any vehicle) and the date and weather. The next check sees the baseline state on every machine (`CR-02`; gap H2).
 - **RST-02** (must) The baseline is captured when the session first becomes `ready` and again after every mission restart and game restart: each player unit's position (ASL), direction and loadout, the date, and the overcast, fog and rain (`CR-02`).
-- **RST-03** (must) `reset` runs the reset on demand, outside a run (`CR-02`, `CR-27`).
+- **RST-03** (must) `reset` runs the reset on demand, outside a run. On a `broken` session it is refused with the reason the session broke and the two ways out, a `game-restart` reload and `session stop` (`CR-02`, `CR-27`).
 - **RST-04** (must) A reset has a ceiling of 15 s. A reset that does not verify within it fails, names what did not match, and leaves the session `broken` (`CR-02`, `CR-31`).
 - **RST-05** (must) A player who died is alive again before the reset ends: on a dedicated session the session mission's respawn brings the unit back at once; in singleplayer the way is settled by spike `SPK-05`, and a singleplayer session must survive the player's death in every case (`CR-02`).
 - **RST-06** (must) A check whose header says `@reset mission` gets a mission restart (level B of `P-08`) instead of a reset in place, for a check that changes state the framework cannot name, such as global variables or mod settings (`CR-02`; Q5).
@@ -40,7 +40,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 ## Reload
 
-- **RLD-01** (must) `reload [files...]` brings changed mod code into the running session at the lowest level the change allows, as process `P-08` says. With no files given it finds the changed files itself by comparing the watched `source` folders with the snapshot taken at the last ready state (`CR-03`).
+- **RLD-01** (must) `reload [files...]` brings changed mod code into the running session at the lowest level the change allows, as process `P-08` says. With no files given it finds the changed files itself by comparing the watched `source` folders with the snapshot taken at the last ready state. A `reload` or a `reset` asked while a run, a reload or a reset is in progress is refused, naming what is in progress and, for a run, its progress and `run stop` (`CR-03`, `CR-05`).
 - **RLD-02** (must) Each changed file is classified, and the highest level any file needs is applied (`CR-03`; conflict C1):
 
   | Change | Level | Reason given |
@@ -113,7 +113,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 ## Inspecting a running game
 
-- **INS-01** (must) `inspect <machine>` returns, without stopping anything: the machine's state and start number, the mission and its start count, `time`, `diag_tickTime`, `diag_fps`, `diag_frameNo`, the run, check and step running; the player unit (class, position ASL, direction, damage, alive, vehicle, animation); up to 50 objects within 50 m of the player or of a named object (class, net id, position, distance); up to 50 running scheduled scripts from `diag_activeSQFScripts`; and the last 10 script errors. The radius and the object are arguments (`CR-27`).
+- **INS-01** (must) `inspect <machine>` returns, without stopping anything: the machine's state and start number, the mission and its start count, `time`, `diag_tickTime`, `diag_fps`, `diag_frameNo`, the run, check and step running; the player unit (class, position ASL, direction, damage, alive, vehicle, animation); up to 50 objects within 50 m of the player or of a named object (class, net id, position, distance); up to 50 running scheduled scripts from `diag_activeSQFScripts`; and the last 10 script errors. The radius and the object are arguments. The order has an in-game ceiling of 10 s; a machine that does not answer within it plus the grace of `OBS-03` is `lost` as process `P-07` says, and `inspect` returns its machine with state `lost` and nothing else, instead of an error (`CR-27`).
 - **INS-02** (must) `status` answers without a game: whether the runner runs, the session's id, setup, state and each machine's state and last answer time, and the active run with its progress (`CR-27`, `CR-53`).
 - **INS-03** (must) `exec`, `inspect`, `logs` and `errors` work while a run is active and while the session is `broken` (`CR-27`).
 

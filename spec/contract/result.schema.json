@@ -130,7 +130,7 @@
           "properties": {
             "reason": { "enum": ["exited", "no-answer"] },
             "exit_code": { "type": ["integer", "null"] },
-            "dumps": { "type": "array", "items": { "type": "string" } }
+            "dumps": { "description": "Crash dumps copied into the run folder, under dumps/<machine>/.", "type": "array", "items": { "$ref": "#/$defs/RelativePath" } }
           }
         }
       }

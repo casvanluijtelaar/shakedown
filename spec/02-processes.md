@@ -31,7 +31,7 @@ Every process below uses one channel, so it is described once:
 
 Triggered by `session start --setup <name>` (or by `P-04` when no session runs).
 
-1. **client**: reads `shakedown.toml`, checks it against `CFG-01`, and sends the setup to the runner. A malformed file or an unknown setup is refused here with the key at fault.
+1. **client**: reads `shakedown.toml`, checks it against `CFG-01`, and sends the setup to the runner. A malformed file is refused here with the key at fault and its line; an unknown setup with the setups the file declares.
 2. **runner**: refuses if a session already runs (`SES-02`), naming it and the command that stops it.
 3. **runner**: checks the preconditions of `SES-03`: the game executables exist, a `steam` process runs, every mod folder of the setup exists, the setup's ports are free, the framework's addon link exists in the game folder (creating it if missing, `INT-AR-06`). Any failure ends the session as `failed` before a process starts, naming what is missing.
 4. **runner**: creates the session id, the session token and the session folder; generates the session mission (`INT-AR-04`) and, for a dedicated setup, `server.cfg` (`INT-AR-05`); copies the mission to `<game>\MPMissions\shakedown_<session id>.<world>` for a dedicated setup; writes every file and folder it created into the run record (`STP-03`).
@@ -79,7 +79,7 @@ Triggered by `run` (command line) or `run_start` (MCP).
 
 Run before every check with reset mode `in-place`, and by the `reset` command. The **runner** drives it through orders; the whole reset has the ceiling of `RST-04`.
 
-1. **lead**: runs the cleanups the previous check registered with `skd_fnc_cleanup`, last registered first. An error in one is logged, attributed to the previous check's execution, and the reset goes on.
+1. **lead**: runs the cleanups the previous check registered with `skd_fnc_cleanup`, last registered first. An error in one is logged, attributed to the previous check's execution, and the reset goes on. A cleanup still running when the reset's ceiling passes is terminated, and the reset fails naming the check that registered it.
 2. **agent** (every machine): returns the entities its recorder saw created since the baseline that still exist, as net ids.
 3. **agent** (server): deletes them: crew first with `deleteVehicleCrew`, then each object with `deleteVehicle`, then empty groups created since the baseline. Player units and the session mission's own units are never deleted.
 4. **agent** (each player's machine, for its own unit): if the unit is dead, waits for its respawn (`RST-05`); then moves it out of any vehicle, restores its loadout with `setUnitLoadout`, sets its damage to 0 (and calls ACE's full heal when ACE medical is loaded, `INT-ACE-02`), sets its direction and then its position to the baseline, sets its velocity to zero and resets its animation with `switchMove ""`.
@@ -107,7 +107,7 @@ Triggered by `reload [files...]`. **runner** drives it.
 ## **P-09** A crash: a process exits unasked
 
 1. **runner**: sees a game process of the session end without having asked it to (it waits on every process handle).
-2. **runner**: records the exit code, looks for a new `.mdmp` or `.bidmp` in that machine's profile folder, marks the machine `lost` with reason `exited`, and marks the session `broken`.
+2. **runner**: records the exit code, looks for a new `.mdmp` or `.bidmp` in that machine's profile folder and copies each one into the active run's folder as `dumps/<machine>/<file>`, marks the machine `lost` with reason `exited`, and marks the session `broken`.
 3. **runner**: the check executing ends `invalid` / `machine-lost` naming the machine, its exit code and any dump; following checks of the run end `invalid` / `session-broken`.
 4. On a dedicated session the other processes keep running until the session stops or a `game-restart` reload replaces every machine.
 

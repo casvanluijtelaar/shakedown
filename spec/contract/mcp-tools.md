@@ -36,7 +36,7 @@ status: draft
 ## Shared shapes
 
 - **Machine**: `{"name": "p1", "kind": "client", "start": 1, "state": "ready", "last_answer_at": "<time>"}`; `kind` is `server`, `client` or `headless`; `state` as the machine status machine of `01-domain-model.md`.
-- **Session**: `{"id", "setup", "mode", "state", "started_at", "folder", "machines": [Machine]}`; `state` as the session status machine.
+- **Session**: `{"id", "setup", "mode", "state", "started_at", "folder", "machines": [Machine], "reason": {"message", "machine", "rpt_tail": [string]} or null}`; `state` as the session status machine. `reason` is set when the state is `failed` or `broken`: what happened, the machine it concerns, and that machine's last 20 RPT lines, redacted (`SES-04`, `P-07`, `P-09`).
 - **Outcome line**: `{"check_id", "repeat", "outcome", "reason": {"kind", "message"} | null, "duration_s"}`.
 - **Value**: an SQF value encoded as `DM-13` says.
 - **Time**: an ISO 8601 UTC string with milliseconds, such as `"2026-11-04T21:37:06.123Z"`.
@@ -58,7 +58,7 @@ status: draft
 | `exec` | `{"machine": string, "code": string, "args"?: array, "ceiling"?: number}` | `{"results": {machine name: {"state": "done" or "ceiling" or "lost", "value": Value, "duration_s"}}, "errors": [ScriptError]}`. `machine` may be a group name. Script errors the code caused are returned, not raised. |
 | `wait_until` | `{"machine", "condition": string, "description"?: string, "args"?: array, "ceiling"?: number}` | `{"met": boolean, "waited_s"}`. |
 | `expect` | `{"machine", "value": string, "op", "expected": Value, "args"?: array, "ceiling"?: number}` | `{"passed": boolean, "last_value": Value, "waited_s"}`. |
-| `inspect` | `{"machine", "near"?: netId, "radius"?: number}` | `{"machine": Machine, "mission", "mission_start", "time", "tick", "fps", "frame", "run_id", "check_id", "step_path", "player": {"class", "position", "direction", "damage", "alive", "vehicle", "animation"} or null, "nearby": [{"class", "net_id", "position", "distance"}], "scripts": [{"name", "file", "line"}], "errors": [ScriptError]}` (`INS-01`). |
+| `inspect` | `{"machine", "near"?: netId, "radius"?: number}` | `{"machine": Machine, "mission", "mission_start", "time", "tick", "fps", "frame", "run_id", "check_id", "step_path", "player": {"class", "position", "direction", "damage", "alive", "vehicle", "animation"} or null, "nearby": [{"class", "net_id", "position", "distance"}], "scripts": [{"name", "file", "line"}], "errors": [ScriptError]}` (`INS-01`). A machine that does not answer within 10 s plus the grace returns `machine` with state `lost` and every other field `null`. |
 | `logs` | `{"machine", "run_id"?, "check_id"?, "grep"?: regex, "last"?: integer}` | `{"lines": [string], "truncated": boolean, "path": path or null}`, redacted (`LOG-03`). |
 | `errors` | `{"machine"?, "run_id"?, "check_id"?}` | `{"errors": [ScriptError]}` (`ERR-05`). |
 | `guide` | `{}` | `{"text": string}`: how to start a session, run checks, read a result and write a check, in under 8,000 characters (`AGT-06`). |

@@ -148,7 +148,7 @@ Any script error on any machine whose text contains `text` (case-insensitive), f
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `skd_fnc_cleanup` | `[code, args]` - `args` default `[]`. | Nothing. Registers `code` to run on the lead machine at the start of the next reset, last registered first (`RST-01`). For state the reset cannot name, such as a mod setting. |
+| `skd_fnc_cleanup` | `[code, args]` - `args` default `[]`. | Nothing. Registers `code` to run on the lead machine at the start of the next reset, last registered first (`RST-01`). For state the reset cannot name, such as a mod setting. A cleanup still running at the reset's ceiling (`RST-04`) is terminated and fails the reset, naming the check that registered it. |
 | `skd_fnc_evidence` | `[label, value]` - `label` String. | Nothing. Adds the value to the check's evidence in the result file. |
 | `skd_fnc_fail` | `[message]` | Does not return. Ends the check `fail` / `explicit`. |
 | `skd_fnc_invalid` | `[message]` | Does not return. Ends the check `invalid` / `explicit`, for a cause outside the mod that the check detects itself. |
