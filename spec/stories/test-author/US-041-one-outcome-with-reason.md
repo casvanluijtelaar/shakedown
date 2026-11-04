@@ -6,7 +6,7 @@ status: draft
 id: US-041
 role: test-author
 kind: feature
-requirements: [OUT-01, DM-01, DM-02, DM-05, DM-06]
+requirements: [OUT-01, DM-01, DM-02, DM-05, DM-06, RES-05, FIX-01]
 ---
 
 # US-041 Every check ends pass, fail or invalid with its reason

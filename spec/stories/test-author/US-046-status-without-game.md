@@ -6,7 +6,7 @@ status: draft
 id: US-046
 role: test-author
 kind: feature
-requirements: [INS-02, AGT-05, NFR-PT-02]
+requirements: [INS-02, AGT-05, NFR-PT-02, INS-04]
 ---
 
 # US-046 See the runner, the session and the active run at any time

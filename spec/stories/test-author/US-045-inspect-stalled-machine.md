@@ -6,7 +6,7 @@ status: draft
 id: US-045
 role: test-author
 kind: system fail
-requirements: [INS-01, OBS-03, P-07]
+requirements: [INS-01, OBS-03, P-07, INS-04]
 ---
 
 # US-045 Inspecting a machine that stopped answering

@@ -35,17 +35,18 @@ status: draft
 
 ## Shared shapes
 
-- **Machine**: `{"name": "p1", "kind": "client", "start": 1, "state": "ready", "last_answer_at": "<time>"}`; `kind` is `server`, `client` or `headless`; `state` as the machine status machine of `01-domain-model.md`.
+- **Machine**: `{"name": "p1", "kind": "client", "start": 1, "state": "ready", "pid": 10432, "process_started_at": "<time>", "profile": "<path>", "last_answer_at": "<time>" or null, "health": {"flag": null, "since": null, "heartbeat": Clocks or null}}` (`INS-04`). `kind` is `server`, `client` or `headless`; `state` as the machine status machine of `01-domain-model.md`. `pid` is the operating-system process id of the machine's game process and `process_started_at` that process's start time, which together name it even after the id is reused; `profile` is the absolute path of its profile folder, which holds its RPT and any crash dump. `health.flag` is `null`, `mission-time` or `frame` for the clock that stopped (`HLT-02`), `since` the time it was raised, and `heartbeat` the clocks of the last heartbeat. A machine is listed from the moment its process is launched, in every session state.
 - **Session**: `{"id", "setup", "mode", "state", "started_at", "folder", "machines": [Machine], "reason": {"message", "machine", "rpt_tail": [string]} or null}`; `state` as the session status machine. `reason` is set when the state is `failed` or `broken`: what happened, the machine it concerns, and that machine's last 20 RPT lines, redacted (`SES-04`, `P-07`, `P-09`).
 - **Outcome line**: `{"check_id", "repeat", "outcome", "reason": {"kind", "message"} | null, "duration_s"}`.
 - **Value**: an SQF value encoded as `DM-13` says.
+- **Clocks**: `{"utc": Time, "tick", "time", "frame"}`, the clocks of `OBS-05`, the shape of the same name in [result.schema.json](result.schema.json).
 - **Time**: an ISO 8601 UTC string with milliseconds, such as `"2026-11-04T21:37:06.123Z"`.
 
 ## Tools
 
 | Tool | Input | Output |
 |---|---|---|
-| `status` | `{}` | `{"runner": "running" or "not-running", "version", "session": Session or null, "run": {"id", "state", "done", "total", "current_check"} or null, "last_reload": Reload or null}`. Works with no runner and no game (`AGT-05`). |
+| `status` | `{}` | `{"runner": "running" or "not-running", "runner_pid": integer or null, "version", "session": Session or null, "run": {"id", "state", "done", "total", "current_check"} or null, "last_reload": Reload or null}`. Works with no runner and no game (`AGT-05`). |
 | `session_start` | `{"setup": string}` | Session. Returns when the session is `ready` or `failed`, or after 50 s with state `starting`; follow it with `status`. |
 | `session_stop` | `{}` | Session, with state `stopped`. |
 | `list_checks` | `{"ids"?: [string], "tags"?: [string]}` | `{"checks": [{"id", "name", "tags", "setups", "timeout_s", "reset"}]}`. Works with no runner. |

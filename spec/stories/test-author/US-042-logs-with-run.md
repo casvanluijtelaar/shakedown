@@ -6,7 +6,7 @@ status: draft
 id: US-042
 role: test-author
 kind: feature
-requirements: [LOG-01, LOG-02, LOG-03, LOG-04, SES-09, NFR-PV-01]
+requirements: [LOG-01, LOG-02, LOG-03, LOG-04, SES-09, NFR-PV-01, INS-04]
 ---
 
 # US-042 Each machine's log is kept with the run and can be filtered

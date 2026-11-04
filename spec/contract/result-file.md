@@ -29,7 +29,7 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
 | `framework_version` | The version of the `shakedown` binary that wrote the file. |
 | `run` | The run's id, its end state (`finished`, or `stopped` with `stopped_reason`), its wall-clock start, end and duration, and the selection it was given. |
 | `session.setup` | The setup the session ran: its name, mode, client and headless client counts, world and mod names. |
-| `session.machines` | Every machine start that took part in the run: name, kind, start number, the game version and the version of each mod with a `patch` key as that machine loaded it, and its state at the end of the run. A machine that was `lost` says whether it exited (with its exit code and the paths of its crash dumps under `dumps/`) or stopped answering. |
+| `session.machines` | Every machine start that took part in the run: name, kind, start number, the game version and the version of each mod with a `patch` key as that machine loaded it, and its state at the end of the run. A machine that was `lost` says whether it exited (with its exit code and the paths of its crash dumps under `dumps/`) or stopped answering, and the wall-clock time it was lost (`RES-05`). Its crash dumps are the `.mdmp` and `.bidmp` files written to its profile folder after its process started (`P-09`). |
 | `summary` | The count of check executions per outcome, and of checks not run. `total` is `pass + fail + invalid + not_run`. |
 | `checks` | One entry per check execution, in run order (below). |
 | `not_run` | Selected checks that were not executed: `setup` when the check's `@setups` excludes the session's setup, `run-stopped` when the run stopped first. |
@@ -43,7 +43,7 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
 | `check_id`, `name`, `tags` | From the check file as it was read for this execution. |
 | `repeat` | 1, or the repeat index when the run repeats checks (`OUT-02`). |
 | `outcome` | `pass`, `fail` or `invalid` (`DM-01`). |
-| `reason` | `null` for `pass`. Otherwise its `kind` (`DM-03`, `DM-04`, `DM-05`), a `message` that says what happened in one or two sentences, and the `machine` it concerns when there is one. |
+| `reason` | `null` for `pass`. Otherwise its `kind` (`DM-03`, `DM-04`, `DM-05`), a `message` that says what happened in one or two sentences, the `machine` it concerns when there is one, and `at`, the wall-clock time of the cause that decided the outcome, so the order of `DM-06` can be read from the file (`RES-05`). |
 | `started_at`, `ended_at`, `duration_s` | Wall clock, from the start of `preparing` to the outcome. |
 | `reload` | `partial` when the check ran after a `mission`-level reload of mod code (`RLD-05`), otherwise `full`. |
 | `steps` | Every step in the order it started, nested steps after their parent, each with its path, the machine it ran on, its state, its start and end on the clocks of `OBS-05`, its duration and its error. A step that was running when the check ended has state `running` and no end. |
@@ -81,7 +81,7 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
     {
       "check_id": "rope/US-012-hook-holds", "name": "US-012 A hook thrown at a wall holds a player's weight",
       "tags": ["US-012", "smoke"], "repeat": 1, "outcome": "fail",
-      "reason": { "kind": "assertion", "message": "ropes attached to the wall: expected >= 1 on every machine; p2 read 0 for 10 s.", "machine": "p2" },
+      "reason": { "kind": "assertion", "message": "ropes attached to the wall: expected >= 1 on every machine; p2 read 0 for 10 s.", "machine": "p2", "at": "2026-11-04T21:37:19.650Z" },
       "started_at": "2026-11-04T21:37:06.200Z", "ended_at": "2026-11-04T21:37:19.700Z", "duration_s": 13.5,
       "reload": "full",
       "steps": [

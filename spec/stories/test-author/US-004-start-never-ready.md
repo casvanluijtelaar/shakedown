@@ -6,7 +6,7 @@ status: draft
 id: US-004
 role: test-author
 kind: system fail
-requirements: [SES-04, STP-02, NFR-US-01]
+requirements: [SES-04, STP-02, NFR-US-01, INS-04]
 ---
 
 # US-004 A start that never becomes ready ends failed and leaves nothing running

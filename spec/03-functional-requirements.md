@@ -20,12 +20,12 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 - **SES-01** (must) `session start --setup <name>` starts a session of the named setup: one singleplayer game, or a dedicated server with the setup's game clients and headless clients, all on the local machine. It returns when the session is `ready` (every machine answers in the session mission) or `failed` (`CR-01`).
 - **SES-02** (must) At most one session runs on the machine. A second `session start` is refused, naming the running session's id and setup and the command that stops it (`CR-01`).
-- **SES-03** (must) Before any process starts, the start checks that the game's `arma3_x64.exe` (and for a dedicated setup `arma3server_x64.exe`) exist in the configured game folder, that a `steam` process runs, that every mod folder of the setup exists, and, for a dedicated setup, that the five ports from the base port are free. A failed check refuses the start and names exactly what is missing (`CR-01`, scenario "things go wrong" 4).
+- **SES-03** (must) Before any process starts, the start checks that the game's `arma3_x64.exe` (and for a dedicated setup `arma3server_x64.exe`) exist in the configured game folder, that a process `steam.exe` of the current user runs, that every mod folder of the setup exists, and, for a dedicated setup, that the five ports from the base port are free. A failed check refuses the start and names exactly what is missing (`CR-01`, scenario "things go wrong" 4).
 - **SES-04** (must) A start has a ceiling of 180 s from the first process launch to `ready`, settable per setup with `start_timeout`. At the ceiling, or when a process exits during the start, the session is `failed`, every process it started is stopped, and the reason names the machine that was not ready, its state and the last 20 lines of its RPT (`CR-01`, `CR-05`).
 - **SES-05** (must) A `ready` session runs any number of runs, checks and `exec` calls without restarting a process. Only a reload at level `mission-restart` or `game-restart`, or a check with reset mode `mission`, restarts anything (`CR-01`).
 - **SES-06** (must) A session belongs to the runner, not to the client that started it. When the command line exits or an AI agent's session ends and its MCP server stops, the game session keeps running and a new client finds it (`CR-01`, `CR-53`; gap H6).
 - **SES-07** (must) `session stop` stops every process of the session and returns when none is left (`CR-05`).
-- **SES-08** (must) The runner runs as its own detached process, outside the process tree and job object of any client, so that a client's host ending the client's tree does not end the runner (`CR-01`, `CR-05`; gap H6).
+- **SES-08** (must) The runner runs as its own detached process, outside the process tree and job object of any client, so that a client's host ending the client does not end the runner, whether the host closes a job object with kill-on-close that holds the client, with or without breakaway allowed, or terminates each process of the client's tree. Those are the two ways a host such as Claude Code ends a client, and a test reproduces either one around `shakedown mcp` (`CR-01`, `CR-05`; gap H6, `INT-CC-02`).
 - **SES-09** (must) Every game process is started from the installed executables, with its own profile folder in the session folder, `-name=<machine>`, `-filePatching`, `-debug`, and every option of `INT-AR-02`. No game executable is copied (`CR-01`, `CR-03`, `CR-24`).
 
 ## Reset between checks
@@ -114,14 +114,15 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 ## Inspecting a running game
 
 - **INS-01** (must) `inspect <machine>` returns, without stopping anything: the machine's state and start number, the mission and its start count, `time`, `diag_tickTime`, `diag_fps`, `diag_frameNo`, the run, check and step running; the player unit (class, position ASL, direction, damage, alive, vehicle, animation); up to 50 objects within 50 m of the player or of a named object (class, net id, position, distance); up to 50 running scheduled scripts from `diag_activeSQFScripts`; and the last 10 script errors. The radius and the object are arguments. The order has an in-game ceiling of 10 s; a machine that does not answer within it plus the grace of `OBS-03` is `lost` as process `P-07` says, and `inspect` returns its machine with state `lost` and nothing else, instead of an error (`CR-27`).
-- **INS-02** (must) `status` answers without a game: whether the runner runs, the session's id, setup, state and each machine's state and last answer time, and the active run with its progress (`CR-27`, `CR-53`).
+- **INS-02** (must) `status` answers without a game: whether the runner runs, the session's id, setup, state and each machine of `INS-04`, and the active run with its progress (`CR-27`, `CR-53`).
 - **INS-03** (must) `exec`, `inspect`, `logs` and `errors` work while a run is active and while the session is `broken` (`CR-27`).
+- **INS-04** (must) `status`, and every session shape the command line and the tools return, list each machine from the moment its process is launched, in every session state including `starting` and `reloading`, with: its state and start number; its operating-system process id and process start time; its profile folder; its last answer time; its health flag of `HLT-02` (`null`, `mission-time` or `frame`) and the time the flag was raised; and the clocks of `OBS-05` from its last heartbeat. `status` also gives the runner's process id. A person or an AI agent finds a machine's window, process and RPT from these, and an outside tool can suspend, end or dump a chosen machine's process by its id, which is how a stall, a crash and a crash dump are made on purpose (`CR-27`, `CR-53`, `CR-30`).
 
 ## Outcomes and health
 
 - **OUT-01** (must) Every check execution ends `pass`, `fail` or `invalid` by the rules `DM-01` to `DM-08`, with a reason kind and a message for every outcome that is not `pass` (`CR-31`).
 - **HLT-01** (should) Watch each machine's health with a heartbeat (mission time against real time, frame rate, answer time) and process and window checks, and end a check that overlaps an unhealthy interval `invalid` / `unhealthy` (`CR-30`; conflict C6). Its clock watch is `HLT-02`, a must.
-- **HLT-02** (must) From the moment a machine is `ready`, its in-game agent sends a heartbeat every second of real time carrying the clocks of `OBS-05`. The runner flags the machine unhealthy while, over the last 5 s of real time, its mission time advanced less than half as much as its real time or its frame number did not advance (thresholds until `SPK-15`). A check execution that overlaps a flagged interval ends `invalid` / `unhealthy`, naming the machine and which clock stopped, unless a cause for `fail` came first (`DM-06`). `status` shows the flag on the machine (`CR-30`, G3; conflict C6).
+- **HLT-02** (must) From the moment a machine is `ready`, its in-game agent sends a heartbeat every second of real time carrying the clocks of `OBS-05`. The heartbeat is sent from a per-frame handler (the `EachFrame` mission event, gated on `diag_tickTime`), not from a scheduled loop, so it keeps coming while the scheduled environment or the simulation stands still. The runner flags the machine unhealthy while, over the last 5 s of real time, its mission time advanced less than half as much as its real time or its frame number did not advance (thresholds until `SPK-15`). A check execution that overlaps a flagged interval ends `invalid` / `unhealthy`, naming the machine and which clock stopped, unless a cause for `fail` came first (`DM-06`). `status` shows the flag and the last heartbeat's clocks on the machine (`INS-04`) (`CR-30`, G3; conflict C6).
 - **OUT-02** (should) Repeat each selected check N times and summarise each by `DM-09`, with the count of each outcome (`CR-32`).
 - **OUT-03** (could) Run a check marked as expected to fail against a build where its promise is broken, and report it as proven when it fails (`CR-33`).
 - **OUT-04** (could) Measure a baseline of the game's own behaviour in the same run and conditions as a check that compares against it (`CR-34`).
@@ -132,7 +133,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 - **RUN-02** (must) `list` returns every check's id, name, tags, setups, timeout and reset mode from the files, without a runner or a game, filtered like `RUN-01` (`CR-40`, `CR-53`).
 - **RUN-03** (must) Checks run in the order given; checks selected by tag or by default run in check id order (`CR-40`).
 - **RUN-04** (must) A run given a setup when no session runs starts a session of that setup, runs, and stops it, whatever the outcomes (`CR-05`, `CR-40`, scenario "as planned" 5).
-- **RUN-05** (must) A run can be stopped by hand. Its executing check ends `invalid` / `run-stopped`, the checks not started are listed as `not-run`, and the result file is written (`CR-05`, `CR-31`, `CR-51`).
+- **RUN-05** (must) A run can be stopped by hand, with `run stop`, `run_stop`, or a Ctrl+C or Ctrl+Break console event to `shakedown run`, which it treats alike. Its executing check ends `invalid` / `run-stopped`, the checks not started are listed as `not-run`, and the result file is written (`CR-05`, `CR-31`, `CR-51`).
 - **RUN-06** (must) A run has a runner ceiling of the sum of its checks' timeouts plus 60 s; at it the run is stopped as `RUN-05` says (`CR-20`).
 - **RUN-07** (should) Choose the setups per check: a check's `@setups` header names the setups it runs in, a run skips the others as `not-run` / `setup`, and one command runs a selection in each setup it needs, one session per setup (`CR-41`). The MVP honours the header for skipping; running several setups in one command waits for this requirement.
 - **TIM-01** (should) Report the time of every step and flag steps over a threshold (`CR-42`). The MVP records step times (`OBS-05`) without flagging.
@@ -151,6 +152,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 - **RES-02** (must) The result file holds the run and session ids, the setup with its machines, the game build and each mod's version as each machine loaded it, the selection, every check execution with its outcome, reason, steps with times, script errors, evidence and reload state, the reloads during the run, the checks not run with the reason, and the summary counts (`CR-51`, `CR-42`, `CR-23`).
 - **RES-03** (must) Evidence for an outcome that is not `pass` includes the failed step's path, the last observed value per machine, every unexpected script error, the values the check attached, and the paths to each machine's log excerpt for that check (`CR-51`, `CR-23`).
 - **RES-04** (must) Paths in the result file are relative to the run folder (`CR-51`).
+- **RES-05** (must) Every reason of an outcome that is not `pass` carries the wall-clock time of the cause that decided it, and every machine that was `lost` carries the wall-clock time it was lost, so the order `DM-06` judges by is in the result (`CR-51`, `CR-31`).
 
 ## Agent tools
 
@@ -166,9 +168,18 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 - **SEC-01** (must) The runner listens on `127.0.0.1` only. Every client presents the runner token from `runner.json` on each connection, and every extension presents its session token; a connection with anything else, or whose first message is not the protocol's hello, is closed (`CR-60`).
 - **SEC-02** (must) The session token is a random 256-bit value made per session and passed to each game process only in its environment, never on a command line. The runner token file is readable by the current user only (`CR-60`).
-- **SEC-03** (must) The runner accepts an extension's hello only from a process id it started for that machine of that session (`CR-60`).
+- **SEC-03** (must) The runner accepts an extension's hello only from a process id it started for that machine of that session. It takes the process id of the connection's other end from the system's TCP table (`GetExtendedTcpTable`), never from the hello, so a process that holds a stolen token still cannot pose as a game process (`CR-60`).
 - **SEC-04** (must) Every `exec` order, from a client or from a check, is appended to `audit.jsonl` in the session folder with its time, source (command line, MCP or check id), target and code (`CR-60`, `CR-53`).
 - **SEC-05** (should) Refuse to start with BattlEye on or against a server that is not the session's own loopback server (`CR-61`). The MVP writes `BattlEye = 0` and `loopback = 1` into every `server.cfg` it generates.
+- **SEC-06** (must) The runner token is `skd_r_` and the session token `skd_s_`, each followed by 64 lowercase hexadecimal digits of the random value. The fixed form lets any leak be found by searching for the pattern, in command lines, files, logs and tool output (`CR-60`).
+
+## Fixture mods
+
+The framework is developed and accepted against fixture mods of its own, whose promises are [contract/fixture-mod.md](contract/fixture-mod.md). Besides a target for each capability, they give a test the failures of the environment it cannot otherwise cause on purpose. They are test targets, never part of the framework: a session loads them only when its setup names them, like any mod.
+
+- **FIX-01** (must) A fixture function crashes the game process it runs on, after a delay in real time, through a fault in native code, so the engine's own crash handling runs and the process ends unasked; another ends the process with a chosen exit code after a delay. A check places a crash at a known point between its own steps (`CR-31`, G3; `SPK-16`).
+- **FIX-02** (must) A fixture function holds singleplayer `p1`'s mission time still for a given number of seconds of real time while its frames go on and it keeps answering, as when the Shadow stream is cut, then lets it run (`CR-30`, G3; `SPK-17`).
+- **FIX-03** (must) The fixtures name the files a test may change in their installed copy for a reload: the two reload targets, one file absent from the build that a test may create and must delete after, and any installed fixture file a test may name to `reload` without changing it (`CR-03`).
 
 ## Further should and could requirements
 
@@ -187,7 +198,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 |---|---|---|
 | CR-01 | must | CFG-01, SES-01 to SES-06, SES-08, SES-09 |
 | CR-02 | must | RST-01 to RST-06, SCN-04 |
-| CR-03 | must | RLD-01 to RLD-06, API-02, SES-09 |
+| CR-03 | must | RLD-01 to RLD-06, API-02, SES-09, FIX-03 |
 | CR-04 | should | MCH-01 |
 | CR-05 | must | SES-04, SES-07, SES-08, STP-01 to STP-04, RUN-04, RUN-05 |
 | CR-06 | should | ENV-01 (SES-03 covers what a start needs) |
@@ -205,9 +216,9 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 | CR-24 | must | LOG-01 to LOG-04, SES-09 |
 | CR-25 | could | SHT-01 |
 | CR-26 | could | PRF-01 |
-| CR-27 | must | INS-01 to INS-03, RST-03, RST-07 |
-| CR-30 | should | HLT-01; its clock watch HLT-02 is a must |
-| CR-31 | must | OUT-01, CTL-04, ACT-03, ERR-03, RST-04, OBS-03, RUN-05 |
+| CR-27 | must | INS-01 to INS-04, RST-03, RST-07 |
+| CR-30 | should | HLT-01; its clock watch HLT-02, INS-04 and FIX-02 are musts |
+| CR-31 | must | OUT-01, CTL-04, ACT-03, ERR-03, RST-04, OBS-03, RUN-05, RES-05, FIX-01 |
 | CR-32 | should | OUT-02 |
 | CR-33 | could | OUT-03 |
 | CR-34 | could | OUT-04 |
@@ -215,8 +226,8 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 | CR-41 | should | RUN-07 (CFG-01 declares setups) |
 | CR-42 | should | TIM-01 (OBS-05, RLD-03 record times) |
 | CR-50 | must | API-01 to API-05 |
-| CR-51 | must | RES-01 to RES-04, CFG-02, LOG-04 |
+| CR-51 | must | RES-01 to RES-05, CFG-02, LOG-04 |
 | CR-52 | should | MAN-01 |
-| CR-53 | must | AGT-01 to AGT-07, SES-06, INS-02, SEC-04 |
-| CR-60 | must | SEC-01 to SEC-04 |
+| CR-53 | must | AGT-01 to AGT-07, SES-06, INS-02, INS-04, SEC-04 |
+| CR-60 | must | SEC-01 to SEC-04, SEC-06 |
 | CR-61 | should | SEC-05 |

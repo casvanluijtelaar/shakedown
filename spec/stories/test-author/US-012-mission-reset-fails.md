@@ -6,7 +6,7 @@ status: draft
 id: US-012
 role: test-author
 kind: system fail
-requirements: [RST-06, P-05, NFR-RL-01]
+requirements: [RST-06, P-05, NFR-RL-01, INS-04]
 ---
 
 # US-012 A mission restart before a check does not bring every machine back

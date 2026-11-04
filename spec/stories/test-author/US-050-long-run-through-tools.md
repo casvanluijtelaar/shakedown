@@ -6,7 +6,7 @@ status: draft
 id: US-050
 role: test-author
 kind: feature
-requirements: [AGT-03, RUN-04]
+requirements: [AGT-03, RUN-04, INS-04]
 ---
 
 # US-050 An AI agent follows a long run without a tool call timing out

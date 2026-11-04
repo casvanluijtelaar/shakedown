@@ -126,9 +126,10 @@
         "lost": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["reason", "exit_code", "dumps"],
+          "required": ["reason", "at", "exit_code", "dumps"],
           "properties": {
             "reason": { "enum": ["exited", "no-answer"] },
+            "at": { "description": "Wall clock when the process exited or its runner ceiling passed (RES-05).", "$ref": "#/$defs/Time" },
             "exit_code": { "type": ["integer", "null"] },
             "dumps": { "description": "Crash dumps copied into the run folder, under dumps/<machine>/.", "type": "array", "items": { "$ref": "#/$defs/RelativePath" } }
           }
@@ -150,7 +151,7 @@
     "Reason": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "message"],
+      "required": ["kind", "message", "at"],
       "properties": {
         "kind": {
           "enum": [
@@ -160,7 +161,8 @@
           ]
         },
         "message": { "type": "string", "minLength": 1 },
-        "machine": { "$ref": "#/$defs/MachineName" }
+        "machine": { "$ref": "#/$defs/MachineName" },
+        "at": { "description": "Wall clock of the cause that decided the outcome (RES-05, DM-06).", "$ref": "#/$defs/Time" }
       }
     },
     "CheckExecution": {

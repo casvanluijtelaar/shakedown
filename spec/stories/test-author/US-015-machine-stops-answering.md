@@ -6,7 +6,7 @@ status: draft
 id: US-015
 role: test-author
 kind: system fail
-requirements: [OBS-03, DM-07, P-07, NFR-RL-01]
+requirements: [OBS-03, DM-07, P-07, NFR-RL-01, INS-04]
 ---
 
 # US-015 A machine stops answering during a check

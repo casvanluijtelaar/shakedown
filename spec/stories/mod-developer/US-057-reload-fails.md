@@ -6,7 +6,7 @@ status: draft
 id: US-057
 role: mod-developer
 kind: system fail
-requirements: [RLD-03, DM-05, P-08, NFR-RL-01]
+requirements: [RLD-03, DM-05, P-08, NFR-RL-01, INS-04]
 ---
 
 # US-057 A reload that does not complete

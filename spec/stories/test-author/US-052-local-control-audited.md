@@ -6,7 +6,7 @@ status: draft
 id: US-052
 role: test-author
 kind: feature
-requirements: [SEC-01, SEC-02, SEC-04, NFR-SC-01, NFR-SC-03]
+requirements: [SEC-01, SEC-02, SEC-04, NFR-SC-01, NFR-SC-03, SEC-06]
 ---
 
 # US-052 Only the local user controls the session, and every piece of code sent to it is recorded

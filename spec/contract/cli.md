@@ -74,7 +74,7 @@ Without `--json`, output is short lines of text for a person; its wording is not
 
 | Command | Does | MCP twin |
 |---|---|---|
-| `shakedown status` | The runner, the session and its machines, the active run, the last reload (`INS-02`). Works with no runner. | `status` |
+| `shakedown status` | The runner, the session and its machines, the active run, the last reload (`INS-02`, `INS-04`). Works with no runner. | `status` |
 | `shakedown session start --setup <name>` | Starts a session and returns when it is `ready` or `failed` (`SES-01`). | `session_start` |
 | `shakedown session stop` | Stops the session and returns when nothing of it runs (`SES-07`). | `session_stop` |
 | `shakedown list [<id>...] [--tag <tag>]...` | Lists checks from the files, with no runner (`RUN-02`). | `list_checks` |
@@ -93,7 +93,16 @@ Without `--json`, output is short lines of text for a person; its wording is not
 | `shakedown mcp` | Runs the MCP server on stdio (`AGT-01`). | - |
 | `shakedown runner` | Runs the runner. Started by the other commands; not for direct use. | - |
 
-The command line has no ceiling of 60 s per call; `run`, `session start`, `reload` and `exec` wait up to their own ceilings. A run started by `shakedown run` is stopped when the command is interrupted with Ctrl+C, as `run stop` does.
+The command line has no ceiling of 60 s per call; `run`, `session start`, `reload` and `exec` wait up to their own ceilings. A run started by `shakedown run` is stopped when the command receives a Ctrl+C or a Ctrl+Break console event, as `run stop` does (`RUN-05`); a program that drives the command line sends Ctrl+Break to the command's process group.
+
+## The runner's file and connection
+
+The command line and the MCP server reach the runner through these; a test of `SEC-01` and `SEC-03` reaches it the same way.
+
+- `%LOCALAPPDATA%\Shakedown\runner.json` is `{"port": integer, "token": string, "pid": integer, "started_at": Time}`, readable by the current user only (`INT-WIN-03`). `pid` is also in `status` as `runner_pid`.
+- Tokens have the form of `SEC-06`: the runner token `skd_r_` and a session token `skd_s_`, each followed by 64 lowercase hexadecimal digits.
+- The runner listens on `127.0.0.1:<port>`. Each message is one UTF-8 JSON object on one line. The first message on a connection is a hello: `{"hello": "client", "version": string, "token": runner token}` from a client, or `{"hello": "extension", "session": session id, "machine": machine name, "token": session token}` from a game process's extension.
+- A connection whose first message is not a hello, whose token is wrong, or, for an extension, whose other end is not the process the runner started for that machine of that session (`SEC-03`), is closed without a reply, runs no code, and adds one line to `%LOCALAPPDATA%\Shakedown\runner.log`: `refused <client or extension> connection from pid <pid>: <not-hello, bad-token or unknown-process>`.
 
 ## Exit codes
 

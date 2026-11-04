@@ -53,7 +53,7 @@ What is written in the project instead of taken as a dependency: the FNV-1a hash
 - **One binary, `shakedown.exe`**: `shakedown runner` (the long-lived runner), `shakedown mcp` (the stdio MCP server), and every other subcommand as a thin client that talks to the runner over loopback. One binary means one version: a client refuses a runner of another version and tells the user to stop it.
 - **The extension, `shakedown_x64.dll`**: a `cdylib` with `arma-rs`, the three calls of `INT-AR-03`, and a thread holding the connection to the runner.
 - **The addon, `@shakedown`**: one PBO, `shakedown_main.pbo`, with the in-game agent and the check API as `CfgFunctions` functions with the tag `skd` (`skd_fnc_*`), compiled without `compileFinal` so they can be recompiled in a running mission. The agent starts in `postInit`.
-- **Install layout**: one folder holding `shakedown.exe`, `@shakedown\` (with `addons\shakedown_main.pbo` and `shakedown_x64.dll`) and `fixtures\` (an installed copy of the fixture mods, [contract/fixture-mod.md](contract/fixture-mod.md)). The binary finds `@shakedown` next to itself. The project's `.mcp.json` calls `shakedown`, so the folder is on `PATH`.
+- **Install layout**: one folder holding `shakedown.exe`, `@shakedown\` (with `addons\shakedown_main.pbo` and `shakedown_x64.dll`) and `fixtures\` (an installed copy of the fixture mods with the fixture's extension, [contract/fixture-mod.md](contract/fixture-mod.md)). The binary finds `@shakedown` next to itself. The project's `.mcp.json` calls `shakedown`, so the folder is on `PATH`.
 
 ## How each choice serves each principle
 
@@ -110,7 +110,7 @@ The framework developer owns these. The test developer opens none of them.
 | `crates/shakedown-ext/` | The extension `cdylib` and its tests with `arma-rs`'s test harness. |
 | `crates/shakedown-protocol/` | The message types between runner and extension, and the result file types that generate the schemas. |
 | `addon/` | The HEMTT project of the `@shakedown` addon: the in-game agent and the check API in SQF. |
-| `fixtures/` | The source of the fixture mods `@skd_fixture` and `@skd_fixture_cba`, HEMTT projects whose behaviour is [contract/fixture-mod.md](contract/fixture-mod.md). |
+| `fixtures/` | The source of the fixture mods `@skd_fixture` and `@skd_fixture_cba`, HEMTT projects whose behaviour is [contract/fixture-mod.md](contract/fixture-mod.md), and the crate of the fixture's extension `skdfx_x64.dll` (`FIX-01`), a member of the workspace. |
 | `e2e/` | The framework developer's end-to-end tests: a `shakedown.toml` and SQF checks against the fixture mods, run on the test machine. |
 
 GitHub Actions runs, besides the bundle check: `cargo fmt --check`, `cargo clippy -- -D warnings` and `cargo test` on Windows and Linux, and `hemtt check` on the addon. Nothing there starts the game.

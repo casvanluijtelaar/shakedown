@@ -15,7 +15,7 @@ Every process below uses one channel, so it is described once:
 
 - The runner listens on `127.0.0.1` only, on a port it picks at its own start (`SEC-01`).
 - Each game process gets four environment variables from the runner when it is started: `SHAKEDOWN_RUNNER` (`127.0.0.1:<port>`), `SHAKEDOWN_SESSION`, `SHAKEDOWN_MACHINE` and `SHAKEDOWN_TOKEN` (`SEC-02`).
-- When the game loads the extension, the extension opens one connection to the runner and sends a hello with the session id, machine name, token and its process id. The runner accepts it only if the token matches the session's and the process id is one the runner started for that machine. Otherwise it closes the connection and logs the refusal.
+- When the game loads the extension, the extension opens one connection to the runner and sends a hello with the session id, machine name and token. The runner accepts it only if the token matches the session's and the process at the other end of the connection, as the system's TCP table names it, is the one the runner started for that machine (`SEC-03`). Otherwise it closes the connection and logs the refusal.
 - **Runner to game.** The runner sends an order (id, kind, payload) to the extension. The extension queues it and calls the engine's callback with name `shakedown`, function `order` and the order id as data. The agent's `ExtensionCallback` handler fetches the order with `"shakedown" callExtension ["fetch", [id, part]]` in parts of at most 10000 bytes until the last part, since one `callExtension` result is limited to 10240 bytes.
 - **Game to runner.** The agent sends results, errors and requests with `"shakedown" callExtension ["send", [json]]`, which carries any size in one call. The extension queues the message and returns at once; its own thread writes it to the runner.
 - The extension does no work inside `callExtension` beyond queueing, and retries a callback the engine refused (`INT-AR-03`).
@@ -24,7 +24,7 @@ Every process below uses one channel, so it is described once:
 
 1. **client**: reads `%LOCALAPPDATA%\Shakedown\runner.json` (port, token, process id and start time of the runner). If it names a live runner whose process start time matches, the client connects with that token and the process ends here.
 2. **client**: otherwise starts `shakedown runner` as a detached process outside the client's own job object and process tree (`SES-08`), and waits for `runner.json` to appear, polling every 100 ms with a ceiling of 10 s.
-3. **runner**: at start, before it writes `runner.json`, runs the recovery of `P-12`, picks a free port on `127.0.0.1`, makes a random 256-bit token, writes `runner.json` readable by the current user only, and creates its job object with kill-on-close.
+3. **runner**: at start, before it writes `runner.json`, runs the recovery of `P-12`, picks a free port on `127.0.0.1`, makes a random 256-bit token in the form of `SEC-06`, writes `runner.json` readable by the current user only, and creates its job object with kill-on-close.
 4. **runner**: exits by itself 60 s after its last session stopped with no client connected; it then deletes `runner.json`.
 
 ## **P-02** Start a session
@@ -33,8 +33,8 @@ Triggered by `session start --setup <name>` (or by `P-04` when no session runs).
 
 1. **client**: reads `shakedown.toml`, checks it against `CFG-01`, and sends the setup to the runner. A malformed file is refused here with the key at fault and its line; an unknown setup with the setups the file declares.
 2. **runner**: refuses if a session already runs (`SES-02`), naming it and the command that stops it.
-3. **runner**: checks the preconditions of `SES-03`: the game executables exist, a `steam` process runs, every mod folder of the setup exists, the setup's ports are free, the framework's addon link exists in the game folder (creating it if missing, `INT-AR-06`). Any failure ends the session as `failed` before a process starts, naming what is missing.
-4. **runner**: creates the session id, the session token and the session folder; generates the session mission (`INT-AR-04`) and, for a dedicated setup, `server.cfg` (`INT-AR-05`); copies the mission to `<game>\MPMissions\shakedown_<session id>.<world>` for a dedicated setup; writes every file and folder it created into the run record (`STP-03`).
+3. **runner**: checks the preconditions of `SES-03`: the game executables exist, a process `steam.exe` of the current user runs, every mod folder of the setup exists, the setup's ports are free, the framework's addon link exists in the game folder (creating it if missing, `INT-AR-06`). Any failure ends the session as `failed` before a process starts, naming what is missing.
+4. **runner**: creates the session id, the session token (`SEC-06`) and the session folder; generates the session mission (`INT-AR-04`) and, for a dedicated setup, `server.cfg` (`INT-AR-05`); copies the mission to `<game>\MPMissions\shakedown_<session id>.<world>` for a dedicated setup; writes every file and folder it created into the run record (`STP-03`).
 5. **runner**: starts the processes, each one suspended, assigned to the job object, then resumed (`STP-01`):
    - **singleplayer**: `arma3_x64.exe` with `-autotest` pointing at the session's autotest list (`INT-AR-04`) as machine `p1`.
    - **dedicated**: `arma3server_x64.exe` as `server` with `-autoInit`; then, all at once, every headless client (`arma3server_x64.exe -client`) and every game client (`arma3_x64.exe -connect`).
@@ -89,7 +89,7 @@ Run before every check with reset mode `in-place`, and by the `reset` command. T
 ## **P-07** A stall: a machine stops answering
 
 1. **runner**: an order to a machine has no answer within its in-game ceiling plus the grace (`OBS-03`), or a check's end report does not come within its timeout plus the grace.
-2. **runner**: marks the machine `lost` with reason `no-answer`, marks the session `broken`, ends the check executing `invalid` / `machine-lost` with the machine, the order that went unanswered and the machine's last 20 RPT lines, and ends each following check of the run `invalid` / `session-broken`.
+2. **runner**: marks the machine `lost` with reason `no-answer` and the wall-clock time the ceiling passed, marks the session `broken`, ends the check executing `invalid` / `machine-lost` with the machine, the order that went unanswered and the machine's last 20 RPT lines, and ends each following check of the run `invalid` / `session-broken`.
 3. The game processes keep running, so a person or an AI agent can still look at the logs and the processes. The session leaves `broken` by a `game-restart` reload or by `session stop`.
 
 ## **P-08** A reload
@@ -107,7 +107,7 @@ Triggered by `reload [files...]`. **runner** drives it.
 ## **P-09** A crash: a process exits unasked
 
 1. **runner**: sees a game process of the session end without having asked it to (it waits on every process handle).
-2. **runner**: records the exit code, looks for a new `.mdmp` or `.bidmp` in that machine's profile folder and copies each one into the active run's folder as `dumps/<machine>/<file>`, marks the machine `lost` with reason `exited`, and marks the session `broken`.
+2. **runner**: records the exit code and the wall-clock time of the exit, looks in that machine's profile folder for every `.mdmp` and `.bidmp` file written after the machine's process started, waiting up to 5 s for a file still being written, and copies each one into the active run's folder as `dumps/<machine>/<file>`, marks the machine `lost` with reason `exited`, and marks the session `broken`.
 3. **runner**: the check executing ends `invalid` / `machine-lost` naming the machine, its exit code and any dump; following checks of the run end `invalid` / `session-broken`.
 4. On a dedicated session the other processes keep running until the session stops or a `game-restart` reload replaces every machine.
 

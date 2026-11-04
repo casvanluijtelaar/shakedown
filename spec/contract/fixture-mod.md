@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: Fixture mods
-description: The contract for the two small mods the framework's own tests and the acceptance suite run against - what each one does, where, and what a check can observe - so neither tester nor writer needs their source.
+description: The contract for the two small mods the framework's own tests and the acceptance suite run against - what each one does, where, what a check can observe, the failures a test causes with them on purpose and the files a test may change - so neither tester nor writer needs their source.
 status: draft
 ---
 
@@ -13,20 +13,20 @@ This file is the whole of what the fixtures promise. A check against them is wri
 
 | Mod | Folder | Needs | CfgPatches class | Tag |
 |---|---|---|---|---|
-| `@skd_fixture` | `fixtures\@skd_fixture` | nothing but the game | `skdfx_main` | `skdfx` |
+| `@skd_fixture` | `fixtures\@skd_fixture`, with its extension `skdfx_x64.dll` | nothing but the game | `skdfx_main` | `skdfx` |
 | `@skd_fixture_cba` | `fixtures\@skd_fixture_cba` | CBA_A3, and `@skd_fixture` | `skdfx_cba` | `skdfx_cba` |
 
 The two are separate mods so a setup without CBA loads `@skd_fixture` alone; a dedicated server would stop at a missing-addon warning if a CBA-dependent addon were loaded without CBA.
 
 ## Where the fixtures are installed
 
-The fixtures are installed as a **copy** in the install folder, beside `@shakedown`: `fixtures\@skd_fixture`, `fixtures\@skd_fixture_cba`, and their unpacked file trees `fixtures\skdfx\` and `fixtures\skdfx_cba\`. The install links `<game>\skdfx` and `<game>\skdfx_cba` to those trees, so file patching reads them. The installed copy is not the fixtures' source in `fixtures/`; editing it changes nothing in the repository.
+The fixtures are installed as a **copy** in the install folder, beside `@shakedown`: `fixtures\@skd_fixture`, `fixtures\@skd_fixture_cba`, and their unpacked file trees `fixtures\skdfx\` and `fixtures\skdfx_cba\`. The install links `<game>\skdfx` and `<game>\skdfx_cba` to those trees, so file patching reads them, and `<game>\@skd_fixture` to the installed `fixtures\@skd_fixture`, because a dedicated server and a headless client load an extension only from inside the game's folder tree (`INT-AR-06`). The installed copy is not the fixtures' source in `fixtures/`; editing it changes nothing in the repository.
 
 A project uses them like any mod:
 
 ```toml
 [mods.fixture]
-path = '<install>\fixtures\@skd_fixture'
+path = '<game>\@skd_fixture'
 patch = "skdfx_main"
 source = '<install>\fixtures\skdfx\addons'
 prefix = 'skdfx\addons'
@@ -69,7 +69,7 @@ prefix = 'skdfx_cba\addons'
   "1"
   ```
 
-- To test a reload, the installed copy of this file may be replaced with a file whose whole content is another quoted string, such as `"2"`, and put back afterwards. This file and the one under `@skd_fixture_cba` below are the only fixture files a test changes, and only in the installed copy.
+- To test a reload, the installed copy of this file may be replaced as [Files a test may change](#files-a-test-may-change-fix-03) says.
 
 ## `@skd_fixture_cba`
 
@@ -87,8 +87,35 @@ prefix = 'skdfx_cba\addons'
   "1"
   ```
 
-- It may be replaced in the installed copy as `skdfx_fnc_version` may, and put back afterwards.
+- It may be replaced in the installed copy as [Files a test may change](#files-a-test-may-change-fix-03) says.
+
+## Failures on demand (`FIX-01`, `FIX-02`)
+
+These give a test the failures of the environment it cannot otherwise cause at a known moment. Each is in `@skd_fixture` and works on every kind of machine unless it says otherwise.
+
+| Function | Does |
+|---|---|
+| `skdfx_fnc_crash` | `[delay] call skdfx_fnc_crash`, `delay` seconds of real time from 0 to 60. Returns `true` at once. After `delay`, the game process it ran on faults in native code inside `skdfx_x64.dll` (an access violation), so the engine's own crash handling runs and the process ends unasked with a nonzero exit code. Whether the engine leaves a `.mdmp` or `.bidmp` in the machine's profile folder is measured by `SPK-16`. |
+| `skdfx_fnc_exit` | `[delay, code] call skdfx_fnc_exit`, `delay` seconds of real time from 0 to 60, `code` a whole number from 1 to 2147483647. Returns `true` at once. After `delay`, the game process it ran on ends with exit code `code`, leaving no dump. |
+| `skdfx_fnc_holdClock` | `[seconds] call skdfx_fnc_holdClock`, `seconds` from 1 to 30. Singleplayer `p1` only. Returns `true` at once, then holds `time` still for `seconds` of real time while `diag_frameNo` keeps advancing and the machine keeps answering orders within their ceilings plus the grace of `OBS-03`; then `time` runs again at the real-time rate. A hold under 10 s ends no order as lost. On any other machine, or in a dedicated session, it does nothing and returns `false`. Measured by `SPK-17`. |
+
+A delay lets a check place the failure between its own steps: `["p2", {[0.5] call skdfx_fnc_crash}] call skd_fnc_on` followed by an assertion that fails at once puts the assertion first; a crash with no delay followed by a wait puts the lost machine first (`DM-06`).
+
+A stall and an end from outside need no fixture. `status` gives each machine's process id and start time (`INS-04`). A process suspended by its id stops answering, which the runner sees as a stall (`P-07`); a process ended by its id exits unasked, which the runner sees as a crash with the exit code it was ended with (`P-09`); a dump written of the live process into its profile folder before it is ended is taken as its crash dump.
+
+## Files a test may change (`FIX-03`)
+
+Only in the installed copy, never in `fixtures/`, and each put back as it was after the test:
+
+| File (in the installed copy) | A test may |
+|---|---|
+| `skdfx\addons\main\functions\fn_version.sqf` | Replace its whole content with another quoted string, such as `"2"`. |
+| `skdfx_cba\addons\main\functions\fnc_version.sqf` | The same. |
+| `skdfx\addons\main\functions\fn_new.sqf` | Create it, with any SQF, and delete it after. It is in no built PBO, so file patching does not find it and a reload of it needs a rebuild and a game restart (`RLD-02`). |
+| Any other installed fixture file, such as `skdfx\addons\main\config.cpp` | Name it to `reload` without changing it. |
+
+No other fixture file is changed by a test.
 
 ## What the fixtures do not do
 
-They change no time, weather or player state on their own, run no per-frame code, create nothing at mission start, and log nothing to the RPT except through the engine's own messages and the deliberate error of `skdfx_fnc_throw`. A reset therefore returns them to their start state, except `skdfx_openCount`, `skdfx_refusedCount` and `skdfx_flag`, which only a mission restart clears.
+Unless a test calls a function of [Failures on demand](#failures-on-demand-fix-01-fix-02), they change no time, weather or player state on their own, run no per-frame code, create nothing at mission start, and log nothing to the RPT except through the engine's own messages and the deliberate error of `skdfx_fnc_throw`. A reset therefore returns them to their start state, except `skdfx_openCount`, `skdfx_refusedCount` and `skdfx_flag`, which only a mission restart clears.

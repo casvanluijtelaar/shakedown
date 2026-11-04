@@ -6,7 +6,7 @@ status: draft
 id: US-059
 role: test-author
 kind: system fail
-requirements: [HLT-02, DM-05, DM-06, NFR-RL-01]
+requirements: [HLT-02, DM-05, DM-06, NFR-RL-01, FIX-02, INS-04]
 ---
 
 # US-059 A machine's game clock stops while it still answers

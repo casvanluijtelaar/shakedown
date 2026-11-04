@@ -6,7 +6,7 @@ status: draft
 id: US-056
 role: mod-developer
 kind: mistake
-requirements: [RLD-02, RLD-06, NFR-US-01]
+requirements: [RLD-02, RLD-06, NFR-US-01, FIX-03]
 ---
 
 # US-056 A change that needs a rebuild and a game restart

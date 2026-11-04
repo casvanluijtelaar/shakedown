@@ -6,7 +6,7 @@ status: draft
 id: US-035
 role: test-author
 kind: system fail
-requirements: [STP-01, STP-03, STP-04, NFR-RL-03]
+requirements: [STP-01, STP-03, STP-04, NFR-RL-03, INS-04]
 ---
 
 # US-035 The runner dies

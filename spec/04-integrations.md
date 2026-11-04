@@ -71,7 +71,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 
 ## Steam
 
-- **INT-STM-01** Every game process needs the Steam client running and logged in to an account that owns Arma 3; without Steam the game exits at once with code 53. The session start checks that a `steam` process runs (`SES-03`); a game exit with code 53 during a start is reported as "Steam is not running or not logged in" (`CR-01`).
+- **INT-STM-01** Every game process needs the Steam client running and logged in to an account that owns Arma 3; without Steam the game exits at once with code 53. The session start checks that a process `steam.exe` of the current user runs (`SES-03`); a game exit with code 53 during a start is reported as "Steam is not running or not logged in" (`CR-01`).
 - **INT-STM-02** Every game process of a session runs on the one Steam account, so they share one Steam ID. That is why `kickDuplicate = 0` and every `kickTimeout` is 0, and why machines are told apart by profile name (`CR-01`; research `10-prior-harness.md`).
 - **INT-STM-03** Workshop mods update themselves. The framework records the version each machine loaded in the result file; it does not pin them (`CR-51`).
 
@@ -79,12 +79,12 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 
 - **INT-WIN-01** Shakedown runs on 64-bit Windows 10 or 11. Game processes are owned through a job object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` and `JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION`, each started with `CREATE_SUSPENDED`, assigned, then resumed (`STP-01`) (`CR-05`).
 - **INT-WIN-02** A client starts the runner with `CREATE_BREAKAWAY_FROM_JOB` and `DETACHED_PROCESS` so it leaves the client's job and console. If the client's job forbids breakaway, the client starts the runner through WMI (`Win32_Process.Create`), which creates it outside the job. Spike `SPK-06` confirms which path holds under Claude Code (`SES-08`) (`CR-01`, `CR-05`).
-- **INT-WIN-03** The runner's own files are `%LOCALAPPDATA%\Shakedown\runner.json` (port, token, process id and start time, readable by the current user only), `%LOCALAPPDATA%\Shakedown\record.json` (`STP-03`) and `%LOCALAPPDATA%\Shakedown\runner.log` (`CR-05`, `CR-60`).
+- **INT-WIN-03** The runner's own files are `%LOCALAPPDATA%\Shakedown\runner.json` (port, token, process id and start time, readable by the current user only, in the form [contract/cli.md](contract/cli.md) gives), `%LOCALAPPDATA%\Shakedown\record.json` (`STP-03`) and `%LOCALAPPDATA%\Shakedown\runner.log` (`CR-05`, `CR-60`).
 - **INT-WIN-04** No part of the framework sends input to the desktop, moves the mouse or takes the foreground (PRD section 7).
 
 ## Claude Code and MCP
 
 - **INT-CC-01** The project's `.mcp.json` declares the server as `{"mcpServers": {"shakedown": {"command": "shakedown", "args": ["mcp"], "timeout": 70000}}}`. The owner approves it once per project. The 70 s timeout sits above the 60 s every tool call stays within (`AGT-03`) (`CR-53`).
-- **INT-CC-02** Claude Code ends a stdio server's whole process tree on Windows when its session stops; the runner's detached start (`INT-WIN-02`) keeps the game session alive across that (`CR-01`; gap H6).
+- **INT-CC-02** Claude Code ends a stdio server's whole process tree on Windows when its session stops, by a job object or by ending each process (`SES-08`); the runner's detached start (`INT-WIN-02`) keeps the game session alive across either (`CR-01`; gap H6).
 - **INT-CC-03** Claude Code cuts tool output at 25,000 tokens by default; tool results stay under 20,000 characters and point to files for the rest (`AGT-07`) (`CR-53`).
 - **INT-MCP-01** The MCP server speaks protocol revision 2026-07-28 and negotiates the earlier, initialization-based revisions with clients that still use them, through the official Rust SDK `rmcp` (`CR-53`).

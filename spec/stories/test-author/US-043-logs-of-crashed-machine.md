@@ -6,7 +6,7 @@ status: draft
 id: US-043
 role: test-author
 kind: system fail
-requirements: [LOG-01, LOG-04, P-09]
+requirements: [LOG-01, LOG-04, P-09, INS-04, FIX-01]
 ---
 
 # US-043 The logs of a machine that crashed are kept
