@@ -143,8 +143,9 @@ def main():
                 err(path, f"status {fm['status']!r} is not draft, stable or deprecated")
             concepts.append((path, fm, bundle))
 
+    # .worktrees/ holds other checkouts of this repository, checked on their own.
     for path in ROOT.rglob("log.md"):
-        if ".git" not in path.parts and "node_modules" not in path.parts:
+        if not {".git", ".worktrees", "node_modules"} & set(path.relative_to(ROOT).parts):
             err(path, "log.md is reserved by OKF and not used here; git holds the history")
 
     by_type = {}

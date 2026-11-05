@@ -7,6 +7,9 @@
 .vscode/
 *.swp
 
+# Worktrees of parallel sessions
+.worktrees/
+
 # Dependencies and build output
 node_modules/
 dist/

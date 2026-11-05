@@ -90,7 +90,7 @@ Every `by` value is an OKF actor: `human:casvanluijtelaar` for the owner, `claud
 - **Never sleep a fixed time in a test or a check.** Poll for the outcome with a ceiling.
 - **The owner does the in-game look and feel.** Screenshots are evidence for a person or an agent to interpret, never a verdict. When a milestone needs a look in the game, the session sets up the situation and tells the owner what to look for.
 - **Committing and pushing are the owner's call.** Wait to be asked, unless a coordinator's prompt says otherwise. Never push unless told to.
-- **Git: trunk based.** All work lands on `main`. When sessions run in parallel, each works in its own worktree, `../<repo>-<role>-<topic>` on branch `<role>/<topic>`, rebases on `main` and fast-forward merges. Never use `git stash`: the stash list is shared by every worktree.
+- **Git: trunk based.** All work lands on `main`. When sessions run in parallel, each works in its own worktree inside the repository, `.worktrees/<role>-<topic>` on branch `<role>/<topic>`, never beside the repository, rebases on `main` and fast-forward merges. Never use `git stash`: the stash list is shared by every worktree.
 - **Do not add a dependency for something you can write in an afternoon.** Code taken from another project needs a license that allows this project to be open-sourced later. Record where it came from and its license.
 
 ## Machines
