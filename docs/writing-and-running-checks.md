@@ -1,13 +1,13 @@
 ---
 type: Documentation
 title: Writing and running a check
-description: How to write a check in SQF with steps, run code on p1, assert and keep evidence, how to list and run checks in a singleplayer session, and what the run leaves behind.
+description: How to write a check in SQF - its file, header and body - how to list and run checks in a singleplayer session, the reset between checks, and what the run leaves behind.
 status: draft
 ---
 
 # Writing and running a check
 
-A check is one `.sqf` file under the project's checks folder. Its contract is [spec/contract/check-api.md](../spec/contract/check-api.md); this page shows the part that is built: a header, steps, code run on `p1`, assertions, evidence and an explicit failure, in a singleplayer session.
+A check is one `.sqf` file under the project's checks folder. Its contract is [spec/contract/check-api.md](../spec/contract/check-api.md); this page covers the file and running it in a singleplayer session, and [The check API by example](check-api.md) shows every function a check can call.
 
 ## A check
 
@@ -29,12 +29,12 @@ private _answer = ["ask p1 for a value", {
 ["answer", _answer] call skd_fnc_evidence;
 ```
 
-- **The header** is the first lines of the form `// @key value`. `@check` is required: the story or requirement ID the check proves, then a short sentence. `@tags`, `@setups`, `@timeout` (seconds, default 120) and `@reset` are optional.
+- **The header** is the first lines of the form `// @key value`. `@check` is required: the story or requirement ID the check proves, such as `US-012` or `NFR-PF-02`, then a short sentence. `@tags`, `@setups`, `@timeout` (seconds, default 120) and `@reset` are optional. A file saved with a UTF-8 byte order mark reads the same as one without.
 - **The check id** is the file's path under the checks folder without `.sqf`: `checks/rope/US-012-hook.sqf` is `rope/US-012-hook`.
 - **The body** is the rest of the file. It runs on `p1` in singleplayer, as plain SQF: no `#include`, no macro. Comments of both kinds may stand anywhere.
 - **Keep long data out of string literals.** The game stands still while it compiles the body, and a long literal compiles slowly: about half a second for 100 KB.
 
-## The functions
+## The functions used above
 
 | Function | Does |
 |---|---|
@@ -44,7 +44,7 @@ private _answer = ["ask p1 for a value", {
 | `[label, value] call skd_fnc_evidence` | Adds a value to the result, for a passing check as well as a failing one. |
 | `[message] call skd_fnc_fail` | Ends the check `fail` / `explicit`. |
 
-A function that fails does not return: the check ends there, and the reason is recorded against the innermost step.
+A function that fails does not return: the check ends there, and the reason is recorded against the innermost step. Waits, polled assertions, the scene, actions, keybinds and cleanups are in [The check API by example](check-api.md).
 
 ## When the check itself is wrong
 
@@ -53,6 +53,7 @@ A broken check ends `fail` with reason `check-error` and a message that says wha
 | Mistake | Message |
 |---|---|
 | No `@check` line | `The check header is wrong, the header has no @check line. ...` |
+| `// @check A hook holds` | `... line 1: @check must start with the story or requirement ID the check proves, such as US-012 or NFR-PF-02, then a short sentence; it starts with `A`.` |
 | `// @timeout fast` | `... line 2: @timeout must be a whole number of seconds from 1 to 3600, got `fast`. ...` |
 | A key given twice | `... line 3: @tags is given twice, first on line 2. Keep one. ...` |
 | A syntax error | `The check body does not compile: Invalid number in expression, at line 4 of the check file. ...` |
@@ -73,7 +74,7 @@ A header mistake is found without the game. Fix the file and run the check again
 
 With no id and no tag, `run` runs every check; with tags, every check carrying any of them. Ids keep the order given; checks a tag selects run in id order.
 
-A session start takes the game's own start time, 40 to 60 s on the test machine. A session that is kept up runs any number of runs without restarting the game.
+A session start takes the game's own start time, 40 to 60 s on the test machine. A session that is kept up runs any number of runs without restarting the game. Before every check the session is reset to the state the mission started in, in well under a second; [The check API by example](check-api.md#the-reset-between-checks) says what the reset restores and what it leaves.
 
 `run` prints one line per check as it ends, then a summary with the path of the result file:
 
@@ -88,4 +89,4 @@ Exit codes: 0 every check passed, 1 a check failed, 2 none failed and one was in
 
 Each run writes `.shakedown\runs\<run id>\result.json` in the project, valid against [spec/contract/result.schema.json](../spec/contract/result.schema.json). It holds the run, the session with `p1`'s game version and its start number, the summary, and for each check its outcome, reason, steps with their clocks, and evidence. A session's folder, `.shakedown\sessions\<session id>\`, holds the generated mission and `p1`'s profile folder with its RPT.
 
-Not built yet: the reset between checks, script errors in the result, log excerpts, and dedicated sessions. Until the reset comes, what one check changes in the game is still there for the next.
+What a check leaves in the game stays there until the next check's reset, so a person can look at it in the game window after a run. Not built yet: script errors in the result, log excerpts, and dedicated sessions.

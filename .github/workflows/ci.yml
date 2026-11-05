@@ -42,3 +42,7 @@ jobs:
           version: v1.23.1
       - run: hemtt check
         working-directory: addon
+      - run: hemtt check
+        working-directory: fixtures/skd_fixture
+      - run: hemtt check
+        working-directory: fixtures/skd_fixture_cba

@@ -1,0 +1,9 @@
+name = "Shakedown fixture with CBA"
+author = "casvanluijtelaar"
+prefix = "skdfx_cba"
+
+[version]
+major = 0
+minor = 0
+patch = 2
+git_hash = 0

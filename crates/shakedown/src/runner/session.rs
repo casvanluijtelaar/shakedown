@@ -36,17 +36,19 @@ pub enum SessionState {
     Starting,
     Ready,
     Running,
+    Broken,
     Failed,
     Stopping,
     Stopped,
 }
 
 impl SessionState {
-    fn as_str(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             SessionState::Starting => "starting",
             SessionState::Ready => "ready",
             SessionState::Running => "running",
+            SessionState::Broken => "broken",
             SessionState::Failed => "failed",
             SessionState::Stopping => "stopping",
             SessionState::Stopped => "stopped",
@@ -65,6 +67,8 @@ pub struct Machine {
     pub last_answer_at: Option<String>,
     pub game_version: Option<String>,
     pub mods: Vec<ModVersion>,
+    /// The mission start count the agent last reported with `ready`.
+    pub mission_start: u64,
     process: Option<Child>,
     tx: Option<mpsc::UnboundedSender<String>>,
 }
@@ -104,8 +108,38 @@ impl Session {
         self.inner.lock().unwrap().machines.iter().any(|m| m.name == name)
     }
 
+    /// The mission start count a machine last reported, 0 before its first `ready`.
+    pub fn mission_start(&self, machine: &str) -> u64 {
+        let inner = self.inner.lock().unwrap();
+        inner
+            .machines
+            .iter()
+            .find(|m| m.name == machine)
+            .map_or(0, |m| m.mission_start)
+    }
+
     pub fn state(&self) -> SessionState {
         self.inner.lock().unwrap().state
+    }
+
+    /// Marks the session `broken` with what broke it; no check runs in it after this (`P-07`).
+    pub(crate) fn set_broken(&self, machine: &str, message: String) {
+        {
+            let mut inner = self.inner.lock().unwrap();
+            inner.state = SessionState::Broken;
+            inner.reason = Some(json!({"message": message, "machine": machine, "rpt_tail": []}));
+        }
+        self.changed.notify_waiters();
+    }
+
+    /// Why the session broke, for the checks that follow (`DM-05`).
+    pub fn broken_reason(&self) -> String {
+        let inner = self.inner.lock().unwrap();
+        inner
+            .reason
+            .as_ref()
+            .and_then(|r| r["message"].as_str().map(String::from))
+            .unwrap_or_else(|| "the session broke".into())
     }
 
     pub(crate) fn set_state(&self, state: SessionState) {
@@ -239,6 +273,7 @@ impl Session {
             if message["kind"] == "ready" {
                 m.state = "ready";
                 m.game_version = message["game_version"].as_str().map(String::from);
+                m.mission_start = message["mission_start"].as_u64().unwrap_or(0);
             }
         }
         if let Some(order) = message["order"].as_str()
@@ -412,6 +447,7 @@ pub async fn start(
                 last_answer_at: None,
                 game_version: None,
                 mods: vec![],
+                mission_start: 0,
                 process: None,
                 tx: None,
             }],

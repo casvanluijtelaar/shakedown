@@ -846,7 +846,7 @@ dependencies = [
 
 [[package]]
 name = "shakedown"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "clap",
  "getrandom 0.4.3",
@@ -861,7 +861,7 @@ dependencies = [
 
 [[package]]
 name = "shakedown-ext"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "arma-rs",
  "serde_json",
@@ -870,7 +870,7 @@ dependencies = [
 
 [[package]]
 name = "shakedown-protocol"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde",
  "serde_json",

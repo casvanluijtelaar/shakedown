@@ -2,7 +2,8 @@
     Runs an order of kind check on the lead machine (P-05 steps 5 and 8): compiles the body,
     spawns it, waits for it to end or for its timeout, and sends the end report.
 
-    Arguments: [order] - HashMap with "id", "check_id", "source", "timeout".
+    Arguments: [order] - HashMap with "id", "check_id", "source", "timeout", and the session's
+    "machines", "mode" and "setup" for the context functions (check API, "Context").
 */
 params ["_order"];
 private _timeout = _order getOrDefault ["timeout", 120];
@@ -13,6 +14,9 @@ skd_check = createHashMapFromArray [
     ["stack", []],
     ["attached", []],
     ["deadline", diag_tickTime + _timeout],
+    ["machines", _order getOrDefault ["machines", [skd_machine]]],
+    ["mode", _order getOrDefault ["mode", "singleplayer"]],
+    ["setup", _order getOrDefault ["setup", createHashMap]],
     ["done", false]
 ];
 

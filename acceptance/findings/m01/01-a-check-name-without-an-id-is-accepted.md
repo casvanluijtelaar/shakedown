@@ -9,7 +9,8 @@ for: developer
 checks: []
 stories: [US-038]
 generated: { by: "claude-code/developer", at: 2026-11-05T10:21:39-08:00 }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-05T19:50:00+01:00, note: "list and run refuse a @check name whose first word is not a story or requirement ID, naming the line, with check-error; the contract says what an ID looks like. crates/shakedown/src/checks.rs us_038_m01_1_a_name_without_an_id_is_refused_naming_the_line proves it." }
 verified: []
 ---
 

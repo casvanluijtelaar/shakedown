@@ -10,6 +10,8 @@ private _id = _order get "id";
 private _ceiling = _order getOrDefault ["ceiling", 10];
 private _args = _order getOrDefault ["args", []];
 if (isNil "_args") then { _args = [] };
+// Objects and groups in the arguments arrive by net id (DM-14).
+_args = [_args] call skd_fnc_decode;
 
 skd_compileErrors = [];
 skd_compiling = true;

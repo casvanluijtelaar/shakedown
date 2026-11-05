@@ -3,7 +3,7 @@ type: Deferred
 title: "A check file saved with a byte order mark has no header"
 description: "A check file that starts with a UTF-8 byte order mark is reported as having no @check line, because its first header line does not read as one."
 id: DEF-05
-state: planned
+state: done
 milestone: M1
 status: stable
 ---

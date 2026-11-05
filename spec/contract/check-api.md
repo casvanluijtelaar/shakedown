@@ -14,11 +14,11 @@ A check is SQF. It needs no build step, no `#include`, no macro and no other lan
 
 A check is one file with the extension `.sqf` anywhere under the project's checks folder (default `checks/`). Its **check id** is its path relative to that folder, with `/` as separator and without `.sqf`: `checks/rope/US-012-hook-holds.sqf` has the id `rope/US-012-hook-holds`.
 
-The file starts with a header: one or more lines of the form `// @key value`, before any other line except blank lines. The header ends at the first line that is not a header line.
+The file starts with a header: one or more lines of the form `// @key value`, before any other line except blank lines. The header ends at the first line that is not a header line. A UTF-8 byte order mark before the first line, as some Windows editors write, is skipped.
 
 | Key | Required | Value | Default |
 |---|---|---|---|
-| `@check` | yes | The check's name: the story or requirement ID it proves, then a short sentence. | - |
+| `@check` | yes | The check's name: the story or requirement ID it proves, then a short sentence. The ID is capital letters and digits in parts joined by `-`, holding a digit, such as `US-012`, `NFR-PF-02` or `B3`. | - |
 | `@tags` | no | Tags separated by spaces, such as story IDs, finding IDs, `smoke`. | none |
 | `@setups` | no | Setup names separated by spaces; the check runs only in these (`RUN-07`). | every setup |
 | `@timeout` | no | The check's ceiling in seconds, a whole number from 1 to 3600. | `120` |
@@ -84,7 +84,7 @@ private _wall = ["place a wall in front of p1", {
 | Function | Arguments | Returns | Fails |
 |---|---|---|---|
 | `skd_fnc_on` | `[machine, code, args, ceiling]` - `args` default `[]`; `ceiling` default 10. | The value `code` returned on that machine. | `fail` / `wait-ceiling` when the code is still running at the ceiling; `fail` / `check-error` when it does not compile there. |
-| `skd_fnc_onEach` | `[machines, code, args, ceiling]` | HashMap from machine name to the value `code` returned there. | As `skd_fnc_on`, naming each machine that did not finish. |
+| `skd_fnc_onEach` | `[machines, code, args, ceiling]` | HashMap from machine name to the value `code` returned there; a machine whose code returned nothing has no key. | As `skd_fnc_on`, naming each machine that did not finish. |
 
 A script error the code raises does not stop it: the value still comes back, and the error fails the check `fail` / `script-error` when the body ends, unless an `expectError` block matches it (`CTL-05`).
 
@@ -145,9 +145,9 @@ Any script error on any machine whose text contains `text` (case-insensitive), f
 | Function | Arguments | Returns | Fails |
 |---|---|---|---|
 | `skd_fnc_useAction` | `[machine, target, title, ceiling]` - `machine` the acting player's machine; `target` the object carrying the action; `title` String; `ceiling` default 10. | `true` once the action was fired. | At the ceiling, `fail` / `assertion` with the reason: no action with that title (listing the titles on the target), its condition false, or the player's distance and the action's radius. `fail` / `check-error` when the machine has no player. |
-| `skd_fnc_pressKey` | `[machine, mod, action, mode]` - `mod` and `action` the names the mod registered its CBA keybind with; `mode` `"press"` (down then up), `"down"` or `"up"`, default `"press"`. | `true` once the keybind's code ran. | `fail` / `check-error` when CBA is not loaded on that machine or the keybind is not registered, listing the keybinds that are (`ACT-03`). |
+| `skd_fnc_pressKey` | `[machine, mod, action, mode]` - `mod` and `action` the names the mod registered its CBA keybind with; `mode` `"press"` (down then up), `"down"` or `"up"`, default `"press"`. | `true` once the keybind's code ran. | `fail` / `check-error` when CBA is not loaded on that machine or the keybind is not registered, listing the keybinds registered for that mod, in lower case as CBA keeps them (`ACT-03`). |
 
-`skd_fnc_useAction` matches the title after removing structured-text tags (`<...>`) from the action's title, exactly and case-sensitively. It waits until the action exists, its condition holds and the player is within its radius, then fires it with `action ["User", target, id]` on the acting machine (`ACT-01`). `skd_fnc_pressKey` calls the code `CBA_fnc_getKeybind` returns with `[findDisplay 46, DIK, shift, ctrl, alt]` for the first bound key (`ACT-02`).
+`skd_fnc_useAction` matches the title after removing structured-text tags (`<...>`) from the action's title, exactly and case-sensitively. It waits until the action exists, its condition holds and the player is within its radius, then fires it with `action ["User", target, id]` on the acting machine (`ACT-01`). The condition is evaluated with `_target` the object carrying the action and `_this` the player; a radius of -1 is no limit. The engine itself runs an action fired that way whatever its condition and radius (`SPK-10`). `skd_fnc_pressKey` calls the code `CBA_fnc_getKeybind` returns with `[findDisplay 46, DIK, shift, ctrl, alt]` for the first bound key (`ACT-02`).
 
 ## Ending a check and keeping evidence
 

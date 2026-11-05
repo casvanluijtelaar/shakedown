@@ -1,0 +1,17 @@
+# The M1 demo project: arma-grappling-hook checks rewritten as Shakedown checks
+# (plan/milestones/m01.md). It loads CBA_A3 from the Steam Workshop and the arma-grappling-hook
+# build that HEMTT leaves in that repository's .hemttout\build; Shakedown does not build it.
+game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'
+checks = "checks"
+
+[mods.cba]
+path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997'
+patch = "cba_main"
+
+[mods.agh]
+path = 'C:\Users\Shadow\Documents\arma-grappling-hook\.hemttout\build'
+patch = "agh_main"
+
+[setups.sp]
+mode = "singleplayer"
+mods = ["cba", "agh"]

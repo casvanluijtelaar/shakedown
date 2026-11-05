@@ -56,7 +56,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 
 ## CBA
 
-- **INT-CBA-01** Shakedown is specified against CBA_A3 3.19.0. The framework does not depend on CBA (`API-05`). When CBA is loaded it uses only `CBA_fnc_getKeybind`, which is public, to press a keybind (`ACT-02`) (`CR-12`).
+- **INT-CBA-01** Shakedown is specified against CBA_A3 3.19.0. The framework does not depend on CBA (`API-05`). When CBA is loaded it uses `CBA_fnc_getKeybind`, which is public, to press a keybind (`ACT-02`). In CBA 3.19 it returns `[mod, action, display name, down code, up code, [DIK, [shift, ctrl, alt]], hold, hold delay, bound keys]`, where the last element lists every key bound to it; the framework presses the first. To name the keybinds that exist when one is not found (`ACT-03`), it reads the variable names of CBA's namespace `cba_keybinding_actions`, one per keybind as `<mod>$<action>` in lower case, the only use of a CBA internal; a CBA version that changes it changes only that message (`CR-12`).
 - **INT-CBA-02** The session mission turns CBA's function cache off through `CfgSettings` (`INT-AR-04`), so a CBA mod's `PREP` functions take a changed file at the next mission start. A level-A reload never assumes a CBA function can be recompiled in place; it asks whether the function is final (`RLD-02`) (`CR-03`; conflict C1).
 
 ## ACE3

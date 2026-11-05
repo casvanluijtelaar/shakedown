@@ -57,8 +57,20 @@ pub fn discover(dir: &Path) -> Result<Vec<CheckRef>, CliError> {
     Ok(out)
 }
 
-/// Reads the header of a check file. An error names the line and the key (`US-038`).
+/// Whether a word has the form of a story or requirement ID: capital letters and digits in parts
+/// joined by `-`, starting with a letter and holding a digit, such as `US-012`, `NFR-PF-02` or `B3`.
+fn is_id(word: &str) -> bool {
+    word.starts_with(|c: char| c.is_ascii_uppercase())
+        && word.chars().any(|c| c.is_ascii_digit())
+        && word
+            .split('-')
+            .all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()))
+}
+
+/// Reads the header of a check file. An error names the line and the key (`US-038`). A UTF-8 byte
+/// order mark before the first line is skipped.
 pub fn parse_header(text: &str) -> Result<Header, String> {
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut seen: Vec<(String, usize, String)> = Vec::new();
     for (i, raw) in text.lines().enumerate() {
         let n = i + 1;
@@ -93,6 +105,12 @@ pub fn parse_header(text: &str) -> Result<Header, String> {
     if name.is_empty() {
         return Err(format!(
             "line {line}: @check has no name. Give the story or requirement ID it proves, then a short sentence."
+        ));
+    }
+    let first = name.split_whitespace().next().unwrap_or_default();
+    if !is_id(first) {
+        return Err(format!(
+            "line {line}: @check must start with the story or requirement ID the check proves, such as US-012 or NFR-PF-02, then a short sentence; it starts with `{first}`."
         ));
     }
     let words = |v: &str| v.split_whitespace().map(String::from).collect::<Vec<_>>();
@@ -138,6 +156,7 @@ pub fn parse_header(text: &str) -> Result<Header, String> {
 /// into spaces, because `compile` takes no comments. Line breaks stay, so the engine's line
 /// numbers are the file's.
 pub fn body_source(text: &str) -> String {
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     #[derive(PartialEq)]
     enum S {
         Code,
@@ -341,6 +360,28 @@ mod tests {
             e.contains("line 3") && e.contains("@tags") && e.contains("line 2"),
             "{e}"
         );
+    }
+
+    #[test]
+    fn us_038_m01_1_a_name_without_an_id_is_refused_naming_the_line() {
+        let e = parse_header("// @tags smoke\n// @check A hook holds a player\n").unwrap_err();
+        assert!(e.contains("line 2") && e.contains("@check") && e.contains("`A`"), "{e}");
+        for name in ["US-012 x", "NFR-PF-02 x", "B3 x", "SPK-04 x", "RST-01"] {
+            assert!(parse_header(&format!("// @check {name}\n")).is_ok(), "{name}");
+        }
+        for name in ["us-012 x", "US- x", "Smoke test", "US-012x y"] {
+            assert!(parse_header(&format!("// @check {name}\n")).is_err(), "{name}");
+        }
+    }
+
+    #[test]
+    fn def_05_a_byte_order_mark_is_skipped() {
+        let text = "\u{feff}// @check US-037 x\n// @tags a\n[] call x;\n";
+        let h = parse_header(text).unwrap();
+        assert_eq!((h.name.as_str(), h.tags.clone()), ("US-037 x", vec!["a".to_string()]));
+        let body = body_source(text);
+        assert!(!body.contains('\u{feff}'));
+        assert_eq!(body.lines().count(), 3);
     }
 
     #[test]

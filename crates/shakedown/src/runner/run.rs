@@ -52,6 +52,7 @@ fn session_state_word(state: SessionState) -> &'static str {
         SessionState::Starting => "starting",
         SessionState::Ready => "ready",
         SessionState::Running => "running a run",
+        SessionState::Broken => "broken",
         SessionState::Failed => "failed",
         SessionState::Stopping => "stopping",
         SessionState::Stopped => "stopped",
@@ -80,7 +81,7 @@ async fn execute(
     let mut executions: Vec<CheckExecution> = Vec::new();
     let mut not_run: Vec<NotRun> = Vec::new();
     for check in &checks {
-        let execution = execute_check(session, &run_id, check).await;
+        let execution = execute_check(runner, session, &run_id, check).await;
         let Some(execution) = execution else {
             not_run.push(NotRun {
                 check_id: check.id.clone(),
@@ -145,7 +146,12 @@ async fn execute(
 }
 
 /// Executes one check (`P-05`); `None` when its `@setups` excludes the session's setup.
-async fn execute_check(session: &Arc<Session>, run_id: &str, check: &CheckRef) -> Option<CheckExecution> {
+async fn execute_check(
+    runner: &Runner,
+    session: &Arc<Session>,
+    run_id: &str,
+    check: &CheckRef,
+) -> Option<CheckExecution> {
     let started = SystemTime::now();
     let clock = Instant::now();
     // The check is read fresh from disk for every execution (RLD-04).
@@ -180,7 +186,50 @@ async fn execute_check(session: &Arc<Session>, run_id: &str, check: &CheckRef) -
     {
         return None;
     }
+    // P-05 step 2: no check runs in a broken session.
+    if session.state() == SessionState::Broken {
+        let reason = Reason {
+            kind: "session-broken".into(),
+            message: format!(
+                "The session was broken before this check started: {}. Stop it with `shakedown session stop` and start a new one.",
+                session.broken_reason()
+            ),
+            machine: None,
+            at: time::now(),
+        };
+        return Some(ended(
+            check,
+            Some(&header),
+            started,
+            clock,
+            "invalid",
+            Some(reason),
+            vec![],
+            Evidence::default(),
+        ));
+    }
     let lead = session.lead();
+    // P-05 step 3: the reset in place before the check (P-06, RST-01).
+    if let Err(message) = reset(runner, session).await {
+        session.set_broken(lead, format!("the reset before check {} failed: {message}", check.id));
+        let reason = Reason {
+            kind: "reset-failed".into(),
+            message: format!("The reset before the check failed: {message}."),
+            machine: Some(lead.into()),
+            at: time::now(),
+        };
+        return Some(ended(
+            check,
+            Some(&header),
+            started,
+            clock,
+            "invalid",
+            Some(reason),
+            vec![],
+            Evidence::default(),
+        ));
+    }
+    let setup = &session.spec.setup;
     let order = json!({
         "kind": "check",
         "run_id": run_id,
@@ -188,7 +237,14 @@ async fn execute_check(session: &Arc<Session>, run_id: &str, check: &CheckRef) -
         "source": checks::body_source(text.as_deref().unwrap_or_default()),
         "timeout": header.timeout_s,
         "machines": session.machine_names(),
-        "mode": session.spec.setup.mode.as_str(),
+        "mode": setup.mode.as_str(),
+        "setup": {
+            "name": setup.name,
+            "mode": setup.mode.as_str(),
+            "clients": setup.clients,
+            "headless": setup.headless,
+            "world": setup.world,
+        },
     });
     let ceiling = Duration::from_secs(header.timeout_s) + GRACE;
     match session.order(lead, order, ceiling).await {
@@ -204,6 +260,7 @@ async fn execute_check(session: &Arc<Session>, run_id: &str, check: &CheckRef) -
                     GRACE.as_secs()
                 ),
             };
+            session.set_broken(lead, why.clone());
             let reason = Reason {
                 kind: "machine-lost".into(),
                 message: format!("{why}."),
@@ -221,6 +278,51 @@ async fn execute_check(session: &Arc<Session>, run_id: &str, check: &CheckRef) -
                 Evidence::default(),
             ))
         }
+    }
+}
+
+/// The ceiling of a reset (`RST-04`).
+const RESET_CEILING_S: f64 = 15.0;
+
+/// Resets the session in place through the lead (`P-06`). Returns what did not match when the
+/// reset failed, or the lead did not answer.
+async fn reset(runner: &Runner, session: &Session) -> Result<(), String> {
+    let lead = session.lead();
+    let answer = session
+        // The order's own ceiling is a second longer, so the reset reports what did not match.
+        .exec(
+            lead,
+            "_this call skd_fnc_reset",
+            json!([RESET_CEILING_S]),
+            RESET_CEILING_S + 1.0,
+        )
+        .await;
+    match answer {
+        Ok(a) if a["state"] == "done" && a["value"]["state"] == "done" => {
+            runner.log(&format!(
+                "{} reset done in {} s",
+                session.id,
+                a["value"]["duration_s"].as_str().unwrap_or("?")
+            ));
+            Ok(())
+        }
+        Ok(a) if a["state"] == "done" => {
+            let mismatches: Vec<String> = a["value"]["mismatches"]
+                .as_array()
+                .map(|m| m.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+                .unwrap_or_default();
+            runner.log(&format!("{} reset failed: {}", session.id, mismatches.join("; ")));
+            Err(if mismatches.is_empty() {
+                "the reset reported no result".into()
+            } else {
+                mismatches.join("; ")
+            })
+        }
+        Ok(a) => Err(format!(
+            "{lead} did not finish the reset within its ceiling of {RESET_CEILING_S} s ({})",
+            a["state"]
+        )),
+        Err(e) => Err(format!("{lead} did not answer the reset order ({e:?})")),
     }
 }
 

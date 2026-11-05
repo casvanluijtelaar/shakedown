@@ -1,7 +1,29 @@
 # The framework developer's end-to-end project (spec/07-tech-stack.md, "Source code folders").
+# The fixtures are those `python tools/install.py` installs into target\shakedown and links into
+# the game folder (spec/contract/fixture-mod.md).
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'
 checks = "checks"
+
+[mods.cba]
+path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997'
+patch = "cba_main"
+
+[mods.fixture]
+path = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3\@skd_fixture'
+patch = "skdfx_main"
+
+[mods.fixture-cba]
+path = '..\target\shakedown\fixtures\@skd_fixture_cba'
+patch = "skdfx_cba"
 
 [setups.sp]
 mode = "singleplayer"
 mods = []
+
+[setups.sp-fixture]
+mode = "singleplayer"
+mods = ["fixture"]
+
+[setups.sp-cba]
+mode = "singleplayer"
+mods = ["cba", "fixture", "fixture-cba"]

@@ -23,7 +23,7 @@ From the repository root:
 python tools/install.py
 ```
 
-It builds the `shakedown` binary and the extension in release mode, builds the `@shakedown` addon with HEMTT, and assembles the install folder `target\shakedown\`. Give another folder as the first argument to install there:
+It builds the `shakedown` binary and the extension in release mode, builds the `@shakedown` addon and the two fixture mods with HEMTT, and assembles the install folder `target\shakedown\`. Give another folder as the first argument to install there:
 
 ```
 python tools/install.py C:\Tools\Shakedown
@@ -35,6 +35,15 @@ The install folder holds:
 shakedown.exe
 @shakedown\addons\shakedown_main.pbo     the in-game agent and the check API
 @shakedown\shakedown_x64.dll             the extension
+fixtures\@skd_fixture\                  the fixture mod, which needs nothing but the game
+fixtures\@skd_fixture_cba\              the fixture mod with a CBA keybind
+fixtures\skdfx\, fixtures\skdfx_cba\    the fixtures' unpacked files
+```
+
+The fixtures are small mods the framework's own tests run against ([spec/contract/fixture-mod.md](../spec/contract/fixture-mod.md)); a project loads them only when a setup names them. On Windows the install also links three folders in the game folder to the installed fixtures: `skdfx`, `skdfx_cba` and `@skd_fixture`. A link left by an earlier install is replaced; a real folder of one of those names stops the install. The game folder is Steam's default unless the `SHAKEDOWN_GAME` variable or `--game <folder>` names another:
+
+```
+python tools/install.py --game D:\Games\Arma3
 ```
 
 `shakedown.exe` finds `@shakedown` next to itself, so keep them together. Put the folder on `PATH` to call `shakedown` from any project, or call it by its full path.
