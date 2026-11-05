@@ -139,4 +139,4 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 ## State at the end of the last session
 
-- 2026-11-05: Steps 1 to 3 are done and stable: the research, the specification with the contract, the roles and stories, and the implementation plan. Step 4 starts now with M0 Walking skeleton (`plan/milestones/m00.md`), in progress. If `SPK-01` p1 fails in singleplayer, the milestone stops and the owner decides.
+- 2026-11-05: Steps 1 to 3 are done and stable. M0 Walking skeleton (`plan/milestones/m00.md`) is built (`6453f0b`) and in progress: the spikes passed, the acceptance harness and the M0 checks are in (`bc5afb8`), and the first tester round wrote no findings, with 47 of 47 passing in the 3-repeat flake run. Left before Close: the owner's push and the first green GitHub Actions run of the gates (criterion 3), and the owner's demo (criterion 6). The Close round then runs the 5-run repeated demo. The tester's deferral candidates wait for the owner at the end of the milestone.
