@@ -19,11 +19,12 @@ SYNTAX = "us038/US-038-syntax-error"
 API_IN_SENT = "us038/US-038-api-in-sent-code"
 WRONG_ARG = "us038/US-038-wrong-argument"
 NEXT_PASSES = "us038/US-038-next-check-passes"
+NO_ID = "us038/US-038-name-without-id"
 
 # The batch runs the selected ids in this order, so every broken check comes before NEXT_PASSES.
-ORDER = [STEPS_ONLY, STEP_RECORDS, EVIDENCE_PASS, EVIDENCE_FAIL, NO_CHECK, TIMEOUT_FAST, KEY_TWICE,
+ORDER = [STEPS_ONLY, STEP_RECORDS, EVIDENCE_PASS, EVIDENCE_FAIL, NO_CHECK, TIMEOUT_FAST, KEY_TWICE, NO_ID,
          SYNTAX, API_IN_SENT, WRONG_ARG, NEXT_PASSES]
-BROKEN = [NO_CHECK, TIMEOUT_FAST, KEY_TWICE, SYNTAX, API_IN_SENT, WRONG_ARG]
+BROKEN = [NO_CHECK, TIMEOUT_FAST, KEY_TWICE, NO_ID, SYNTAX, API_IN_SENT, WRONG_ARG]
 
 SYNTAX_LINE = 5
 SYNTAX_BROKEN = "private _value = (1 + ;"
@@ -110,6 +111,14 @@ def us_038_list(ctx):
         assert err, f"{cid} is listed with no error"
         for part in parts:
             assert part in err, f"{cid}: the error {err!r} does not name {part!r}"
+
+
+@check("US-038 API-01 list shows a @check name that starts with no ID as broken, naming line 1 and @check", "offline")
+def us_038_list_no_id(ctx):
+    err = listed(ctx)[NO_ID]["error"]
+    assert err, f"{NO_ID}, whose @check name is 'A hook holds a player', is listed with no error"
+    for part in ["line 1", "@check"]:
+        assert part in err, f"{NO_ID}: the error {err!r} does not name {part!r}"
 
 
 # ---------------------------------------------------------------- in the session, per repeat
@@ -211,6 +220,12 @@ def us_038_timeout_fast(ctx):
 @check("US-038 a check with a key given twice ends fail check-error naming the line and the key", "session", [KEY_TWICE])
 def us_038_key_twice(ctx):
     header_error(ctx, KEY_TWICE, "line 3", "@tags")
+
+
+@check("US-038 API-01 a @check name that starts with no ID ends fail check-error naming the line and the key without touching the game",
+       "session", [NO_ID])
+def us_038_no_id(ctx):
+    header_error(ctx, NO_ID, "line 1", "@check")
 
 
 @check("US-038 a body with a syntax error ends fail check-error with the compile message and its line", "session", [SYNTAX])

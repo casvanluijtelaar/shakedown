@@ -250,6 +250,11 @@ def nfr_us_01_timeout(ctx):
     message = ran(ctx, "sp", SLOW_PART)["reason"]["message"]
     assert "@timeout" in message, \
         f"the message {message!r} names no next step, such as raising @timeout or looking at the step that ran long"
+    # US-039: the failure names the step it was in, so the author need not open the result file.
+    assert "slow part" in message, f"the message {message!r} does not name the step slow part"
+    assert 1 <= len(sentences(message)) <= 2, f"the message {message!r} is not one or two sentences"
+    assert "\n" not in message and "panicked" not in message and ".rs:" not in message, \
+        f"the message {message!r} looks like a stack trace"
 
 
 # ---------------------------------------------------------------- the check API

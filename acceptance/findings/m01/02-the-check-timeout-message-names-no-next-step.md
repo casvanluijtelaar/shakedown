@@ -11,7 +11,8 @@ stories: [US-039]
 generated: { by: "claude-code/tester", at: 2026-11-05T12:05:00-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-05T21:15:00+01:00, note: "The check-timeout message names the step it ran past its timeout in and says to raise @timeout or find why the step runs long. crates/shakedown/tests/m01.rs us_018_us_021_us_022_us_039_and_the_check_api asserts both in the message." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-05T12:17:00-08:00 }
 ---
 
 # The check-timeout message names no next step
@@ -40,4 +41,4 @@ A test author whose check times out reads the line in the run output and has to 
 
 ## The check that holds it
 
-`NFR-US-01 US-039 the check-timeout message says what to do next`. It passes when the message names `@timeout`, as the next thing to do (raise it, or find why the step ran long).
+`NFR-US-01 US-039 the check-timeout message says what to do next`. It passes when the message names `@timeout` as the next thing to do (raise it, or find why the step ran long), names the step `slow part`, and is one or two sentences with no stack trace.
