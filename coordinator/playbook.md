@@ -128,6 +128,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-04: Three roles: framework developer, test developer, technical writer. There is no frontend developer.
 - 2026-11-04: Fresh worktree per round.
 - 2026-11-05: The repeated demo of M0 exit criterion 2 runs 5 times, not 10, and only when M0 closes. Other rounds drive the demo once.
+- 2026-11-05: M0 closes without the 5-run repeated demo. The owner chose to skip it for this close only; the developer's earlier 5-run and 10-run results stand.
 - 2026-11-05: Every worktree lives inside the repository at `.worktrees/<role>-<topic>`, never beside it. `.worktrees/` is ignored by git.
 - 2026-11-04: The owner pushes. The coordinator never pushes unless told to push for that one push.
 
