@@ -2,11 +2,12 @@
 type: User Story
 title: "Code sent to a machine raises a script error"
 description: "Code that raises a script error on the machine it was sent to still returns its value; the error fails the check it ran in, naming the machine and the step, and comes back beside the value from exec."
-status: draft
+status: stable
 id: US-061
 role: test-author
 kind: error
 requirements: [CTL-05, ERR-01, ERR-03, ERR-05]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-061 Code sent to a machine raises a script error

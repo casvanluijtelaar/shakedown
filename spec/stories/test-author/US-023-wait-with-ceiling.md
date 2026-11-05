@@ -7,7 +7,7 @@ id: US-023
 role: test-author
 kind: feature
 requirements: [OBS-01, OBS-02, OBS-07]
-verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-023 Wait for an outcome on a machine with a ceiling, never a fixed sleep

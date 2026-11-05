@@ -2,11 +2,12 @@
 type: User Story
 title: "A new client cannot reach the runner that holds the session"
 description: "When the runner that holds a session runs but does not answer, or runs another version, a new command or tool says so with the runner's process id and the way out, and never starts a second runner beside it."
-status: draft
+status: stable
 id: US-060
 role: test-author
 kind: system fail
 requirements: [P-01, INS-02, SES-06, AGT-02, NFR-US-01]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-060 A new client cannot reach the runner that holds the session

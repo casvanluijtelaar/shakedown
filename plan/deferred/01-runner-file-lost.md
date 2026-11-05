@@ -5,6 +5,8 @@ description: "When runner.json is deleted or unreadable while its runner holds a
 id: DEF-01
 state: open
 milestone: null
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # A lost runner.json starts a second runner that ends the live session

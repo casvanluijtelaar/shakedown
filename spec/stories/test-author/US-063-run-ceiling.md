@@ -2,11 +2,12 @@
 type: User Story
 title: "A run reaches its runner ceiling"
 description: "A run that outlasts the sum of its checks' timeouts plus 60 s is stopped at that ceiling, reports the check it was on as invalid and the rest as not run, writes its result file, and leaves nothing of its own running."
-status: draft
+status: stable
 id: US-063
 role: test-author
 kind: system fail
 requirements: [RUN-06, RUN-05, RES-01, STP-02, DM-05]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-063 A run reaches its runner ceiling

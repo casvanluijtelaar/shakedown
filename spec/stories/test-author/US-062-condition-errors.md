@@ -2,11 +2,12 @@
 type: User Story
 title: "A wait's condition raises a script error or returns no Boolean"
 description: "A wait whose condition raises a script error or returns something other than a Boolean ends at once with that cause, instead of polling a broken condition to its ceiling."
-status: draft
+status: stable
 id: US-062
 role: test-author
 kind: error
 requirements: [OBS-01, ERR-03, DM-04]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-062 A wait's condition raises a script error or returns no Boolean

@@ -2,11 +2,12 @@
 type: User Story
 title: "A check puts the Steam ID or the Steam name into its result"
 description: "When a check attaches, logs or fails with the Steam ID or the Steam name of the account the game runs on, the result file and the logs show placeholders in their place."
-status: draft
+status: stable
 id: US-065
 role: test-author
 kind: mistake
 requirements: [LOG-02, NFR-PV-01, NFR-PV-02]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-065 A check puts the Steam ID or the Steam name into its result

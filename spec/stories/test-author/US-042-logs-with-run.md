@@ -7,7 +7,7 @@ id: US-042
 role: test-author
 kind: feature
 requirements: [LOG-01, LOG-02, LOG-03, LOG-04, SES-09, NFR-PV-01, INS-04]
-verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-042 Each machine's log is kept with the run and can be filtered

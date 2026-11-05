@@ -3,7 +3,7 @@ type: Specification
 title: Integrations
 description: How Shakedown works with Arma 3, CBA, ACE3, HEMTT, Steam, Windows and Claude Code - the versions it is specified against, the interfaces it uses and the configuration it generates.
 status: stable
-verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # Integrations

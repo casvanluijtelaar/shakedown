@@ -7,7 +7,7 @@ id: US-007
 role: test-author
 kind: feature
 requirements: [SES-06, SES-08]
-verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-007 The session outlives the command or the AI agent session that started it

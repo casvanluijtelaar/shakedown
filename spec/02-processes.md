@@ -3,7 +3,7 @@ type: Specification
 title: Processes
 description: Every flow of Shakedown end to end, naming the process or machine that does each step - starting a session, an order round trip, running a check, a reset, a reload at each level, a stall, a crash, stopping, and recovery after the runner dies.
 status: stable
-verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # Processes

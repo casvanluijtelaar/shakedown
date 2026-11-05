@@ -5,6 +5,8 @@ description: "arma-grappling-hook's dedicated M00 checks include a client that j
 id: DEF-04
 state: open
 milestone: null
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # Late joiners for the grappling-hook port

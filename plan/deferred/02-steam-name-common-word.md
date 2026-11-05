@@ -5,6 +5,8 @@ description: "LOG-02 replaces the Steam account and persona names as whole words
 id: DEF-02
 state: open
 milestone: null
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # A Steam name that is also a common word is redacted everywhere

@@ -3,7 +3,7 @@ type: Specification
 title: MCP tools
 description: The contract for the shakedown MCP server - how it is started, the rules every tool follows, and each tool with its input, its structured output and its errors.
 status: stable
-verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # MCP tools

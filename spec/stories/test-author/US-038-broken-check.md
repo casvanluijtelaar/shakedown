@@ -7,7 +7,7 @@ id: US-038
 role: test-author
 kind: mistake
 requirements: [DM-04, API-01, API-02, RLD-04, OUT-01, NFR-US-01]
-verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-038 A broken check is the author's to fix

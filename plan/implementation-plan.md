@@ -2,6 +2,8 @@
 type: Plan
 title: Implementation plan
 description: The phases of Shakedown's build, the order of its milestones and the rules behind that order, where each spike lands, and which milestone completes each must requirement of the PRD.
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # Implementation plan

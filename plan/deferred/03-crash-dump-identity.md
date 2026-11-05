@@ -5,6 +5,8 @@ description: "P-09 copies each crash dump into the run folder as the engine wrot
 id: DEF-03
 state: open
 milestone: null
+status: stable
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # Crash dumps in a run folder are not redacted

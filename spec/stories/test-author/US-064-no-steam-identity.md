@@ -2,11 +2,12 @@
 type: User Story
 title: "A run's result file and stored logs hold no Steam name and no Steam ID"
 description: "Every game process runs under its machine name, and the result file, the run folder's logs, the logs output and a stopped session's RPTs hold neither the Steam ID nor the Steam names of the account the game runs on."
-status: draft
+status: stable
 id: US-064
 role: test-author
 kind: feature
 requirements: [NFR-PV-02, NFR-PV-01, LOG-02, INT-STM-04, DM-11]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-064 A run's result file and stored logs hold no Steam name and no Steam ID

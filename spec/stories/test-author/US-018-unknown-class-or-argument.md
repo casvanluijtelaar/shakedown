@@ -7,7 +7,7 @@ id: US-018
 role: test-author
 kind: mistake
 requirements: [SCN-01, DM-04, API-03, OBS-01]
-verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
+verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---
 
 # US-018 An unknown class name or a wrong argument to the check API
