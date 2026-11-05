@@ -16,3 +16,29 @@ jobs:
           python-version: "3.13"
       - run: pip install PyYAML==6.0.3
       - run: python3 tools/okf_check.py
+
+  # The gates of NFR-MT-03 that need no game. Versions looked up on 2026-11-05 (spec/07-tech-stack.md).
+  rust:
+    name: Rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt,clippy && rustup default 1.99.1
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
+  hemtt-check:
+    name: HEMTT check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: arma-actions/hemtt@v1
+        with:
+          version: v1.23.1
+      - run: hemtt check
+        working-directory: addon

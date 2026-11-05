@@ -29,12 +29,12 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 
   | Call | Does | Returns |
   |---|---|---|
-  | `"shakedown" callExtension ["fetch", [orderId, part]]` | Returns one part of a queued order's JSON. | `[partText, isLast]`, each part at most 10000 bytes. |
-  | `"shakedown" callExtension ["send", [json]]` | Queues a message for the runner. | `"ok"`, or `"no-runner"` when the connection is down. |
+  | `"shakedown" callExtension ["fetch", [orderId, part]]` | Returns one part of a queued order's JSON, and forgets the order once its last part was fetched. | The part as text, prefixed with `1` when it is the last part or `0` when more follow; each part at most 10000 bytes, cut on a character boundary. The text is returned as it is, unquoted, so a part of JSON full of quotes still fits the 10240-byte result. |
+  | `"shakedown" callExtension ["send", [json]]` | Queues a message for the runner. | `"ok"`, also while the connection is still being made (the message waits for it), or `"no-runner"` when the connection is down. |
   | `"shakedown" callExtension ["status", []]` | Reports the connection. | `["connected" or "connecting" or "refused", sessionId, machine]`. |
   | Callback `("shakedown", "order", orderId)` | Tells the agent an order is waiting. | - |
 
-  It does no work inside a call except queueing and returns within 1 ms. It retries a callback the engine refused, as `arma-rs` does. Its version string is the framework version. It holds no test logic, because it cannot be replaced while the game runs on the stable branch.
+  The engine returns each call as `[result, returnCode, errorCode]`; a failed `fetch` has a nonzero return code and the result `unknown-order` or `unknown-part`. It does no work inside a call except queueing and returns within 1 ms. It retries a callback the engine refused, as `arma-rs` does. Its version string is the framework version. It holds no test logic, because it cannot be replaced while the game runs on the stable branch.
 
 - **INT-AR-04** The runner generates the session mission `shakedown_<session id>.<world>` (`CR-01`, `CR-02`, `CR-03`):
   - `mission.sqm`: for each `pN` a playable rifleman (`B_Soldier_F`, side WEST) in a group of its own, at `[spawn x + 10 × (N - 1), spawn y]` on the ground, direction 0; for each `hcN` a playable `HeadlessClient_F`; a marker `respawn_west` at the spawn point. `spawn` is a setup key, default `[100, 100]`.
@@ -46,7 +46,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 - **INT-AR-05** For a dedicated setup the runner writes `server.cfg` with (`CR-01`, `CR-61`; research `14-sessions.md`):
   `hostname = "shakedown <session id>"`; `password` and `serverCommandPassword`, each random per session; `loopback = 1`; `kickDuplicate = 0`; `BattlEye = 0`; `verifySignatures = 0`; `allowedFilePatching = 2`; `persistent = 1`; `kickTimeout[] = {{0, 0}, {1, 0}, {2, 0}, {3, 0}}`; `headlessClients[] = {"127.0.0.1"}`; `localClient[] = {"127.0.0.1"}`; `maxPlayers` = clients plus headless clients; and `class Missions { class session { template = "shakedown_<session id>.<world>"; difficulty = "Regular"; }; };`.
 
-- **INT-AR-06** The framework's addon `@shakedown` (its PBO and `shakedown_x64.dll`) is reached through a directory junction `<game>\@shakedown` to the installed `@shakedown` folder, because a dedicated server loads extensions only from inside its own folder tree. The session start creates the junction when it is missing and leaves it in place; it is installation, not run state (`CR-01`).
+- **INT-AR-06** The framework's addon `@shakedown` (its PBO and `shakedown_x64.dll`) is reached through a directory junction `<game>\@shakedown` to the installed `@shakedown` folder, because a dedicated server loads extensions only from inside its own folder tree. A singleplayer or game client process loads `@shakedown` by its installed path, which works from outside the game folder (research `22-spikes-singleplayer-channel.md`). The start of a dedicated session creates the junction when it is missing and leaves it in place; it is installation, not run state (`CR-01`).
 
 - **INT-AR-07** An RPT line is a script error when, after its timestamp, it starts with `Error ` or contains `Error in expression`. The lines that follow it starting with `Error position:` or `File ` belong to the same error and give its file and line (`CR-23`).
 

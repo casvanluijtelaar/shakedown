@@ -22,3 +22,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Shakedown: HEMTT output and the state a project's runs leave
+/addon/.hemttout/
+.shakedown/

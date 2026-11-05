@@ -1,0 +1,43 @@
+/*
+    Runs an order of kind exec (P-03 step 2 and 3): compiles the source, spawns it with the
+    arguments as _this, and answers with its value, or with state "ceiling" when the in-game
+    ceiling passes first, or "compile-error" with the engine's message.
+
+    Arguments: [order] - HashMap with "id", "source", "args", "ceiling".
+*/
+params ["_order"];
+private _id = _order get "id";
+private _ceiling = _order getOrDefault ["ceiling", 10];
+private _args = _order getOrDefault ["args", []];
+if (isNil "_args") then { _args = [] };
+
+skd_compileErrors = [];
+skd_compiling = true;
+private _code = compile (_order get "source");
+skd_compiling = false;
+if (skd_compileErrors isNotEqualTo []) exitWith {
+    (skd_compileErrors select 0) params ["_text", "_line"];
+    [createHashMapFromArray [
+        ["kind", "result"], ["order", _id], ["state", "compile-error"],
+        ["error", format ["%1 (line %2)", _text, _line]]
+    ]] call skd_fnc_send;
+};
+
+private _start = diag_tickTime;
+private _box = [nil];
+private _script = [_args, _code, _box] spawn {
+    params ["_skd_args", "_skd_code", "_skd_box"];
+    private _skd_remote = true;
+    _skd_box set [0, _skd_args call _skd_code];
+};
+waitUntil { scriptDone _script || { diag_tickTime - _start > _ceiling } };
+
+private _message = createHashMapFromArray [["kind", "result"], ["order", _id], ["duration_s", (diag_tickTime - _start) toFixed 3]];
+if (scriptDone _script) then {
+    _message set ["state", "done"];
+    _message set ["value", [_box select 0] call skd_fnc_encode];
+} else {
+    terminate _script;
+    _message set ["state", "ceiling"];
+};
+[_message] call skd_fnc_send;

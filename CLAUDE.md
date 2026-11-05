@@ -33,7 +33,7 @@ Documents, by task:
 - **`coordinator/playbook.md`**: coordinator sessions only. No role reads it.
 - **`tools/okf_check.py`**: the bundle check. Run `python3 tools/okf_check.py` after adding, moving or editing any concept. It also prints open findings and uncovered requirements and stories.
 
-Source code folders: none yet. `spec/07-tech-stack.md` names them, and this line is updated to list them when they are created.
+Source code folders: `Cargo.toml` and `rustfmt.toml` (the Rust workspace), `crates/shakedown/`, `crates/shakedown-ext/`, `crates/shakedown-protocol/`, `addon/`, `e2e/`, `tools/install.py` and `.github/workflows/ci.yml`. `spec/07-tech-stack.md` says what each holds; `fixtures/` is added by the first milestone that needs a fixture mod.
 
 ## Which role you are working in
 

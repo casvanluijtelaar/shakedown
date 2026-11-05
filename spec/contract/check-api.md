@@ -26,7 +26,9 @@ The file starts with a header: one or more lines of the form `// @key value`, be
 
 A key given twice, an unknown key, a missing `@check` or a value of the wrong form ends the check `fail` / `check-error` naming the line.
 
-The rest of the file is the **body**. It is compiled with `compile` (the preprocessor does not run: no `#include`, no `#define`) and runs scheduled on the lead machine: `server` on a dedicated session, `p1` in singleplayer. `_this` is empty. The body may use any SQF. A check passes when its body runs to its end without a failed assertion, a wait at its ceiling or an unexpected script error on any machine (`DM-02`).
+The rest of the file is the **body**. It is compiled with `compile` (the preprocessor does not run: no `#include`, no `#define`) and runs scheduled on the lead machine: `server` on a dedicated session, `p1` in singleplayer. `_this` is empty. The body may use any SQF.
+
+Comments, `//` to the end of the line and `/* ... */`, may stand anywhere in the file. The runner turns every comment into spaces before it sends the body, because `compile` takes none, and keeps the line breaks, so a compile message names the line of the file. The game stands still while it compiles the body, and a long string literal compiles in time that grows with the square of its length: about half a second for 100 KB, seconds beyond. Keep data longer than a few kilobytes out of string literals in a check. A check passes when its body runs to its end without a failed assertion, a wait at its ceiling or an unexpected script error on any machine (`DM-02`).
 
 ```sqf
 // @check US-012 A hook thrown at a wall holds a player's weight

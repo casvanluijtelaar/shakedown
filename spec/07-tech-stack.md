@@ -45,7 +45,7 @@ Versions were looked up on 2026-11-04 from crates.io, GitHub releases, `static.r
 | `regex` | 1.13.1 | The `logs` filter and the RPT error scan. | crates.io |
 | `jsonschema` | 0.60.2, tests only | Validating every result file the tests produce against `result.schema.json`. | crates.io |
 | SQF | the game's | The in-game agent and the check API. | - |
-| Python 3 and PyYAML 6.0.3 | as in CI | The bundle check (`tools/okf_check.py`). | `.github/workflows/ci.yml` |
+| Python 3 and PyYAML 6.0.3 | as in CI | The bundle check (`tools/okf_check.py`), and the install script (`tools/install.py`) that builds the binary, the extension and the addon and assembles the install folder. | `.github/workflows/ci.yml` |
 
 What is written in the project instead of taken as a dependency: the FNV-1a hash for file snapshots, the redaction of Steam IDs, the `-autotest` and `mission.sqm` generators, the newline-delimited JSON framing between the runner and the extension.
 
@@ -112,7 +112,8 @@ The framework developer owns these. The test developer opens none of them.
 | `crates/shakedown-protocol/` | The message types between runner and extension, and the result file types that generate the schemas. |
 | `addon/` | The HEMTT project of the `@shakedown` addon: the in-game agent and the check API in SQF. |
 | `fixtures/` | The source of the fixture mods `@skd_fixture` and `@skd_fixture_cba`, HEMTT projects whose behaviour is [contract/fixture-mod.md](contract/fixture-mod.md), and the crate of the fixture's extension `skdfx_x64.dll` (`FIX-01`), a member of the workspace. |
-| `e2e/` | The framework developer's end-to-end tests: a `shakedown.toml` and SQF checks against the fixture mods, run on the test machine. |
+| `e2e/` | The framework developer's end-to-end project: a `shakedown.toml` and SQF checks against the fixture mods, run on the test machine by the ignored tests in `crates/shakedown/tests/`. |
+| `tools/install.py` | Builds the framework and assembles the install folder, by default `target/shakedown/`. |
 
 GitHub Actions runs, besides the bundle check: `cargo fmt --check`, `cargo clippy -- -D warnings` and `cargo test` on Windows and Linux, and `hemtt check` on the addon. Nothing there starts the game.
 

@@ -16,7 +16,7 @@ Each requirement has an ID of the form `NFR-<area>-nn` and says how it is measur
 - **NFR-PF-02** (must) The time for a `mission-restart` reload is measured by `SPK-08` and reported in every reload result; its target is set from that measurement (G2; conflict C2).
 - **NFR-PF-03** (must) An order round trip (`P-03`) of a trivial expression to any machine takes under 1 s at the 95th percentile, over 100 trips per machine kind (`CR-10`; until `SPK-01`).
 - **NFR-PF-04** (must) A reset in place takes under 2 s on a dedicated session with two clients and one headless client (`CR-02`; until `SPK-04`).
-- **NFR-PF-05** (must) The framework adds no frame over 100 ms to a game process while it moves orders and results, including a 1 MB result (`CR-10`; until `SPK-02`).
+- **NFR-PF-05** (must) The framework adds no frame over 100 ms to a game process while it moves orders and results, including a 1 MB order and a 1 MB result. Compiling the SQF an order carries is the engine's own work in one command and is outside this limit: a 1 MB source of short statements compiles in about 0.1 to 0.12 s, and a long string literal compiles in time that grows with the square of its length (research `22-spikes-singleplayer-channel.md`) (`CR-10`; `SPK-02`).
 - **NFR-PF-06** (must) The default wait ceiling is 10 s, the default check timeout 120 s, the runner's grace 10 s, the start ceiling 180 s and the reset ceiling 15 s (`CR-20`; Q3; until `SPK-14`).
 
 ## Reliability
