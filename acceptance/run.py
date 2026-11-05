@@ -15,10 +15,12 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00  # noqa: E402
-from harness.core import CHECKS, Context  # noqa: E402
+from harness import driver, m00, m01  # noqa: E402,F401  (importing a module registers its checks)
+from harness.core import BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
+DEFAULT_CBA = r"C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997"
+DEFAULT_AGH = r"C:\Users\Shadow\Documents\arma-grappling-hook\.hemttout\build"
 
 
 def find_exe(install):
@@ -28,28 +30,42 @@ def find_exe(install):
     return Path(on_path) if on_path else REPO / "target" / "shakedown" / "shakedown.exe"
 
 
-def make_project(work, game):
+def make_project(work, game, install, cba, agh):
+    """The project: checks/ copied, 20 numbered copies of the NFR-RL-02 template, and two setups.
+
+    sp loads @skd_fixture alone, so it is a setup without CBA; cba loads CBA, both fixtures and
+    arma-grappling-hook's built mod, as fixture-mod.md and the M1 demo say.
+    """
     project = work / "project"
     shutil.copytree(HERE / "checks", project / "checks")
+    template = (HERE / "templates" / "NFR-RL-02-start-state.sqf").read_text(encoding="utf-8")
+    for n in range(1, 21):
+        (project / "checks" / "m01" / f"NFR-RL-02-start-state-{n:02}.sqf").write_text(
+            template.replace("{N}", f"{n:02}"), encoding="utf-8")
+    fixture = Path(game) / "@skd_fixture"
+    fixture_cba = Path(install) / "fixtures" / "@skd_fixture_cba"
     (project / "shakedown.toml").write_text(
-        f"game = '{game}'\n\n[setups.sp]\nmode = \"singleplayer\"\nmods = []\n", encoding="utf-8")
+        f"game = '{game}'\n\n"
+        f"[mods.cba]\npath = '{cba}'\npatch = \"cba_main\"\n\n"
+        f"[mods.fixture]\npath = '{fixture}'\npatch = \"skdfx_main\"\n\n"
+        f"[mods.fixture-cba]\npath = '{fixture_cba}'\npatch = \"skdfx_cba\"\n\n"
+        f"[mods.agh]\npath = '{agh}'\n\n"
+        "[setups.sp]\nmode = \"singleplayer\"\nmods = [\"fixture\"]\n\n"
+        "[setups.cba]\nmode = \"singleplayer\"\nmods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n",
+        encoding="utf-8")
     return project
-
-
-def set_syntax(project, fixed):
-    path = project / "checks" / (m00.SYNTAX + ".sqf")
-    lines = path.read_text(encoding="utf-8").split("\n")
-    lines[m00.SYNTAX_LINE - 1] = m00.SYNTAX_FIXED if fixed else m00.SYNTAX_BROKEN
-    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def main():
     ap = argparse.ArgumentParser(description="Shakedown acceptance suite")
     ap.add_argument("--check", action="append", default=[],
                     help="run only checks whose name contains this text; repeat for several")
-    ap.add_argument("--repeat", type=int, default=1, help="run the in-session checks this many times in one session")
+    ap.add_argument("--repeat", type=int, default=1, help="run the in-session checks this many times in each session")
     ap.add_argument("--install", default=os.environ.get("SHAKEDOWN_INSTALL"), help="the install folder holding shakedown.exe")
     ap.add_argument("--game", default=os.environ.get("SHAKEDOWN_GAME", DEFAULT_GAME), help="the Arma 3 folder")
+    ap.add_argument("--cba", default=os.environ.get("SHAKEDOWN_CBA", DEFAULT_CBA), help="the CBA_A3 mod folder")
+    ap.add_argument("--agh", default=os.environ.get("SHAKEDOWN_AGH", DEFAULT_AGH),
+                    help="arma-grappling-hook's built mod folder")
     ap.add_argument("--work", help="the folder for the generated project and the report (default: a new temp folder)")
     ap.add_argument("--list", action="store_true", help="print the check names and exit")
     args = ap.parse_args()
@@ -57,7 +73,8 @@ def main():
     selected = [c for c in CHECKS if not args.check or any(f in c.name for f in args.check)]
     if args.list:
         for c in selected:
-            print(f"[{c.phase}] {c.name}")
+            where = f" {c.setup}" if c.phase == "session" else ""
+            print(f"[{c.phase}{where}] {c.name}")
         return 0
     if not selected:
         print("No check name contains any of the --check values; --list prints the names.", file=sys.stderr)
@@ -78,7 +95,7 @@ def main():
         logfile.write(line + "\n")
         logfile.flush()
 
-    project = make_project(work, args.game)
+    project = make_project(work, args.game, exe.parent, args.cba, args.agh)
     ctx = Context(driver.Shakedown(exe, project, log), project, REPO, log)
     results = []  # (repeat, name, ok, message)
 
@@ -106,11 +123,21 @@ def main():
             log(f"Another game ({sorted(busy)}) or runner ({driver.runner_pid()}) is running; stop it first. "
                 "No in-session check ran.")
             return 4
-        ctx.game_pids_before = driver.pids("arma3_x64.exe")
-        try:
-            run_session(ctx, selected, args.repeat, run_check, log)
-        finally:
-            cleanup(ctx, log)
+        setups = [s for s in SETUPS if any(c.phase == "session" and c.setup == s for c in selected)]
+        if any(c.phase == "end" for c in selected) and "sp" not in setups:
+            setups.append("sp")
+        for setup in setups:
+            ctx.game_pids_before = driver.pids("arma3_x64.exe")
+            ctx.session, ctx.game_pids, ctx.session_runs = None, set(), []
+            checks = [c for c in selected if c.phase == "session" and c.setup == setup]
+            try:
+                run_session(ctx, setup, checks, args.repeat, run_check, log)
+            except Exception as e:  # a session that did not start fails every check of its setup
+                log(f"session of setup {setup}: {traceback.format_exc()}")
+                for c in checks:
+                    results.append((1, c.name, False, f"harness error: the session of setup {setup} failed: {e!r}"))
+            finally:
+                cleanup(ctx, log)
         for c in [c for c in selected if c.phase == "end"]:
             run_check(c, 1)
         rp = ctx.runner_pid
@@ -127,28 +154,24 @@ def main():
     return 1 if failed else 0
 
 
-def run_session(ctx, selected, repeat, run_check, log):
-    session_checks = [c for c in selected if c.phase == "session"]
-    answer = ctx.sh("session", "start", "--setup", "sp", "--json", ceiling=400)
+def run_session(ctx, setup, checks, repeat, run_check, log):
+    answer = ctx.sh("session", "start", "--setup", setup, "--json", ceiling=400)
     ctx.runner_pid = driver.runner_pid()
     ctx.session = answer.json() if answer.stdout.strip() else None
     if ctx.session:
         ctx.game_pids = {m["pid"] for m in ctx.session["machines"]}
     if answer.code != 0 or not ctx.session or ctx.session.get("state") != "ready":
         raise RuntimeError(f"the session did not start: {answer}; {answer.stderr[:500]}")
-    needed = {i for c in session_checks for i in c.needs}
-    ids = [i for i in m00.ORDER if i in needed]
     for n in range(1, repeat + 1):
-        log(f"--- repeat {n} of {repeat}")
-        set_syntax(ctx.project, fixed=False)
-        ctx.batch, ctx.fixed = None, None
-        if ids:
-            ctx.batch = ctx.run(ids)
-        if any(c.name == m00.FIX_CHECK for c in session_checks):
-            set_syntax(ctx.project, fixed=True)
-            ctx.fixed = ctx.run([m00.SYNTAX])
-            set_syntax(ctx.project, fixed=False)
-        for c in session_checks:
+        log(f"--- setup {setup}, repeat {n} of {repeat}")
+        ctx.m01 = {}
+        for batch_setup, fn in BATCHES:
+            if batch_setup == setup:
+                try:
+                    fn(ctx, checks)
+                except Exception:  # the checks that read this batch fail on what it did not store
+                    log(f"batch {fn.__name__}: {traceback.format_exc()}")
+        for c in checks:
             run_check(c, n)
 
 

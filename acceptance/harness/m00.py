@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import driver
-from .core import check, execution
+from .core import batch, check, execution
 
 # SQF check ids, as `list` gives them (their files are in acceptance/checks/).
 STEPS_ONLY = "us037/US-019-steps-only"
@@ -52,6 +52,28 @@ def check_error(ex, *parts):
     return message
 
 
+def set_syntax(project, fixed):
+    path = project / "checks" / (SYNTAX + ".sqf")
+    lines = path.read_text(encoding="utf-8").split("\n")
+    lines[SYNTAX_LINE - 1] = SYNTAX_FIXED if fixed else SYNTAX_BROKEN
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+@batch("sp")
+def m00_batch(ctx, checks):
+    """One run of every M0 check the selection needs, then the rerun of the fixed syntax error."""
+    needed = {i for c in checks for i in c.needs}
+    ids = [i for i in ORDER if i in needed]
+    set_syntax(ctx.project, fixed=False)
+    ctx.batch, ctx.fixed = None, None
+    if ids:
+        ctx.batch = ctx.run(ids)
+    if any(c.name == FIX_CHECK for c in checks):
+        set_syntax(ctx.project, fixed=True)
+        ctx.fixed = ctx.run([SYNTAX])
+        set_syntax(ctx.project, fixed=False)
+
+
 # ---------------------------------------------------------------- offline, no game
 
 @check("RUN-02 list gives every check's id, name, tags, setups, timeout and reset without a runner or a game", "offline")
@@ -59,7 +81,8 @@ def run_02(ctx):
     before = driver.runner_pid()
     games = driver.pids("arma3_x64.exe")
     checks = listed(ctx)
-    assert set(checks) == set(ORDER), f"list gave {sorted(checks)}, expected {sorted(ORDER)}"
+    files = ctx.project_ids()
+    assert sorted(checks) == files, f"list gave {sorted(checks)}, the checks folder holds {files}"
     for c in checks.values():
         assert set(c) == {"id", "name", "tags", "setups", "timeout_s", "reset", "error"}, f"{c['id']}: keys {sorted(c)}"
     good = checks[STEP_RECORDS]
