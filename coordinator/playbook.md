@@ -66,7 +66,7 @@ A lift holds until the owner takes it back, also in a resumed session. Record it
 > - Run `git worktree list` first. Do not touch another session's worktree or processes.
 > - Use `[scratch folder]/[worktree name]/` for temporary files. Nothing else in the scratch folder is yours.
 > - Never use `git stash`. Never use memory. Publish nothing outside this machine.
-> - Commit when you are done. This overrides the rule of waiting to be asked. Work in `git worktree add ../[repo]-[role]-[topic] -b [role]/[topic]`. When done, rebase on main, fast-forward merge into main, remove the worktree and delete the branch. If the main checkout has uncommitted changes, do not merge, and say so. Do not push.
+> - Commit when you are done. This overrides the rule of waiting to be asked. Work in `git worktree add .worktrees/[role]-[topic] -b [role]/[topic]`, inside the repository. When done, rebase on main, fast-forward merge into main, remove the worktree and delete the branch. If the main checkout has uncommitted changes, do not merge, and say so. Do not push.
 >
 > End with a short numbered report: each item done or not, the tests and checks you ran and their results, the decisions you made and where you recorded them, what you left out, the commit hashes, that the worktree is removed, the game processes you stopped, and that no background shell is running.
 
@@ -127,13 +127,14 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-04: Local first. No CI runs the game. A phase closes on a green full acceptance run on the Windows test machine.
 - 2026-11-04: Three roles: framework developer, test developer, technical writer. There is no frontend developer.
 - 2026-11-04: Fresh worktree per round.
+- 2026-11-05: Every worktree lives inside the repository at `.worktrees/<role>-<topic>`, never beside it. `.worktrees/` is ignored by git.
 - 2026-11-04: The owner pushes. The coordinator never pushes unless told to push for that one push.
 
 ## Knowledge about the tooling
 
 - 2026-11-05: On the Windows test machine `python3` is the Microsoft Store alias stub and does not run. Use `python` (3.14), as in `python tools/okf_check.py`.
-- 2026-11-05: Baseline of the Windows test machine before M0: Steam running, no `arma3_x64` or `arma3server_x64` process, about 200 GB free on `C:`, about 400 folders under `%TEMP%` that are not this project's.
-- 2026-11-05: The Windows test machine has no global git identity. The repository's local config sets `user.name casvanluijtelaar` and `user.email cas.luijtelaar@umain.com`, as on the Mac; worktrees share it. `cargo`, `hemtt` (WinGet) and `gh` (logged in as `casvanluijtelaar`) are on the path. The bundle check passes with 114 concepts and lists 86 requirements that no story covers yet.
+- 2026-11-05: Baseline of the Windows test machine before M0: Steam running, no `arma3_x64` or `arma3server_x64` process, about 200 GB free on `C:`, about 400 folders under `%TEMP%` that are not this project's. `cargo`, `hemtt` (WinGet) and `gh` (logged in as `casvanluijtelaar`) are on the path. The bundle check passes with 114 concepts and lists 86 requirements that no story covers yet.
+- 2026-11-05: The Windows test machine has no global git identity. The repository's local config sets `user.name casvanluijtelaar` and `user.email cas.luijtelaar@umain.com`, as on the Mac; worktrees share it.
 
 ## State at the end of the last session
 
