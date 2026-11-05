@@ -75,6 +75,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 - **INT-STM-01** Every game process needs the Steam client running and logged in to an account that owns Arma 3; without Steam the game exits at once with code 53. The session start checks that a process `steam.exe` of the current user runs (`SES-03`); a game exit with code 53 during a start is reported as "Steam is not running or not logged in" (`CR-01`).
 - **INT-STM-02** Every game process of a session runs on the one Steam account, so they share one Steam ID. That is why `kickDuplicate = 0` and every `kickTimeout` is 0, and why machines are told apart by profile name (`CR-01`; research `10-prior-harness.md`).
 - **INT-STM-03** Workshop mods update themselves. The framework records the version each machine loaded in the result file; it does not pin them (`CR-51`).
+- **INT-STM-04** At every session start the runner reads the names of the logged-in Steam account, for redaction (`LOG-02`): the Steam folder from the value `SteamPath` under `HKCU\Software\Valve\Steam`, and from that folder's `config\loginusers.vdf` the `AccountName` and `PersonaName` of the entry whose `MostRecent` is `1`. It keeps them in memory and writes them nowhere (`CR-24`; gap H8).
 
 ## Windows
 

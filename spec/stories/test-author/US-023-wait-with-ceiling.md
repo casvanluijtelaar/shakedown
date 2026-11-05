@@ -23,3 +23,5 @@ As a test author, I want to wait for the outcome I expect with a ceiling instead
 ## Next to
 
 - [US-024](US-024-condition-never-met.md) (error): the condition is never met.
+- [US-062](US-062-condition-errors.md) (error): the condition raises a script error or returns no Boolean.
+- [US-018](US-018-unknown-class-or-argument.md) (mistake): the ceiling is not a number above 0.

@@ -75,7 +75,7 @@ Without `--json`, output is short lines of text for a person; its wording is not
 
 | Command | Does | MCP twin |
 |---|---|---|
-| `shakedown status` | The runner, the session and its machines, the active run, the last reload (`INS-02`, `INS-04`). Works with no runner. | `status` |
+| `shakedown status` | The runner, the session and its machines, the active run, the last reload (`INS-02`, `INS-04`). Works with no runner, and with a runner that does not answer. | `status` |
 | `shakedown session start --setup <name>` | Starts a session and returns when it is `ready` or `failed` (`SES-01`). | `session_start` |
 | `shakedown session stop` | Stops the session and returns when nothing of it runs (`SES-07`). | `session_stop` |
 | `shakedown list [<id>...] [--tag <tag>]...` | Lists checks from the files, with no runner (`RUN-02`). | `list_checks` |
@@ -83,7 +83,7 @@ Without `--json`, output is short lines of text for a person; its wording is not
 | `shakedown run stop` | Stops the active run (`RUN-05`). | `run_stop` |
 | `shakedown reset` | Resets the session (`RST-03`). | `reset` |
 | `shakedown reload [<file>...]` | Reloads changed mod code (`RLD-01`). Files are paths under a watched `source`. | `reload` |
-| `shakedown exec --machine <m> (--code <sqf> \| --file <path>) [--args <json>] [--ceiling <s>]` | Runs SQF on a machine or a group and prints the value (`CTL-01`). `--ceiling` default 10, at most 600. | `exec` |
+| `shakedown exec --machine <m> (--code <sqf> \| --file <path>) [--args <json>] [--ceiling <s>]` | Runs SQF on a machine or a group and prints the value and any script errors it raised (`CTL-01`, `CTL-05`). `--ceiling` default 10, above 0, at most 600. | `exec` |
 | `shakedown wait --machine <m> --condition <sqf> [--description <text>] [--args <json>] [--ceiling <s>]` | Waits for a condition on a machine (`OBS-01`). | `wait_until` |
 | `shakedown expect --machine <m> --value <sqf> --op <op> --expected <json> [--args <json>] [--ceiling <s>]` | Tries an assertion live, as `skd_fnc_expectOn` would, without a check (`OBS-06`). | `expect` |
 | `shakedown inspect --machine <m> [--near <netId>] [--radius <m>]` | A compact state summary of a machine (`INS-01`). `--radius` default 50. | `inspect` |
@@ -103,6 +103,7 @@ The command line and the MCP server reach the runner through these; a test of `S
 - `%LOCALAPPDATA%\Shakedown\runner.json` is `{"port": integer, "token": string, "pid": integer, "started_at": Time}`, readable by the current user only (`INT-WIN-03`). `pid` is also in `status` as `runner_pid`.
 - Tokens have the form of `SEC-06`: the runner token `skd_r_` and a session token `skd_s_`, each followed by 64 lowercase hexadecimal digits.
 - The runner listens on `127.0.0.1:<port>`. Each message is one UTF-8 JSON object on one line. The first message on a connection is a hello: `{"hello": "client", "version": string, "token": runner token}` from a client, or `{"hello": "extension", "session": session id, "machine": machine name, "token": session token}` from a game process's extension.
+- The runner answers a client's hello with `{"hello": "runner", "version": string}`. A client that gets no answer within 5 s, or an answer with another version than its own, starts no other runner and refuses the request with exit code 4, naming the runner's process id and, if it answered, its version, and saying that ending that process ends its session with it; `status` reports the runner `unreachable` instead and exits 0 (`P-01`).
 - A connection whose first message is not a hello, whose token is wrong, or, for an extension, whose other end is not the process the runner started for that machine of that session (`SEC-03`), is closed without a reply, runs no code, and adds one line to `%LOCALAPPDATA%\Shakedown\runner.log`: `refused <client or extension> connection from pid <pid>: <not-hello, bad-token or unknown-process>`.
 
 ## Exit codes
@@ -113,7 +114,7 @@ The command line and the MCP server reach the runner through these; a test of `S
 | `1` | `run`: at least one check `fail`. |
 | `2` | `run`: no check `fail`, at least one `invalid`. |
 | `3` | The request is wrong: an unknown command, option, check, machine or setup, a malformed project file, SQF that does not compile. The message says what to fix. |
-| `4` | The request is right but cannot be done now: no session, a session already running, a precondition of `SES-03` failed, a session start that ended `failed`, a reload that ended `failed`, the session is `broken` or busy with a run, a reload or a reset, the runner refused. The message says what to do. |
+| `4` | The request is right but cannot be done now: no session, a session already running, a precondition of `SES-03` failed, a session start that ended `failed`, a reload that ended `failed`, the session is `broken` or busy with a run, a reload or a reset, the runner refused, the runner does not answer or runs another version. The message says what to do. |
 | `5` | The framework itself failed. The message gives the path of `runner.log`. |
 
 `exec`, `wait` and `expect` exit 0 when they got an answer, whatever the answer: `wait` that ended at its ceiling and `expect` that did not hold report it in their output, with exit code 0.

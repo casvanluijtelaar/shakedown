@@ -58,7 +58,7 @@ private _wall = ["place a wall in front of p1", {
 - **Arguments** are one array, passed with `call`, as `[a, b, c] call skd_fnc_name`. Optional arguments may be left off from the end, or given as `nil`. An argument of the wrong type or a value out of range ends the check `fail` / `check-error` naming the function and the argument (`DM-04`).
 - **Machines** are named by a string: `"server"`, `"p1"` to `"pN"`, `"hc1"` to `"hcN"` (`DM-10`). Where a function takes several machines, it takes an array of names or one of the group names `"all"`, `"clients"`, `"headless"` (`DM-12`). A name the session does not have ends the check `fail` / `check-error`.
 - **Code sent to a machine** is a code value (`{ ... }`). It is sent as text and compiled on the target, so it does **not** see the check's local variables: pass what it needs in `args`, which arrive as `_this` (`CTL-02`). Objects and groups in `args` and in results travel by net id and arrive as the object or group (`DM-13`, `DM-14`). The code runs scheduled (`CTL-03`), so it may `waitUntil`. It may call any SQF, but not `skd_fnc_*` functions: those run only in the body on the lead machine, and calling one elsewhere ends the check `fail` / `check-error`.
-- **Ceilings** are in seconds of real time (`OBS-01`). Every function that waits takes a `ceiling` argument; the default is 10. A ceiling that reaches past the check's own `@timeout` is cut to the time left. The runner also waits the ceiling plus 10 s on the wall clock; a machine that has not answered by then is `lost` and the check is `invalid` / `machine-lost` (`OBS-03`, `DM-07`).
+- **Ceilings** are in seconds of real time (`OBS-01`). Every function that waits takes a `ceiling` argument; the default is 10. A ceiling is a number above 0; `nil` takes the default, and any other value ends the check `fail` / `check-error`. A ceiling that reaches past the check's own `@timeout` is cut to the time left. The runner also waits the ceiling plus 10 s on the wall clock; a machine that has not answered by then is `lost` and the check is `invalid` / `machine-lost` (`OBS-03`, `DM-07`).
 - **Failure ends the check at once.** A function that fails does not return: the body's script is terminated, the outcome and reason are recorded against the innermost step, and the evidence of `RES-03` is kept.
 
 ## Context
@@ -84,6 +84,8 @@ private _wall = ["place a wall in front of p1", {
 | `skd_fnc_on` | `[machine, code, args, ceiling]` - `args` default `[]`; `ceiling` default 10. | The value `code` returned on that machine. | `fail` / `wait-ceiling` when the code is still running at the ceiling; `fail` / `check-error` when it does not compile there. |
 | `skd_fnc_onEach` | `[machines, code, args, ceiling]` | HashMap from machine name to the value `code` returned there. | As `skd_fnc_on`, naming each machine that did not finish. |
 
+A script error the code raises does not stop it: the value still comes back, and the error fails the check `fail` / `script-error` when the body ends, unless an `expectError` block matches it (`CTL-05`).
+
 ## Waits
 
 | Function | Arguments | Returns | Fails |
@@ -91,7 +93,7 @@ private _wall = ["place a wall in front of p1", {
 | `skd_fnc_waitUntil` | `[machine, condition, description, ceiling, args]` - `condition` Code returning a Boolean; `description` String saying what is awaited; `ceiling` default 10; `args` default `[]`. | `true` when the condition held. | `fail` / `wait-ceiling` with the description and the ceiling. |
 | `skd_fnc_tryWaitUntil` | Same as `skd_fnc_waitUntil`. | `true` if the condition held within the ceiling, `false` if not. | Never on the ceiling. |
 
-The condition is evaluated on that machine every frame until it returns `true` or the ceiling passes (`OBS-01`). There is no sleep in the API (`OBS-02`).
+The condition is evaluated on that machine every frame until it returns `true` or the ceiling passes (`OBS-01`). There is no sleep in the API (`OBS-02`). A condition that raises a script error or returns anything but a Boolean ends the wait at that evaluation, with no retry: `fail` / `script-error` when the machine caught a script error during it, otherwise `fail` / `check-error` naming the type it returned. `skd_fnc_tryWaitUntil` ends the check the same way; it returns `false` only at its ceiling.
 
 ## Assertions
 

@@ -23,3 +23,4 @@ As a test author, I want to read the lines each machine logged during one check,
 ## Next to
 
 - [US-043](US-043-logs-of-crashed-machine.md) (system fail): the machine whose logs are needed crashed.
+- [US-064](US-064-no-steam-identity.md) (feature): no Steam name and no Steam ID in what a run leaves behind.

@@ -22,3 +22,4 @@ As a test author, I want to have the game session keep running when my command o
 ## Next to
 
 - [US-035](US-035-runner-dies.md) (system fail): the runner itself dies.
+- [US-060](US-060-runner-unreachable.md) (system fail): the session runs, but a new client cannot reach its runner.

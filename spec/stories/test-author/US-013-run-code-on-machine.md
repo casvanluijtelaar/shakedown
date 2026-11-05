@@ -25,3 +25,4 @@ As a test author, I want to run code on the server, one player's machine, a head
 
 - [US-014](US-014-bad-machine-or-code.md) (mistake): the code names a machine the session lacks or does not compile.
 - [US-015](US-015-machine-stops-answering.md) (system fail): the machine stops answering.
+- [US-061](US-061-code-raises-error.md) (error): the code raises a script error on its machine.

@@ -24,3 +24,4 @@ As a test author, I want to run the whole suite with one command and walk away, 
 
 - [US-034](US-034-run-stopped-by-hand.md) (system fail): the run is stopped by hand.
 - [US-016](US-016-game-crashes-during-check.md) (system fail): the game crashes during a check.
+- [US-063](US-063-run-ceiling.md) (system fail): the run reaches its runner ceiling.

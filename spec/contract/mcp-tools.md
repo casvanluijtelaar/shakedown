@@ -33,6 +33,7 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
   | `session-busy` | The session is running a run, a reload or a reset. |
   | `session-broken` | The session is `broken`; the reason follows. |
   | `precondition-failed` | A precondition of `SES-03` failed; what is missing follows. |
+  | `runner-unreachable` | The runner `runner.json` names runs but does not answer, or runs another version; its process id, and its version when it answered, follow (`P-01`). |
 
 ## Shared shapes
 
@@ -47,7 +48,7 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 
 | Tool | Input | Output |
 |---|---|---|
-| `status` | `{}` | `{"runner": "running" or "not-running", "runner_pid": integer or null, "version", "session": Session or null, "run": {"id", "state", "done", "total", "current_check"} or null, "last_reload": Reload or null}`. Works with no runner and no game (`AGT-05`). |
+| `status` | `{}` | `{"runner": "running" or "not-running" or "unreachable", "runner_pid": integer or null, "version", "session": Session or null, "run": {"id", "state", "done", "total", "current_check"} or null, "last_reload": Reload or null}`. `unreachable` comes with the runner's `runner_pid` and `session` `null` (`P-01`). Works with no runner and no game (`AGT-05`). |
 | `session_start` | `{"setup": string}` | Session. Returns when the session is `ready` or `failed`, or after 50 s with state `starting`; follow it with `status`. |
 | `session_stop` | `{}` | Session, with state `stopped`. |
 | `list_checks` | `{"ids"?: [string], "tags"?: [string]}` | `{"checks": [{"id", "name", "tags", "setups", "timeout_s", "reset"}]}`. Works with no runner. |
@@ -58,7 +59,7 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 | `reset` | `{}` | `{"state": "done" or "failed", "duration_s", "mismatches": [string]}`. |
 | `reload` | `{"files"?: [string]}` | Reload: `{"id", "state", "level": "none" or "mission" or "mission-restart" or "game-restart", "files": [{"path", "level", "reason"}], "duration_s"}`. Returns when done, or after 50 s with state `applying`; `status` then shows it as `last_reload`. |
 | `exec` | `{"machine": string, "code": string, "args"?: array, "ceiling"?: number}` | `{"results": {machine name: {"state": "done" or "ceiling" or "lost", "value": Value, "duration_s"}}, "errors": [ScriptError]}`. `machine` may be a group name. Script errors the code caused are returned, not raised. |
-| `wait_until` | `{"machine", "condition": string, "description"?: string, "args"?: array, "ceiling"?: number}` | `{"met": boolean, "waited_s"}`. |
+| `wait_until` | `{"machine", "condition": string, "description"?: string, "args"?: array, "ceiling"?: number}` | `{"met": boolean, "waited_s", "error": string or null}`. `error` says why a wait ended early with `met` `false`: the script error its condition raised, or the type it returned instead of a Boolean (`OBS-01`). |
 | `expect` | `{"machine", "value": string, "op", "expected": Value, "args"?: array, "ceiling"?: number}` | `{"passed": boolean, "last_value": Value, "waited_s"}`. |
 | `inspect` | `{"machine", "near"?: netId, "radius"?: number}` | `{"machine": Machine, "mission", "mission_start", "time", "tick", "fps", "frame", "run_id", "check_id", "step_path", "player": {"class", "position", "direction", "damage", "alive", "vehicle", "animation"} or null, "nearby": [{"class", "net_id", "position", "distance"}], "scripts": [{"name", "file", "line"}], "errors": [ScriptError]}` (`INS-01`). A machine that does not answer within 10 s plus the grace returns `machine` with state `lost` and every other field `null`. |
 | `logs` | `{"machine", "run_id"?, "check_id"?, "grep"?: regex, "last"?: integer}` | `{"lines": [string], "truncated": boolean, "path": path or null}`, redacted (`LOG-03`). |

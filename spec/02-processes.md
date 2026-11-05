@@ -23,7 +23,7 @@ Every process below uses one channel, so it is described once:
 
 ## **P-01** Start the runner
 
-1. **client**: reads `%LOCALAPPDATA%\Shakedown\runner.json` (port, token, process id and start time of the runner). If it names a live runner whose process start time matches, the client connects with that token and the process ends here.
+1. **client**: reads `%LOCALAPPDATA%\Shakedown\runner.json` (port, token, process id and start time of the runner). If it names a live runner whose process start time matches, the client connects with that token, sends its hello and waits up to 5 s for the runner's answer, which carries the runner's version. An answer of the client's own version ends the process here. With no answer, or an answer of another version, the client starts no other runner: it refuses the request, naming the runner's process id and, when it answered, its version, and saying that ending that process ends its session's game processes with it (`STP-01`) and that the next command then starts a fresh runner. `status` answers instead with the runner `unreachable` (`INS-02`).
 2. **client**: otherwise starts `shakedown runner` as a detached process outside the client's own job object and process tree (`SES-08`), and waits for `runner.json` to appear, polling every 100 ms with a ceiling of 10 s.
 3. **runner**: at start, before it writes `runner.json`, runs the recovery of `P-12`, picks a free port on `127.0.0.1`, makes a random 256-bit token in the form of `SEC-06`, writes `runner.json` readable by the current user only, and creates its job object with kill-on-close.
 4. **runner**: exits by itself 60 s after its last session stopped with no client connected; it then deletes `runner.json`.

@@ -36,7 +36,7 @@ Each requirement has an ID of the form `NFR-<area>-nn` and says how it is measur
 ## Privacy
 
 - **NFR-PV-01** (must) No Steam ID appears in the result file, the run folder's logs, tool output or a stopped session's RPTs (`CR-24`, `CR-51`; gap H8).
-- **NFR-PV-02** (must) Every process's profile name is its machine name, so no person's name is written by the framework's own processes (`CR-24`; gap H8).
+- **NFR-PV-02** (must) Every process's profile name is its machine name, so no person's name is written by the framework's own processes, and no Steam name, neither the account name nor the persona name of the logged-in account, appears in the result file, the run folder's logs, tool output or a stopped session's RPTs (`LOG-02`), verified by searching each of them for both names during and after a session (`CR-24`, `CR-51`; gap H8).
 - **NFR-PV-03** (must) Session and run folders are ignored by git (`CFG-02`) (gap H8).
 
 ## Usability

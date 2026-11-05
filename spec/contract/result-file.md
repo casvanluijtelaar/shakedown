@@ -20,7 +20,7 @@ Every run writes exactly one result file, also when it was stopped or its sessio
   dumps/<machine>/<file>     each crash dump a machine lost during the run left in its profile folder
 ```
 
-Every path in `result.json` is relative to the run folder (`RES-04`). The folder is under `.shakedown/`, which git ignores (`CFG-02`). Nothing in it holds a Steam ID or a token (`NFR-PV-01`, `NFR-SC-03`).
+Every path in `result.json` is relative to the run folder (`RES-04`). The folder is under `.shakedown/`, which git ignores (`CFG-02`). Nothing in it holds a Steam ID, a Steam name or a token (`NFR-PV-01`, `NFR-PV-02`, `NFR-SC-03`), except the crash dumps under `dumps/`, which are copied as the engine wrote them and may hold the Steam ID and names; like everything under `.shakedown/`, git ignores them.
 
 ## Fields
 
