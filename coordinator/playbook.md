@@ -131,8 +131,10 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 ## Knowledge about the tooling
 
-(Empty until a coordinator learns something.)
+- 2026-11-05: On the Windows test machine `python3` is the Microsoft Store alias stub and does not run. Use `python` (3.14), as in `python tools/okf_check.py`.
+- 2026-11-05: Baseline of the Windows test machine before M0: Steam running, no `arma3_x64` or `arma3server_x64` process, about 200 GB free on `C:`, about 400 folders under `%TEMP%` that are not this project's.
+- 2026-11-05: The Windows test machine has no global git identity. The repository's local config sets `user.name casvanluijtelaar` and `user.email cas.luijtelaar@umain.com`, as on the Mac; worktrees share it. `cargo`, `hemtt` (WinGet) and `gh` (logged in as `casvanluijtelaar`) are on the path. The bundle check passes with 114 concepts and lists 86 requirements that no story covers yet.
 
 ## State at the end of the last session
 
-- 2026-11-04: The PRD is approved and stable. Step 1, research, is done and frozen: `research/01-best-of-breed.md` and `research/02-gaps.md` with the owner's answers. Next is step 2, the specification. The project's new name is still open.
+- 2026-11-05: Steps 1 to 3 are done and stable: the research, the specification with the contract, the roles and stories, and the implementation plan. Step 4 starts now with M0 Walking skeleton (`plan/milestones/m00.md`), in progress. If `SPK-01` p1 fails in singleplayer, the milestone stops and the owner decides.
