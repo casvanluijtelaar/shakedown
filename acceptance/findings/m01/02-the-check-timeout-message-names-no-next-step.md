@@ -9,7 +9,8 @@ for: developer
 checks: ["NFR-US-01 US-039 the check-timeout message says what to do next"]
 stories: [US-039]
 generated: { by: "claude-code/tester", at: 2026-11-05T12:05:00-08:00 }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-05T21:15:00+01:00, note: "The check-timeout message names the step it ran past its timeout in and says to raise @timeout or find why the step runs long. crates/shakedown/tests/m01.rs us_018_us_021_us_022_us_039_and_the_check_api asserts both in the message." }
 verified: []
 ---
 

@@ -40,8 +40,11 @@ if (skd_compileErrors isNotEqualTo []) then {
             private _path = if (count _stack > 0) then {
                 ((skd_check get "steps") select (_stack select -1)) get "path"
             } else { nil };
+            private _where = if (isNil "_path") then { "" } else {
+                format [" in step ""%1""", _path joinString " > "]
+            };
             skd_check set ["end", ["fail", "check-timeout",
-                format ["The check ran past its timeout of %1 s while the game still answered.", _timeout],
+                format ["The check ran past its timeout of %1 s%2 while the game still answered. Raise @timeout in the check's header if the step needs longer, or find why it runs long.", _timeout, _where],
                 (call skd_fnc_clocks) get "utc", nil, _path]];
         };
     };

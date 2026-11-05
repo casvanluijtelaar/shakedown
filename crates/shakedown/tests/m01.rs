@@ -384,7 +384,8 @@ private _id = player addAction ["Salute", {}];
 
     for id in ["d/US-039-slow-part", "d/US-039-long-wait"] {
         let c = by_id(&result, id);
-        assert_outcome(&c, "fail", Some("check-timeout"), &[]);
+        // NFR-US-01, finding m01-2: the message names the step and the next thing to do.
+        assert_outcome(&c, "fail", Some("check-timeout"), &["in step \"", "Raise @timeout"]);
         let d = c["duration_s"].as_f64().unwrap();
         assert!((4.5..9.0).contains(&d), "{id} took {d} s");
         let step = c["steps"][0].clone();
