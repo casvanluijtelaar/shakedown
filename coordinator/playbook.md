@@ -18,7 +18,7 @@ The project is MVP first (`CLAUDE.md`, "How this project runs"). The loop serves
 4. **Verify.** Start a fresh test developer to verify every new `addressed` entry and add `verified` entries. A finding that does not hold becomes a new finding that links to the old one.
 5. Repeat 3 and 4 until every finding is verified and every story in the milestone has a passing check.
 6. **The owner looks.** When the milestone's exit criteria include something only a person can judge in the game, hand it to the owner: the command that sets up the situation and what to look for. A framework developer round records what the owner saw.
-7. **Close.** A small framework developer round sets the milestone's `state` to `complete`, writes `docs/milestones/mNN.md`, tags the release if the milestone has a `version`, and names the next milestone. Report that `main` is ready to push.
+7. **Close.** A small framework developer round runs the milestone's repeated-demo test if its exit criteria have one, sets the milestone's `state` to `complete`, writes `docs/milestones/mNN.md`, tags the release if the milestone has a `version`, and names the next milestone. Report that `main` is ready to push.
 
 A phase closes when the full acceptance suite is green on the Windows test machine and the GitHub Actions gates are green on `main`. There is no CI run of the game.
 
@@ -127,6 +127,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-04: Local first. No CI runs the game. A phase closes on a green full acceptance run on the Windows test machine.
 - 2026-11-04: Three roles: framework developer, test developer, technical writer. There is no frontend developer.
 - 2026-11-04: Fresh worktree per round.
+- 2026-11-05: The repeated demo of M0 exit criterion 2 runs 5 times, not 10, and only when M0 closes. Other rounds drive the demo once.
 - 2026-11-05: Every worktree lives inside the repository at `.worktrees/<role>-<topic>`, never beside it. `.worktrees/` is ignored by git.
 - 2026-11-04: The owner pushes. The coordinator never pushes unless told to push for that one push.
 
