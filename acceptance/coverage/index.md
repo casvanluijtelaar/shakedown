@@ -6,3 +6,5 @@ description: The result of the last full acceptance run of each milestone, one C
 ---
 
 # Acceptance coverage
+
+* [M0 Walking skeleton: coverage](m00.md) - The last full acceptance run of M0: every check of US-037 and US-038, and of the demo's requirements, passed three times in one singleplayer session.
