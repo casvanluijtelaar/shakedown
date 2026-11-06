@@ -42,6 +42,12 @@ class Shakedown:
         self.log(f"{answer}")
         return answer
 
+    def start(self, *args):
+        """Starts `shakedown <args>` without waiting for it; returns the Popen. The caller ends it."""
+        self.log(f"`shakedown {' '.join(args)}` started in the background")
+        return subprocess.Popen([self.exe, *args], cwd=self.project, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, encoding="utf-8", errors="replace")
+
     def run_folders(self):
         runs = self.project / ".shakedown" / "runs"
         return sorted(p.name for p in runs.iterdir()) if runs.is_dir() else []
@@ -52,6 +58,11 @@ def pids(image):
     out = subprocess.run(["tasklist", "/FO", "CSV", "/NH", "/FI", f"IMAGENAME eq {image}"],
                          capture_output=True, text=True, timeout=30).stdout
     return {int(row[1]) for row in csv.reader(io.StringIO(out)) if len(row) > 1 and row[0].lower() == image.lower()}
+
+
+def game_pids():
+    """Process ids of every game client, headless client and dedicated server."""
+    return pids("arma3_x64.exe") | pids("arma3server_x64.exe")
 
 
 def alive(pid):

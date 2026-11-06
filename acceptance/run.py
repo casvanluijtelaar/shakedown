@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
@@ -31,10 +31,12 @@ def find_exe(install):
 
 
 def make_project(work, game, install, cba, agh):
-    """The project: checks/ copied, 20 numbered copies of the NFR-RL-02 template, and two setups.
+    """The project: checks/ copied, the numbered copies of the templates, and four setups.
 
     sp loads @skd_fixture alone, so it is a setup without CBA; cba loads CBA, both fixtures and
-    arma-grappling-hook's built mod, as fixture-mod.md and the M1 demo say.
+    arma-grappling-hook's built mod, as fixture-mod.md and the M1 demo say. ded is a dedicated
+    server with two clients and a headless client loading the same mods as cba; ded30 is ded
+    with a start ceiling of 30 s, which a start of about 45 s cannot meet (US-004).
     """
     project = work / "project"
     shutil.copytree(HERE / "checks", project / "checks")
@@ -42,6 +44,13 @@ def make_project(work, game, install, cba, agh):
     for n in range(1, 21):
         (project / "checks" / "m01" / f"NFR-RL-02-start-state-{n:02}.sqf").write_text(
             template.replace("{N}", f"{n:02}"), encoding="utf-8")
+    template = (HERE / "templates" / "US-008-start-state.sqf").read_text(encoding="utf-8")
+    (project / "checks" / "us008").mkdir(exist_ok=True)
+    for n in range(1, 22):
+        name = (f"US-008 NFR-RL-02 check {n:02} of 20 sees the start state on every machine, then changes the scene"
+                if n <= 20 else "US-008 the check after the 20th sees the start state on every machine")
+        (project / "checks" / "us008" / f"US-008-start-state-{n:02}.sqf").write_text(
+            template.replace("{NAME}", name).replace("{CHANGE}", "true" if n <= 20 else "false"), encoding="utf-8")
     fixture = Path(game) / "@skd_fixture"
     fixture_cba = Path(install) / "fixtures" / "@skd_fixture_cba"
     (project / "shakedown.toml").write_text(
@@ -51,7 +60,11 @@ def make_project(work, game, install, cba, agh):
         f"[mods.fixture-cba]\npath = '{fixture_cba}'\npatch = \"skdfx_cba\"\n\n"
         f"[mods.agh]\npath = '{agh}'\n\n"
         "[setups.sp]\nmode = \"singleplayer\"\nmods = [\"fixture\"]\n\n"
-        "[setups.cba]\nmode = \"singleplayer\"\nmods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n",
+        "[setups.cba]\nmode = \"singleplayer\"\nmods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n\n"
+        "[setups.ded]\nmode = \"dedicated\"\nclients = 2\nheadless = 1\n"
+        "mods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n\n"
+        "[setups.ded30]\nmode = \"dedicated\"\nclients = 2\nheadless = 1\nstart_timeout = 30\n"
+        "mods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n",
         encoding="utf-8")
     return project
 
@@ -69,6 +82,7 @@ def main():
     ap.add_argument("--work", help="the folder for the generated project and the report (default: a new temp folder)")
     ap.add_argument("--list", action="store_true", help="print the check names and exit")
     args = ap.parse_args()
+    sys.stdout.reconfigure(errors="replace")  # an RPT line in a message may hold a character the console cannot show
 
     selected = [c for c in CHECKS if not args.check or any(f in c.name for f in args.check)]
     if args.list:
@@ -80,7 +94,7 @@ def main():
         print("No check name contains any of the --check values; --list prints the names.", file=sys.stderr)
         return 3
 
-    exe = find_exe(args.install)
+    exe = find_exe(args.install).resolve()
     if not exe.is_file():
         print(f"No shakedown.exe at {exe}. Run `python tools/install.py` or give --install.", file=sys.stderr)
         return 3
@@ -116,19 +130,21 @@ def main():
     for c in [c for c in selected if c.phase == "offline"]:
         run_check(c, 1)
 
-    in_session = [c for c in selected if c.phase in ("session", "end")]
+    in_session = [c for c in selected if c.phase in ("start", "session", "end")]
     if in_session:
-        busy = driver.pids("arma3_x64.exe") | driver.pids("arma3server_x64.exe")
+        busy = driver.game_pids()
         if busy or driver.runner_pid() and driver.alive(driver.runner_pid()):
             log(f"Another game ({sorted(busy)}) or runner ({driver.runner_pid()}) is running; stop it first. "
                 "No in-session check ran.")
             return 4
+        for c in [c for c in selected if c.phase == "start"]:
+            run_check(c, 1)
         setups = [s for s in SETUPS if any(c.phase == "session" and c.setup == s for c in selected)]
         if any(c.phase == "end" for c in selected) and "sp" not in setups:
             setups.append("sp")
         for setup in setups:
-            ctx.game_pids_before = driver.pids("arma3_x64.exe")
-            ctx.session, ctx.game_pids, ctx.session_runs = None, set(), []
+            ctx.game_pids_before = driver.game_pids()
+            ctx.session, ctx.game_pids, ctx.session_runs, ctx.start_answer = None, set(), [], None
             checks = [c for c in selected if c.phase == "session" and c.setup == setup]
             try:
                 run_session(ctx, setup, checks, args.repeat, run_check, log)
@@ -137,7 +153,7 @@ def main():
                 for c in checks:
                     results.append((1, c.name, False, f"harness error: the session of setup {setup} failed: {e!r}"))
             finally:
-                cleanup(ctx, log)
+                cleanup(ctx, setup, log)
         for c in [c for c in selected if c.phase == "end"]:
             run_check(c, 1)
         rp = ctx.runner_pid
@@ -156,6 +172,7 @@ def main():
 
 def run_session(ctx, setup, checks, repeat, run_check, log):
     answer = ctx.sh("session", "start", "--setup", setup, "--json", ceiling=400)
+    ctx.start_answer = answer
     ctx.runner_pid = driver.runner_pid()
     ctx.session = answer.json() if answer.stdout.strip() else None
     if ctx.session:
@@ -164,7 +181,7 @@ def run_session(ctx, setup, checks, repeat, run_check, log):
         raise RuntimeError(f"the session did not start: {answer}; {answer.stderr[:500]}")
     for n in range(1, repeat + 1):
         log(f"--- setup {setup}, repeat {n} of {repeat}")
-        ctx.m01 = {}
+        ctx.m01, ctx.m02 = {}, {}
         for batch_setup, fn in BATCHES:
             if batch_setup == setup:
                 try:
@@ -175,14 +192,15 @@ def run_session(ctx, setup, checks, repeat, run_check, log):
             run_check(c, n)
 
 
-def cleanup(ctx, log):
+def cleanup(ctx, setup, log):
     """Stops the session, then any game process the session started that is still alive."""
-    if ctx.session is None and not (driver.pids("arma3_x64.exe") - ctx.game_pids_before):
+    if ctx.session is None and not (driver.game_pids() - ctx.game_pids_before):
         return
     ctx.stop_answer = ctx.sh("session", "stop", "--json", ceiling=180)
     ctx.stopped_at = time.monotonic()
     ctx.alive_after_stop = {pid for pid in ctx.game_pids if driver.alive(pid)}
-    started = (driver.pids("arma3_x64.exe") - ctx.game_pids_before) | ctx.game_pids
+    ctx.stops[setup] = (ctx.stop_answer, set(ctx.alive_after_stop))
+    started = (driver.game_pids() - ctx.game_pids_before) | ctx.game_pids
     for pid in started:
         if driver.wait_gone(pid, 30) is None:
             log(f"game process {pid} still runs after session stop; stopping it by id")

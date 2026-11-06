@@ -9,6 +9,10 @@ if (isNil "agh_fnc_placeHook") then { ["arma-grappling-hook is not loaded in thi
 
 private _anchor = ["put a rope up on a container's south lip", {
     private _box = ["Land_Cargo20_military_green_F", AGLToASL [130, 130, 0], 0] call skd_fnc_create;
+    // On a dedicated session the container reaches p1 a moment after the server made it, and
+    // first at the place the server created it before moving it into position.
+    ["p1", { (getPosASL objectFromNetId (_this select 0)) distance2D (_this select 1) < 0.5 }, "p1 sees the container in place", 10,
+        [netId _box, AGLToASL [130, 130, 0]]] call skd_fnc_waitUntil;
     private _stand = ["p1", {
         params ["_box"];
         private _c = getPosASL _box;
@@ -31,9 +35,12 @@ private _anchor = ["put a rope up on a container's south lip", {
     ["p1", {
         player addBackpack "B_Carryall_khk";
         player addItemToBackpack "agh_placed_short";
-        [player, "agh_placed_short"] call agh_fnc_placeHook;
         true
     }] call skd_fnc_on;
+    // The server checks the unit carries the hook, so it must see the item before p1 places it.
+    ["server", { "agh_placed_short" in items (_this select 0) }, "the server sees the hook in p1's backpack", 10,
+        [["p1"] call skd_fnc_player]] call skd_fnc_waitUntil;
+    ["p1", { [player, "agh_placed_short"] call agh_fnc_placeHook; true }] call skd_fnc_on;
     ["p1", { count (nearestObjects [player, ["agh_anchor"], 5]) > 0 }, "a rope is up within 5 m of p1", 10] call skd_fnc_waitUntil;
     ["p1", { (nearestObjects [player, ["agh_anchor"], 5]) select 0 }] call skd_fnc_on
 }] call skd_fnc_step;

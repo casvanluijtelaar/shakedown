@@ -19,7 +19,8 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 | `harness/schema.py` | A validator for the JSON Schema 2020-12 keywords `result.schema.json` uses. It refuses a schema with a keyword it does not know, so a new keyword in the contract shows up as a harness error. Written here instead of taking `jsonschema` as a dependency. |
 | `harness/m00.py` | The checks of M0 and their batch. |
 | `harness/m01.py` | The checks of M1 and their batches. |
-| `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `agh/` for the M1 demo against arma-grappling-hook. |
+| `harness/m02.py` | The checks of M2, their batches, and the `US-004` starts that fail. |
+| `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `agh/` for the M1 and M2 demos against arma-grappling-hook. |
 | `templates/` | SQF checks written into the project in numbered copies. |
 
 ## Checks
@@ -27,7 +28,8 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 A check is a Python function with a name that starts with the story or requirement ID it proves. Its phase says when it runs:
 
 - `offline`: once, before any game starts. Commands that need no runner, such as `list`.
-- `session`: once per repeat, inside the session of its setup (`sp` or `cba`). Each names the SQF checks it reads (`needs`). Per repeat each module's batch for that setup makes its runs: the union of what the selected checks need, in a fixed order that puts every broken check before the check that must pass after them, plus the runs a check needs on its own (the 20 checks of `NFR-RL-02`, the four selections of `RUN-01`, the four selections with a repeated id and one text run of `m01-3`, the demo run). Then every selected check is judged against those result files.
+- `start`: once, before the first session. It starts what it needs itself, such as a session start that must fail, and stops every game process it left by its id.
+- `session`: once per repeat, inside the session of its setup (`sp` or `cba`). The setups are `ded`, `cba` and `sp`, in that order. Each check names the SQF checks it reads (`needs`). Per repeat each module's batch for that setup makes its runs: the union of what the selected checks need, in a fixed order that puts every broken check before the check that must pass after them, plus the runs a check needs on its own (the 20 checks of `NFR-RL-02`, the four selections of `RUN-01`, the four selections with a repeated id and one text run of `m01-3`, the demo run). Then every selected check is judged against those result files.
 - `end`: once, after the last session stopped.
 
 A failed assertion fails only its own check; the others are still judged. A harness error is reported as a failure of the check it happened in.
@@ -45,3 +47,13 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - `run` given an id more than once executes it once per time (`m01-3`), so the demo's ten passes are one run of the demo and the second check, given ten times each, in turn.
 - The reset leaves variables on units and in `missionNamespace`, as `docs/check-api.md` says. A check that counts something on the player's unit, such as the fixture's `skdfx_signalDown`, registers a cleanup that puts it back; the `NFR-RL-02` checks keep the start state they compare against in `acc_m01_base` for the same reason.
 - arma-grappling-hook's placed hook needs a lip: the demo check finds a container's south lip by casting rays down from above, places `p1` 0.6 m inside it facing out, and calls `agh_fnc_placeHook` from there.
+
+## What the M2 round learned
+
+- A dedicated session of a server, two clients and a headless client is ready in 47 to 50 s; the 21 checks of `US-008` take about 45 s together, and `shakedown reset` after one of them answers in under a second.
+- The headless client runs as `arma3server_x64.exe`, like the server. The harness counts both images as game processes.
+- `skd_fnc_create` returns once the server has the object. A client receives it a moment later, and first at the place the server created it before moving it into position. A check that reads the object's position on a client, as the demos do to find the container's lip, waits until that client sees it in place, looking it up by net id each frame.
+- arma-grappling-hook's server checks that the unit carries the placed hook, so the demos wait until the server sees the hook in `p1`'s backpack before placing it.
+- arma-grappling-hook gives a respawned unit none of its actions again, in a dedicated session also without a reset. No check of the `ded` session kills `p1`, so its demos do not fail on the mod. The `US-009` check of the `ded` session kills `p2`.
+- `skdfx_flag` survives the reset, as `fixture-mod.md` says, so the `US-025` and `US-026` checks set it at their start.
+- `status` answers at once while a start runs in another command, and before the runner has the session it gives `session` `null`. The `US-004` checks poll it twice a second.

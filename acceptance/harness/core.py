@@ -10,7 +10,7 @@ BATCHES = []
 
 # The setups of the generated project, in the order their sessions run. The last one's session
 # is the one the "end" checks look at.
-SETUPS = ["cba", "sp"]
+SETUPS = ["ded", "cba", "sp"]
 
 
 class Check:
@@ -21,7 +21,8 @@ class Check:
 def check(name, phase, needs=(), setup="sp"):
     """Registers an acceptance check.
 
-    phase: "offline" runs once with no game; "session" runs once per repeat inside the session of
+    phase: "offline" runs once with no game; "start" runs once before the first session and
+    starts and stops what it needs itself; "session" runs once per repeat inside the session of
     its setup; "end" runs once after the last session stopped. needs: the SQF check ids a
     "session" check reads from the runs its setup's batches make.
     """
@@ -57,6 +58,10 @@ class Context:
         self.game_pids = set()
         self.session_runs = []       # the runs of the current session
         self.m01 = {}                # what M1's batches ran this repeat
+        self.m02 = {}                # what M2's batches ran this repeat
+        self.start_answer = None     # the answer of the current session's `session start`
+        self.stops = {}              # setup -> (the `session stop` answer, game pids alive when it returned)
+        self.failed_starts = []      # the Session JSON of every start the "start" checks made fail
 
     def project_ids(self):
         """The id of every check file in the generated project's checks folder."""
