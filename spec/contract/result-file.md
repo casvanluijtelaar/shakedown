@@ -28,12 +28,12 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
 |---|---|
 | `schema` | Always `"shakedown/result/1"`. A change that breaks a reader raises the number. |
 | `framework_version` | The version of the `shakedown` binary that wrote the file. |
-| `run` | The run's id, its end state (`finished`, or `stopped` with `stopped_reason`), its wall-clock start, end and duration, and the selection it was given. |
+| `run` | The run's id, its end state (`finished`, or `stopped` with `stopped_reason`), its wall-clock start, end and duration, and the selection it was given, ids as given, a repeated id each time. |
 | `session.setup` | The setup the session ran: its name, mode, client and headless client counts, world and mod names. |
 | `session.machines` | Every machine start that took part in the run: name, kind, start number, the game version and the version of each mod with a `patch` key as that machine loaded it, and its state at the end of the run. A machine that was `lost` says whether it exited (with its exit code and the paths of its crash dumps under `dumps/`) or stopped answering, and the wall-clock time it was lost (`RES-05`). Its crash dumps are the `.mdmp` and `.bidmp` files written to its profile folder after its process started (`P-09`). |
 | `summary` | The count of check executions per outcome, and of checks not run. `total` is `pass + fail + invalid + not_run`. |
-| `checks` | One entry per check execution, in run order (below). |
-| `not_run` | Selected checks that were not executed: `setup` when the check's `@setups` excludes the session's setup, `run-stopped` when the run stopped first. |
+| `checks` | One entry per check execution, in run order (below): a check given twice in the selection has two entries. |
+| `not_run` | Selected checks that were not executed, one entry per time a check was given: `setup` when the check's `@setups` excludes the session's setup, `run-stopped` when the run stopped first. |
 | `reloads` | Every reload done in the session between the run's start and end. |
 | `logs` | Each machine's log excerpt for the whole run. |
 
@@ -42,7 +42,7 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
 | Field | Meaning |
 |---|---|
 | `check_id`, `name`, `tags` | From the check file as it was read for this execution. |
-| `repeat` | 1, or the repeat index when the run repeats checks (`OUT-02`). |
+| `repeat` | Which time the run executes this check, counting from 1: a check given more than once (`RUN-03`), or repeated (`OUT-02`), has 1, 2, ... in run order, so `check_id` and `repeat` name one execution. |
 | `outcome` | `pass`, `fail` or `invalid` (`DM-01`). |
 | `reason` | `null` for `pass`. Otherwise its `kind` (`DM-03`, `DM-04`, `DM-05`), a `message` that says what happened in one or two sentences, the `machine` it concerns when there is one, and `at`, the wall-clock time of the cause that decided the outcome, so the order of `DM-06` can be read from the file (`RES-05`). |
 | `started_at`, `ended_at`, `duration_s` | Wall clock, from the start of `preparing` to the outcome. |

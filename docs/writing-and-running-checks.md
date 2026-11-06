@@ -72,7 +72,7 @@ A header mistake is found without the game. Fix the file and run the check again
 | `shakedown run <id>...` | Runs the checks against the running session, which stays up. |
 | `shakedown session stop` | Stops the session and returns when its game process is gone. |
 
-With no id and no tag, `run` runs every check; with tags, every check carrying any of them. Ids keep the order given; checks a tag selects run in id order.
+With no id and no tag, `run` runs every check; with tags, every check carrying any of them. Ids keep the order given, and an id given more than once runs that check once per time: `run a a b` runs `a`, `a`, `b`, and `run a b a` runs `a`, `b`, `a`. Checks a tag selects run after them in id order, each once. `list` lists each selected check once.
 
 A session start takes the game's own start time, 40 to 60 s on the test machine. A session that is kept up runs any number of runs without restarting the game. Before every check the session is reset to the state the mission started in, in well under a second; [The check API by example](check-api.md#the-reset-between-checks) says what the reset restores and what it leaves.
 
@@ -87,6 +87,6 @@ Exit codes: 0 every check passed, 1 a check failed, 2 none failed and one was in
 
 ## What a run leaves behind
 
-Each run writes `.shakedown\runs\<run id>\result.json` in the project, valid against [spec/contract/result.schema.json](../spec/contract/result.schema.json). It holds the run, the session with `p1`'s game version and its start number, the summary, and for each check its outcome, reason, steps with their clocks, and evidence. A session's folder, `.shakedown\sessions\<session id>\`, holds the generated mission and `p1`'s profile folder with its RPT.
+Each run writes `.shakedown\runs\<run id>\result.json` in the project, valid against [spec/contract/result.schema.json](../spec/contract/result.schema.json). It holds the run, the session with `p1`'s game version and its start number, the summary, and for each check execution its outcome, reason, steps with their clocks, and evidence. A check run twice has two entries in `checks`, with `repeat` 1 and 2, and prints two lines, the second ending in `#2`. A session's folder, `.shakedown\sessions\<session id>\`, holds the generated mission and `p1`'s profile folder with its RPT.
 
 What a check leaves in the game stays there until the next check's reset, so a person can look at it in the game window after a run. Not built yet: script errors in the result, log excerpts, and dedicated sessions.

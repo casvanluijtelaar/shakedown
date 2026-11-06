@@ -131,12 +131,12 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 ## Selecting and running checks
 
-- **RUN-01** (must) A run selects checks by one or more check ids, by one or more tags (a check matches when it carries any of them), or both (the union). With no selection it runs every check (`CR-40`).
-- **RUN-02** (must) `list` returns every check's id, name, tags, setups, timeout and reset mode from the files, without a runner or a game, filtered like `RUN-01` (`CR-40`, `CR-53`).
-- **RUN-03** (must) Checks run in the order given; checks selected by tag or by default run in check id order (`CR-40`).
+- **RUN-01** (must) A run selects checks by one or more check ids, by one or more tags (a check matches when it carries any of them), or both (the union). A check id given more than once selects that check once per time it is given; a tag selects each check it matches once, and adds nothing for a check also given by id. With no selection it runs every check (`CR-40`).
+- **RUN-02** (must) `list` returns every check's id, name, tags, setups, timeout and reset mode from the files, without a runner or a game, filtered like `RUN-01`, each selected check once (`CR-40`, `CR-53`).
+- **RUN-03** (must) Checks given by id run in the order given, a check given more than once once per time it is given, so `a a b` runs `a`, `a`, `b` and `a b a` runs `a`, `b`, `a`; checks selected by tag run after them in check id order, and with no selection every check runs in check id order (`CR-40`).
 - **RUN-04** (must) A run given a setup when no session runs starts a session of that setup, runs, and stops it, whatever the outcomes (`CR-05`, `CR-40`, scenario "as planned" 5).
 - **RUN-05** (must) A run can be stopped by hand, with `run stop`, `run_stop`, or a Ctrl+C or Ctrl+Break console event to `shakedown run`, which it treats alike. Its executing check ends `invalid` / `run-stopped`, the checks not started are listed as `not-run`, and the result file is written (`CR-05`, `CR-31`, `CR-51`).
-- **RUN-06** (must) A run has a runner ceiling of the sum of its selected checks' timeouts plus 60 s, counted from the start of its first check, after any session the run starts is `ready`. Resets, mission restarts and cleanups count against it. At it the run is stopped as `RUN-05` says, and the result file gives `stopped_reason` `run-ceiling` (`CR-20`, `CR-05`).
+- **RUN-06** (must) A run has a runner ceiling of the sum of the timeouts of its check executions plus 60 s, counted from the start of its first check, after any session the run starts is `ready`. Resets, mission restarts and cleanups count against it. At it the run is stopped as `RUN-05` says, and the result file gives `stopped_reason` `run-ceiling` (`CR-20`, `CR-05`).
 - **RUN-07** (should) Choose the setups per check: a check's `@setups` header names the setups it runs in, a run skips the others as `not-run` / `setup`, and one command runs a selection in each setup it needs, one session per setup (`CR-41`). The MVP honours the header for skipping; running several setups in one command waits for this requirement.
 - **TIM-01** (should) Report the time of every step and flag steps over a threshold (`CR-42`). The MVP records step times (`OBS-05`) without flagging.
 

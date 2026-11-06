@@ -80,8 +80,18 @@ async fn execute(
 
     let mut executions: Vec<CheckExecution> = Vec::new();
     let mut not_run: Vec<NotRun> = Vec::new();
+    // How often each check has come up in this run: its executions' `repeat` (`RUN-03`).
+    let mut times: BTreeMap<String, u32> = BTreeMap::new();
     for check in &checks {
-        let execution = execute_check(runner, session, &run_id, check).await;
+        let repeat = {
+            let n = times.entry(check.id.clone()).or_insert(0);
+            *n += 1;
+            *n
+        };
+        let execution = execute_check(runner, session, &run_id, check).await.map(|mut e| {
+            e.repeat = repeat;
+            e
+        });
         let Some(execution) = execution else {
             not_run.push(NotRun {
                 check_id: check.id.clone(),
@@ -456,7 +466,12 @@ fn outcome_line(e: &CheckExecution, _index: usize) -> Value {
 
 /// One line for a person.
 fn outcome_text(e: &CheckExecution) -> String {
-    let mut text = format!("{:<7} {}  ({:.1} s)", e.outcome, e.check_id, e.duration_s);
+    let repeat = if e.repeat > 1 {
+        format!(" #{}", e.repeat)
+    } else {
+        String::new()
+    };
+    let mut text = format!("{:<7} {}{repeat}  ({:.1} s)", e.outcome, e.check_id, e.duration_s);
     if let Some(r) = &e.reason {
         text.push_str(&format!("\n        {}: {}", r.kind, r.message));
     }

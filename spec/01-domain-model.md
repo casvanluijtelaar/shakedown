@@ -19,7 +19,7 @@ Setup   1──* Session          (at most one session runs on the machine at a 
 Session 1──* Machine          (one per role; a role restarted gets a new machine start)
 Session 1──* Run
 Session 1──* Reload
-Run     1──* CheckExecution   (one per selected check and repeat)
+Run     1──* CheckExecution   (one per time a check is selected, and per repeat)
 CheckExecution 1──* Step       (nested)
 CheckExecution 1──* ScriptError, Evidence
 Run     1──1 ResultFile

@@ -98,7 +98,14 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
         Command::List { ids, tags } => {
             let project = project(cli)?;
             let all = checks::discover(&project.checks)?;
-            let selected = checks::select(&all, ids, tags)?;
+            let mut selected = checks::select(&all, ids, tags)?;
+            // `list` names each selected check once, however often an id was given (`RUN-02`).
+            let mut seen = Vec::new();
+            selected.retain(|c| {
+                let first = !seen.contains(&c.id);
+                seen.push(c.id.clone());
+                first
+            });
             let listed: Vec<checks::Listed> = selected.iter().map(checks::read_listed).collect();
             if cli.json {
                 out.json(&json!({"checks": listed}));

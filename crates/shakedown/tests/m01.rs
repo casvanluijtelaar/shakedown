@@ -592,3 +592,71 @@ fn m1_demo_us_009_ten_times_with_a_second_check() {
     }
     assert_eq!(passed, 10);
 }
+
+/// `US-031` criterion 2, finding `m01-3`: `run a a b` against a running session executes `a`,
+/// `a`, `b` in the game, three executions in that order with `repeat` 1, 2 and 1, each a step of
+/// its own in the game, and prints a line per execution, the second of `a` ending in `#2`.
+#[test]
+#[ignore = "starts Arma 3; run on the test machine"]
+fn us_031_m01_3_a_check_given_twice_runs_twice_in_the_order_given() {
+    let body = r#"["ran", { ["tick", diag_tickTime] call skd_fnc_evidence; true }] call skd_fnc_step;"#;
+    let dir = project(
+        "repeat",
+        &checks_of(&[
+            ("rep/a", "US-031 a check given twice", body),
+            ("rep/b", "US-031 a check given once", body),
+        ]),
+    );
+    let session = Session::start(&dir, "sp");
+
+    let (code, result) = session.run(&["rep/a", "rep/a", "rep/b"]);
+    assert_eq!(code, 0, "{result:#}");
+    let executions = result["checks"].as_array().unwrap();
+    let seen: Vec<(String, u64, String)> = executions
+        .iter()
+        .map(|c| {
+            (
+                c["check_id"].as_str().unwrap().to_string(),
+                c["repeat"].as_u64().unwrap(),
+                c["outcome"].as_str().unwrap().to_string(),
+            )
+        })
+        .collect();
+    println!("US-031 m01-3 a a b: {seen:?}");
+    assert_eq!(
+        seen,
+        [
+            ("rep/a".to_string(), 1, "pass".to_string()),
+            ("rep/a".to_string(), 2, "pass".to_string()),
+            ("rep/b".to_string(), 1, "pass".to_string()),
+        ]
+    );
+    assert_eq!(result["summary"]["total"], 3);
+    assert_eq!(result["summary"]["pass"], 3);
+    assert_eq!(result["run"]["selection"]["ids"], json!(["rep/a", "rep/a", "rep/b"]));
+    // Each execution ran in the game on its own: one step each, later ticks for later executions.
+    let ticks: Vec<f64> = executions
+        .iter()
+        .map(|c| {
+            assert_eq!(c["steps"].as_array().unwrap().len(), 1, "{c:#}");
+            c["evidence"]["attached"][0]["value"].as_f64().unwrap()
+        })
+        .collect();
+    assert!(ticks[0] < ticks[1] && ticks[1] < ticks[2], "{ticks:?}");
+
+    // The printed lines: one per execution, in order, the second of `a` marked `#2`.
+    let out = Command::new(shakedown())
+        .args(["run", "rep/a", "rep/b", "rep/a"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    println!("{stdout}");
+    assert_eq!(out.status.code(), Some(0), "{stdout}");
+    let lines: Vec<&str> = stdout.lines().filter(|l| l.starts_with("pass")).collect();
+    assert_eq!(lines.len(), 3, "{stdout}");
+    assert!(lines[0].contains("rep/a  ("), "{stdout}");
+    assert!(lines[1].contains("rep/b  ("), "{stdout}");
+    assert!(lines[2].contains("rep/a #2  ("), "{stdout}");
+    assert!(stdout.contains("3 passed, 0 failed"), "{stdout}");
+}

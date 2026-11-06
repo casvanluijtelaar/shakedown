@@ -272,8 +272,9 @@ pub fn read_listed(check: &CheckRef) -> Listed {
     }
 }
 
-/// Selects checks by ids and tags (`RUN-01`): the union, ids in the order given, then the checks a
-/// tag selects in check id order (`RUN-03`). No selection selects every check. An id that names no
+/// Selects checks by ids and tags (`RUN-01`): the union, ids in the order given, an id given more
+/// than once each time, then the checks a tag selects and no id gave, in check id order (`RUN-03`).
+/// No selection selects every check. An id that names no
 /// check, or a selection that matches nothing, is refused with what exists.
 pub fn select(all: &[CheckRef], ids: &[String], tags: &[String]) -> Result<Vec<CheckRef>, CliError> {
     if ids.is_empty() && tags.is_empty() {
@@ -288,8 +289,7 @@ pub fn select(all: &[CheckRef], ids: &[String], tags: &[String]) -> Result<Vec<C
     for id in ids {
         let id = id.trim_end_matches(".sqf").replace('\\', "/");
         match all.iter().find(|c| c.id == id) {
-            Some(c) if !out.contains(c) => out.push(c.clone()),
-            Some(_) => {}
+            Some(c) => out.push(c.clone()),
             None => {
                 return Err(CliError::wrong(format!(
                     "No check has the id `{id}`. The checks are: {}.",
@@ -423,6 +423,25 @@ mod tests {
         let e = select(&all, &["zz".into()], &[]).unwrap_err();
         assert_eq!(e.code, 3);
         assert!(e.message.contains("a, b, c"), "{}", e.message);
+    }
+
+    #[test]
+    fn us_031_m01_3_an_id_given_more_than_once_is_selected_each_time() {
+        let all = refs(&["a", "b"]);
+        let ids = |s: &[&str]| s.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+        let names = |v: Vec<CheckRef>| v.into_iter().map(|c| c.id).collect::<Vec<_>>();
+        assert_eq!(
+            names(select(&all, &ids(&["a", "a", "b"]), &[]).unwrap()),
+            ["a", "a", "b"]
+        );
+        assert_eq!(
+            names(select(&all, &ids(&["a", "b", "a"]), &[]).unwrap()),
+            ["a", "b", "a"]
+        );
+        assert_eq!(
+            names(select(&all, &ids(&["a", "a", "a"]), &[]).unwrap()),
+            ["a", "a", "a"]
+        );
     }
 
     #[test]
