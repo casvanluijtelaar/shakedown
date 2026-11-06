@@ -131,6 +131,8 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-05: M0 closes without the 5-run repeated demo. The owner chose to skip it for this close only; the developer's earlier 5-run and 10-run results stand.
 - 2026-11-05: Every worktree lives inside the repository at `.worktrees/<role>-<topic>`, never beside it. `.worktrees/` is ignored by git.
 - 2026-11-06: The owner told the coordinator to commit and push M1 and its tag itself once nothing needed a decision. That covered that one push only.
+- 2026-11-06: The owner told the coordinator to commit and push M2 and its tag `0.0.3`. That covered that one push only.
+- 2026-11-06: The owner dropped the firewall prompts for `shakedown.exe` seen during the M2 build: no finding, nothing deferred.
 - 2026-11-04: The owner pushes. The coordinator never pushes unless told to push for that one push.
 
 ## Knowledge about the tooling
