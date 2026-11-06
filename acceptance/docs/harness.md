@@ -22,6 +22,7 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 | `harness/m02.py` | The checks of M2, their batches, and the `US-004` starts that fail. |
 | `harness/m03.py` | The checks of M3 and their batch, the reading of the Steam identity at run time, and the RPT reading of `INT-AR-07` that the `end` checks of `US-030`, `US-064`, `DEF-09` and `NFR-RL-05` use. |
 | `harness/mcp.py` | An MCP client over stdio, as Claude Code is one: it starts the server the project's `.mcp.json` declares, with the install folder on `PATH`, speaks newline-delimited JSON-RPC to it, keeps every progress notification with its time, cancels a call, and judges a tool result (`structured`, `tool_error`). Written here instead of taking an MCP SDK as a dependency. |
+| `run_mac.py` | The Mac half of M4: `US-046`'s third criterion with no game, through `harness/mcp.py`, which stops the server by its id with `taskkill` on Windows and by its process on macOS. |
 | `harness/m04.py` | The checks of M4 and their batches: the tools offline, the refused and slow starts, and the CLI and tool answers of the `ded` and `sp` sessions. |
 | `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `agh/` for the M1, M2 and M3 demos against arma-grappling-hook. |
 | `templates/` | SQF checks written into the project in numbered copies. |
@@ -85,3 +86,9 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - A run started through `run_start` has no command answer; the M4 batches add it to the suite's runs from its `run_result`, so the checks over every run (`SES-05`, `NFR-RL-05`) read its result file too.
 - In a full run the singleplayer session has served the M0 and M1 checks, `RST-05`'s killed player among them, before the M4 batch. There the game raised `Undefined variable in expression: tsw_camtargetunit` on `p1` three times during the 55 s check of `US-050`, which the framework listed in that execution's errors and failed it `script-error`. The `US-050` checks judge when `run_status` answers, not that check's outcome.
 - With no `steam` process, `session start` still brings up a runner, which refuses in 0.1 s and exits by itself about 60 s later. A check that refuses a start hands that runner to the suite as soon as the start answers, so the suite waits for it even when the check fails; a next run that starts while it lives refuses with exit 4.
+
+## What the Mac round learned
+
+- `python3 tools/install.py` on a Mac needs Rust 1.99 or later, as `docs/install.md` says; with it the cargo step builds `shakedown` into `target/release/`, and the install stops at `hemtt build` without HEMTT, before it assembles an install folder (`m04-2`). The binary alone serves `run_mac.py`.
+- The guide is 4,837 characters on the Mac and 4,885 on Windows, the same text with other line endings; the checks compare it with the documented text with whitespace folded.
+- With no runner, `status`, `list_checks` and `guide` each answer in under 0.01 s, and the server exits 0 as soon as its stdin closes.

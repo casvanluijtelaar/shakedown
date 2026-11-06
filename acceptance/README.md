@@ -36,7 +36,15 @@ One check needs Steam stopped: `US-003 SES-03 INT-STM-01 with no steam process .
 python acceptance/run.py --check "US-003 SES-03 INT-STM-01"
 ```
 
-Options:
+One criterion runs on the Mac, with no game and no Steam: the third of `US-046`. `run_mac.py` writes a project of its own with the `.mcp.json` of `docs/agent-tools.md`, starts `shakedown mcp` from it with the install folder on `PATH`, speaks JSON-RPC to it on stdio and judges `status`, `list_checks` and `guide`, and that the server starts no other process. It needs Python 3 and the `shakedown` binary: `python3 tools/install.py` builds it with cargo into `target/release/` and stops at `hemtt build` on a Mac without HEMTT. Run it from the repository root, once per server start:
+
+```
+python3 acceptance/run_mac.py --install <folder holding shakedown>   # default: target/release/
+```
+
+`--repeat <n>` starts the server `n` times; `--work <dir>` names the folder for the project, `harness.log` and `report.json`. Exit code 0 when every repeat passed, 1 when one failed, 3 when the binary is missing.
+
+Options of `run.py`:
 
 | Option | Meaning |
 |---|---|

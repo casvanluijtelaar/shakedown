@@ -154,7 +154,10 @@ class Mcp:
             self.proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             self.log(f"`shakedown mcp` {self.pid} did not exit 10 s after its stdin closed; stopping it by id")
-            subprocess.run(["taskkill", "/PID", str(self.pid), "/T", "/F"], capture_output=True, timeout=30)
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(self.pid), "/T", "/F"], capture_output=True, timeout=30)
+            else:
+                self.proc.kill()
             self.proc.wait(timeout=30)
 
     def __enter__(self):
