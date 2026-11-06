@@ -87,6 +87,6 @@ Exit codes: 0 every check passed, 1 a check failed, 2 none failed and one was in
 
 ## What a run leaves behind
 
-Each run writes `.shakedown\runs\<run id>\result.json` in the project, valid against [spec/contract/result.schema.json](../spec/contract/result.schema.json). It holds the run, the session with `p1`'s game version and its start number, the summary, and for each check execution its outcome, reason, steps with their clocks, and evidence. A check run twice has two entries in `checks`, with `repeat` 1 and 2, and prints two lines, the second ending in `#2`. A session's folder, `.shakedown\sessions\<session id>\`, holds the generated mission and `p1`'s profile folder with its RPT.
+Each run writes `.shakedown\runs\<run id>\result.json` in the project, valid against [spec/contract/result.schema.json](../spec/contract/result.schema.json). It holds the run, the session with `p1`'s game version and its start number, the summary, and for each check execution its outcome, reason, steps with their clocks, and evidence. A check run twice has two entries in `checks`, with `repeat` 1 and 2, and prints two lines, the second with `#2` right after the check id, as in `pass    sel/RUN-01-a #2  (0.0 s)`. A session's folder, `.shakedown\sessions\<session id>\`, holds the generated mission and `p1`'s profile folder with its RPT.
 
 What a check leaves in the game stays there until the next check's reset, so a person can look at it in the game window after a run. Not built yet: script errors in the result, log excerpts, and dedicated sessions.
