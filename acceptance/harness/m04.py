@@ -383,6 +383,35 @@ def us003_missing_mod(ctx):
     assert not driver.game_pids() - before, "a game process started"
 
 
+@check("US-003 SES-03 INT-STM-01 with no steam process session start exits 4 saying Steam is not running and must be started and logged in, session_start returns precondition-failed with the same text, and status shows no session", "nosteam")
+def us003_no_steam(ctx):
+    steam = driver.pids("steam.exe")
+    assert not steam, (f"{len(steam)} steam process(es) run; this check needs none. Stop Steam first; "
+                       "a full run leaves this check out")
+    no_session(ctx)
+    before = driver.game_pids()
+    a = ctx.sh("session", "start", "--setup", "sp", ceiling=120)
+    ctx.runner_pid = driver.runner_pid()  # the suite waits for it to exit, whether the check passes or not
+    said = message(a)
+    assert a.code == 4, f"{a}, expected exit 4: {said[:300]}"
+    # "Steam is not running" said either way: "not running", or a running Steam client named as missing.
+    not_running = (re.search(r"\bSteam\b.*\bnot running\b", said, re.I | re.S)
+                   or re.search(r"\bmissing\b.*\brunning Steam\b", said, re.I | re.S))
+    assert not_running, f"the message does not say Steam is not running: {said[:400]}"
+    assert re.search(r"\bstart Steam\b|\bSteam must be started\b", said, re.I) and re.search(r"\blog(ged)? ?in\b", said, re.I), \
+        f"the message does not say Steam must be started and logged in: {said[:400]}"
+    st = ctx.sh("status", "--json").json()
+    assert st["session"] is None, f"status after the refusal shows a session: {st['session']}"
+    with Mcp(ctx.project, ctx.install, ctx.log) as m:
+        text = tool_error(m.call("session_start", {"setup": "sp"})[0], "precondition-failed")
+        st2 = structured(m.call("status")[0])
+    assert text[len("precondition-failed: "):].strip() == said.strip(), \
+        f"session_start's text is not the command's message: {text!r} vs {said!r}"
+    assert st2["session"] is None, f"status after the tool's refusal shows a session: {st2['session']}"
+    started = driver.game_pids() - before
+    assert not started, f"{len(started)} game process(es) started"
+
+
 def free_mb():
     import subprocess
     out = subprocess.run(["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory"],

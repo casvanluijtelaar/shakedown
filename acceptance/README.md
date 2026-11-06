@@ -30,6 +30,12 @@ To run only the checks a finding names, give each name from the finding's `check
 python acceptance/run.py --check "US-038 a body with a syntax error ends fail check-error with the compile message and its line"
 ```
 
+One check needs Steam stopped: `US-003 SES-03 INT-STM-01 with no steam process ...`, of the phase `nosteam`. A run without `--check` leaves it out; it runs, before the `start` checks, only when a `--check` value selects it, and fails at once while a `steam` process runs. Stop Steam by its process id before it and start and log in to Steam after it:
+
+```
+python acceptance/run.py --check "US-003 SES-03 INT-STM-01"
+```
+
 Options:
 
 | Option | Meaning |

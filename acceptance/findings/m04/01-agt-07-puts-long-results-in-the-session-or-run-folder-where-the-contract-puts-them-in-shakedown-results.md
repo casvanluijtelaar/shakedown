@@ -11,7 +11,8 @@ stories: [US-048]
 generated: { by: "claude-code/tester", at: 2026-11-06T11:02:42-08:00 }
 addressed:
   - { by: "claude-code/writer", at: 2026-11-06T12:00:00-08:00, note: "AGT-07 in spec/03-functional-requirements.md names the project's .shakedown/results/ folder, as spec/contract/mcp-tools.md, docs/agent-tools.md and the built server do; a tool such as list_checks or status has no session or run folder to write to. No other document changed." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-06T12:01:30-08:00 }
 ---
 
 # AGT-07 puts a long tool result in the session or run folder, where the contract and the docs put it in .shakedown/results

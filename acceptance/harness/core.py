@@ -23,8 +23,9 @@ def check(name, phase, needs=(), setup="sp"):
 
     phase: "offline" runs once with no game; "start" runs once before the first session and
     starts and stops what it needs itself; "session" runs once per repeat inside the session of
-    its setup; "end" runs once after the last session stopped. needs: the SQF check ids a
-    "session" check reads from the runs its setup's batches make.
+    its setup; "end" runs once after the last session stopped; "nosteam" needs no steam process
+    running, so it runs, before the "start" checks, only when a --check value selects it.
+    needs: the SQF check ids a "session" check reads from the runs its setup's batches make.
     """
     def wrap(fn):
         CHECKS.append(Check(name, phase, needs, fn, setup))

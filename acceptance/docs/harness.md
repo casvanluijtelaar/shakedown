@@ -34,6 +34,7 @@ A check is a Python function with a name that starts with the story or requireme
 - `start`: once, before the first session. It starts what it needs itself, such as a session start that must fail, and stops every game process it left by its id.
 - `session`: once per repeat, inside the session of its setup (`sp` or `cba`). The setups are `ded`, `cba` and `sp`, in that order. Each check names the SQF checks it reads (`needs`). Per repeat each module's batch for that setup makes its runs: the union of what the selected checks need, in a fixed order that puts every broken check before the check that must pass after them, plus the runs a check needs on its own (the 20 checks of `NFR-RL-02`, the four selections of `RUN-01`, the four selections with a repeated id and one text run of `m01-3`, the demo run). Then every selected check is judged against those result files.
 - `end`: once, after the last session stopped.
+- `nosteam`: needs no `steam` process running, so a run leaves it out unless a `--check` value selects it; then it runs before the `start` checks. It is the second criterion of `US-003`.
 
 A failed assertion fails only its own check; the others are still judged. A harness error is reported as a failure of the check it happened in.
 
@@ -83,3 +84,4 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - 100 `exec` calls through the tool take 17 ms per call at the 95th percentile to a singleplayer `p1` or a client, 43 ms to the dedicated server and the headless client.
 - A run started through `run_start` has no command answer; the M4 batches add it to the suite's runs from its `run_result`, so the checks over every run (`SES-05`, `NFR-RL-05`) read its result file too.
 - In a full run the singleplayer session has served the M0 and M1 checks, `RST-05`'s killed player among them, before the M4 batch. There the game raised `Undefined variable in expression: tsw_camtargetunit` on `p1` three times during the 55 s check of `US-050`, which the framework listed in that execution's errors and failed it `script-error`. The `US-050` checks judge when `run_status` answers, not that check's outcome.
+- With no `steam` process, `session start` still brings up a runner, which refuses in 0.1 s and exits by itself about 60 s later. A check that refuses a start hands that runner to the suite as soon as the start answers, so the suite waits for it even when the check fails; a next run that starts while it lives refuses with exit 4.
