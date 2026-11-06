@@ -8,7 +8,7 @@
     - "free" [ceiling]: waits for this machine's player to be alive (a dead player respawns at
       once, RST-05) and moves it out of any vehicle, so no deletion takes a player with it.
     - "restore" [ceiling, world]: deletes every entity this machine recorded since the baseline that is
-      not a player, crew first (P-06 steps 2 and 3); brings this machine's player unit back to its
+      local here and not a player, crew first (P-06 steps 2 and 3); brings this machine's player unit back to its
       baseline (step 4); and sets the date and weather of `world`, the server's baseline, here
       (step 5), so no machine waits for the server's to reach it.
     - "verify" [ceiling, world, players]: polls every frame until nothing recorded is left, the
@@ -30,6 +30,18 @@ private _start = diag_tickTime;
 private _keep = {
     params ["_x"];
     _x in allPlayers || { isPlayer _x } || { _x isEqualTo player } || { _x isKindOf "HeadlessClient_F" }
+};
+// Deletes the recorded entities that are local here, a unit in a vehicle out of it first. Each
+// machine deletes only its own: the machine an entity is local to is the one that deletes it, so
+// no machine asks another to delete an object that machine has deleted already, which the server
+// logs as "Object ... not found (message Type_189)" (DEF-09). "verify" deletes again every frame,
+// for an entity whose locality moved here since, such as a vehicle a player has just left, and an
+// entity made here while the reset runs, such as a crater.
+private _deleteLocal = {
+    params ["_entities"];
+    private _mine = _entities select { !isNull _x && { local _x } && { !([_x] call _keep) } };
+    { if (_x isKindOf "CAManBase" && { vehicle _x isNotEqualTo _x }) then { (vehicle _x) deleteVehicleCrew _x } } forEach _mine;
+    { deleteVehicle _x } forEach _mine;
 };
 
 switch (_phase) do {
@@ -65,11 +77,7 @@ switch (_phase) do {
     };
     case "restore": {
         _args params [["_ceiling", 15], "_world"];
-        private _created = skd_created select { !isNull _x && { !([_x] call _keep) } };
-        {
-            if (!(_x isKindOf "CAManBase") && { (crew _x) findIf { [_x] call _keep } < 0 }) then { deleteVehicleCrew _x };
-        } forEach _created;
-        { deleteVehicle _x } forEach _created;
+        [skd_created] call _deleteLocal;
         if (_hasPlayer) then {
             private _unit = player;
             _unit setUnitLoadout (_base get "loadout");
@@ -78,6 +86,9 @@ switch (_phase) do {
             _unit setDir (_base get "direction");
             _unit setPosASL (_base get "position");
             _unit setVelocity [0, 0, 0];
+            // A group that saw an enemy during the check stays in combat and raises the player's
+            // weapon out of the baseline's animation state.
+            (group _unit) setBehaviour (_base getOrDefault ["behaviour", "AWARE"]);
             _unit switchMove (_base get "animation");
         };
         setDate (_world get "date");
@@ -131,6 +142,11 @@ switch (_phase) do {
             if (_hasPlayer) then {
                 private _u = player;
                 _off = (getPosASL _u) distance (_base get "position");
+                // A unit whose animation state ran on from the baseline's is put back into it.
+                if (animationState _u != (_base get "animation")) then {
+                    _still = diag_tickTime;
+                    if (diag_tickTime < _settle) then { _u switchMove (_base get "animation") };
+                };
                 if (_off > 0.02) then {
                     _still = diag_tickTime;
                     if (diag_tickTime < _settle) then {
@@ -140,6 +156,7 @@ switch (_phase) do {
                     };
                 };
             };
+            [skd_created] call _deleteLocal;
             _mismatches = call _check;
             (_mismatches isEqualTo [] && { (_hasPlayer && { diag_tickTime - _still >= 0.3 }) || { !_hasPlayer } || { diag_tickTime >= _settle } })
                 || { diag_tickTime - _start > _ceiling }

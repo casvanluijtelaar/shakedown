@@ -13,6 +13,7 @@ skd_check = createHashMapFromArray [
     ["steps", []],
     ["stack", []],
     ["attached", []],
+    ["expects", []],
     ["deadline", diag_tickTime + _timeout],
     ["machines", _order getOrDefault ["machines", [skd_machine]]],
     ["mode", _order getOrDefault ["mode", "singleplayer"]],
@@ -76,7 +77,12 @@ private _report = createHashMapFromArray [
     ["kind", "report"],
     ["order", skd_check get "order"],
     ["steps", _steps],
-    ["evidence", _evidence]
+    ["evidence", _evidence],
+    // Each skd_fnc_expectError block: its text, when it started and the step it was called in;
+    // the runner matches them against the errors of every machine (ERR-04).
+    ["expects", (skd_check get "expects") apply {
+        createHashMapFromArray [["text", _x select 0], ["from", _x select 1], ["path", _x select 2]]
+    }]
 ];
 if (count _end == 0) then {
     _report set ["outcome", "pass"];

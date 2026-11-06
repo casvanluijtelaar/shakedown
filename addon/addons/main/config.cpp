@@ -7,8 +7,8 @@ class CfgPatches {
         requiredVersion = 2.18;
         requiredAddons[] = {"A3_Functions_F"};
         version = 0.0;
-        versionStr = "0.0.3";
-        versionAr[] = {0, 0, 3};
+        versionStr = "0.0.4";
+        versionAr[] = {0, 0, 4};
     };
 };
 
@@ -51,6 +51,8 @@ class CfgFunctions {
             class useActionLocal {};
             class pressKeyLocal {};
             class reset {};
+            class context {};
+            class stepPath {};
         };
         // The check API (spec/contract/check-api.md).
         class api {
@@ -63,6 +65,7 @@ class CfgFunctions {
             class onEach {};
             class waitUntil {};
             class tryWaitUntil {};
+            class expectError {};
             class expect {};
             class expectOn {};
             class expectEach {};

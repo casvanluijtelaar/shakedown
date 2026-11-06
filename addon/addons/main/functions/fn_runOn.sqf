@@ -16,7 +16,7 @@ if (_machine isEqualTo skd_machine || { (skd_check get "mode") isEqualTo "single
     private _script = [[_args] call skd_fnc_cross, _code, _box] spawn {
         params ["_skd_args", "_skd_code", "_skd_box"];
         private _skd_remote = true;
-        private _skd_value = _skd_args call _skd_code;
+        private _skd_value = switch (true) do { default { _skd_args call _skd_code } };
         _skd_box set [1, if (isNil "_skd_value") then { [] } else { [[_skd_value] call skd_fnc_cross] }];
         _skd_box set [0, true];
     };
@@ -25,7 +25,8 @@ if (_machine isEqualTo skd_machine || { (skd_check get "mode") isEqualTo "single
     [_box select 0, _box select 1]
 };
 private _answer = [_machine, createHashMapFromArray [
-    ["kind", "exec"], ["source", toString _code], ["args", [_args] call skd_fnc_encode], ["ceiling", _ceiling]
+    ["kind", "exec"], ["source", toString _code], ["args", [_args] call skd_fnc_encode], ["ceiling", _ceiling],
+    ["path", call skd_fnc_stepPath]
 ], _ceiling] call skd_fnc_route;
 switch (_answer getOrDefault ["state", "lost"]) do {
     case "done": {

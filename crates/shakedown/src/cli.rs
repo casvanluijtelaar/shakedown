@@ -49,6 +49,19 @@ enum Command {
     Status,
     /// Resets the session in place (RST-03).
     Reset,
+    /// A machine's log lines, redacted (LOG-03).
+    Logs {
+        #[arg(long)]
+        machine: String,
+        #[arg(long)]
+        run: Option<String>,
+        #[arg(long)]
+        check: Option<String>,
+        #[arg(long)]
+        grep: Option<String>,
+        #[arg(long, default_value_t = 200)]
+        last: usize,
+    },
     /// The framework version.
     Version,
     /// Runs the runner. Started by the other commands; not for direct use.
@@ -230,6 +243,38 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
                 }
                 Ok(4)
             }
+        }
+        Command::Logs {
+            machine,
+            run,
+            check,
+            grep,
+            last,
+        } => {
+            let project = project(cli)?;
+            let mut conn = client::connect()?;
+            let request = Request::Logs {
+                project: project.root.clone(),
+                machine: machine.clone(),
+                run: run.clone(),
+                check: check.clone(),
+                grep: grep.clone(),
+                last: *last,
+            };
+            let Event::Value { value } = conn.request(&request, |e| out.progress(e))? else {
+                return Err(CliError::framework("The runner answered logs with something else."));
+            };
+            if cli.json {
+                out.json(&value);
+            } else {
+                for line in value["lines"].as_array().into_iter().flatten() {
+                    println!("{}", line.as_str().unwrap_or_default());
+                }
+                if let Some(path) = value["path"].as_str() {
+                    eprintln!("Every line is in {path}.");
+                }
+            }
+            Ok(0)
         }
         Command::Runner => unreachable!("handled before dispatch"),
     }

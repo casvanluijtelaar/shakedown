@@ -846,11 +846,12 @@ dependencies = [
 
 [[package]]
 name = "shakedown"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "clap",
  "getrandom 0.4.3",
  "jsonschema",
+ "regex",
  "serde",
  "serde_json",
  "shakedown-protocol",
@@ -861,7 +862,7 @@ dependencies = [
 
 [[package]]
 name = "shakedown-ext"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "arma-rs",
  "serde_json",
@@ -870,7 +871,7 @@ dependencies = [
 
 [[package]]
 name = "shakedown-protocol"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "serde",
  "serde_json",

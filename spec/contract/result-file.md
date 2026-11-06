@@ -48,11 +48,11 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
 | `started_at`, `ended_at`, `duration_s` | Wall clock, from the start of `preparing` to the outcome. |
 | `reload` | `partial` when the check ran after a `mission`-level reload of mod code (`RLD-05`), otherwise `full`. |
 | `steps` | Every step in the order it started, nested steps after their parent, each with its path, the machine it ran on, its state, its start and end on the clocks of `OBS-05`, its duration and its error. A step that was running when the check ended has state `running` and no end. |
-| `errors` | Every script error caught on any machine during the execution, with its machine, text, file, line, stack, the check and step it was stamped with, whether the handler or the RPT scan caught it, whether an `expectError` block matched it, and its clocks. |
+| `errors` | Every script error caught on any machine during the execution, from the start of its reset to the end of the wait for errors in flight, in the order of their wall-clock time, with its machine, text, file (empty for code that has none), line, stack (`file:line` and scope, outermost frame first), the check and step it was stamped with or attributed to (`P-05` step 7), whether the handler or the RPT scan caught it (`source`), whether an `expectError` block matched it, and its clocks. An error the RPT scan found has its `at.utc` to the second and `tick`, `time` and `frame` 0, which the RPT does not give. Errors during the reset and errors raised while compiling code the check sent are listed but do not decide a `script-error` (`ERR-03`). |
 | `evidence.failed_step` | The path of the step the outcome was decided in. |
 | `evidence.observed` | The last value read on each machine by the wait or assertion that failed. |
 | `evidence.attached` | The values the check attached with `skd_fnc_evidence`, kept for every outcome. |
-| `evidence.logs` | Each machine's log lines for this check. |
+| `evidence.logs` | The path of each machine's log lines for this check, `checks/<n>/<machine>.log`, kept for every outcome. |
 
 ## Example
 

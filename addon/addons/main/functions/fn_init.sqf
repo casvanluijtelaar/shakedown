@@ -18,15 +18,45 @@ skd_ops = ["==", "!=", "<", "<=", ">", ">=", "~=", "in", "contains"];
 private _starts = (uiNamespace getVariable ["skd_missionStarts", 0]) + 1;
 uiNamespace setVariable ["skd_missionStarts", _starts];
 
-// Compile errors are only reported through ScriptError, so the agent records the errors raised
-// while it compiles code it was sent.
+// Every script error on this machine is sent to the runner at once (ERR-01), stamped with the run
+// and check this machine was told of (skd_context, set by skd_fnc_context) and the step it ran in:
+// on the lead the innermost running step of the check; elsewhere the step of the newest order still
+// running here, or none, and the runner then takes the step running on the lead at that time
+// (P-05 steps 6 and 7). Compile errors are only reported through ScriptError, so the agent also
+// records the errors raised while it compiles code it was sent, and marks them as such.
 skd_compiling = false;
 skd_compileErrors = [];
+skd_context = ["", ""];
+skd_orderPaths = [];
 addMissionEventHandler ["ScriptError", {
-    params ["_text", "_file", "_line"];
+    params ["_text", "_file", "_line", "_position", "_content", "_stack"];
     if (skd_compiling) then {
         skd_compileErrors pushBack [_text, _line];
     };
+    private _path = [];
+    if (!isNil "skd_check" && { !(skd_check get "done") } && { (skd_check get "id") isEqualTo (skd_context select 1) }) then {
+        _path = call skd_fnc_stepPath;
+    } else {
+        if (count skd_orderPaths > 0) then { _path = (skd_orderPaths select -1) select 1 };
+    };
+    // Each frame as "file:line" and its scope; the frames' variables are left out.
+    private _frames = (if (isNil "_stack") then { [] } else { _stack }) apply {
+        _x params [["_f", ""], ["_l", 0], ["_scope", ""]];
+        if (_scope isEqualTo "") then { format ["%1:%2", _f, _l] } else { format ["%1:%2 %3", _f, _l, _scope] }
+    };
+    [createHashMapFromArray [
+        ["kind", "error"],
+        ["machine", skd_machine],
+        ["text", _text],
+        ["file", _file],
+        ["line", _line],
+        ["stack", _frames],
+        ["at", call skd_fnc_clocks],
+        ["key", skd_context select 0],
+        ["check_id", skd_context select 1],
+        ["step_path", _path],
+        ["compile", skd_compiling]
+    ]] call skd_fnc_send;
 }];
 
 // The entity recorder (SCN-04): every entity created on this machine, whatever created it. The

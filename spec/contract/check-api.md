@@ -125,9 +125,9 @@ Any other `op`, or operands of the wrong type for it, ends the check `fail` / `c
 
 | Function | Arguments | Returns | Fails |
 |---|---|---|---|
-| `skd_fnc_expectError` | `[text, code, args]` - `text` String; `code` Code run with `call` in the body; `args` default `[]`. | The value of `code`. | `fail` / `expected-error-missing` at the check's end when no error containing `text` was caught. |
+| `skd_fnc_expectError` | `[text, code, args]` - `text` a String that is not empty; `code` Code run with `call` in the body; `args` default `[]`. | The value of `code`. | `fail` / `expected-error-missing` at the check's end when no error containing `text` was caught. |
 
-Any script error on any machine whose text contains `text` (case-insensitive), from the start of `code` until the check ends, is marked expected and does not fail the check (`ERR-04`). Every other script error on any machine during the check fails it with `fail` / `script-error`, naming the machine, the error, its file and line, and the step (`ERR-03`).
+Any script error on any machine whose text contains `text` (case-insensitive), from the start of `code` until the check ends, is marked expected and does not fail the check (`ERR-04`). Every other script error on any machine during the check fails it with `fail` / `script-error` once the body ends, naming the machine, the error, its file and line, and the step, unless an earlier cause already decided the check (`ERR-03`, `DM-06`); `evidence.failed_step` is then the error's step. An `expectError` block that saw no matching error by the end of a check that would otherwise pass ends it `fail` / `expected-error-missing`, quoting `text`; `evidence.failed_step` is the step the block was called in. The text of an error is the engine's message without the `Error ` prefix, such as `Undefined variable in expression: _x`. The engine reports no undefined variable in unscheduled code, only in scheduled code such as the body and the code sent to a machine (research `25-spikes-errors-and-logs.md`).
 
 ## Building a scene
 

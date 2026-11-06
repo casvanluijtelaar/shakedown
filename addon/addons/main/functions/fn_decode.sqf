@@ -9,7 +9,7 @@
 params ["_value"];
 if (isNil "_value") exitWith { nil };
 switch (typeName _value) do {
-    case "ARRAY": { _value apply { [_x] call skd_fnc_decode } };
+    case "ARRAY": { _value apply { if (isNil "_x") then { nil } else { [_x] call skd_fnc_decode } } };
     case "HASHMAP": {
         switch (_value getOrDefault ["$type", ""]) do {
             case "object": { objectFromNetId (_value getOrDefault ["netId", ""]) };

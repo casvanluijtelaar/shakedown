@@ -15,7 +15,7 @@ if (_machine isEqualTo skd_machine || { (skd_check get "mode") isEqualTo "single
         params ["_skd_args", "_skd_code", "_skd_poller"];
         private _skd_remote = true;
         while { !(_skd_poller select 2) } do {
-            private _skd_value = _skd_args call _skd_code;
+            private _skd_value = switch (true) do { default { _skd_args call _skd_code } };
             _skd_poller set [0, if (isNil "_skd_value") then { [] } else { [[_skd_value] call skd_fnc_cross] }];
             _skd_poller set [1, (_skd_poller select 1) + 1];
             private _skd_frame = diag_frameNo;
@@ -32,7 +32,8 @@ skd_polls set [_ref, _poller];
 [createHashMapFromArray [
     ["kind", "route"], ["ref", _ref], ["target", _machine],
     ["order", createHashMapFromArray [
-        ["kind", "poll"], ["source", toString _code], ["args", [_args] call skd_fnc_encode], ["ceiling", _ceiling + 5]
+        ["kind", "poll"], ["source", toString _code], ["args", [_args] call skd_fnc_encode], ["ceiling", _ceiling + 5],
+        ["path", call skd_fnc_stepPath]
     ]]
 ]] call skd_fnc_send;
 _poller

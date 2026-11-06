@@ -36,6 +36,15 @@ pub enum Request {
     Status,
     /// A reset outside a run (`RST-03`).
     Reset,
+    /// A machine's log lines, redacted (`LOG-03`).
+    Logs {
+        project: PathBuf,
+        machine: String,
+        run: Option<String>,
+        check: Option<String>,
+        grep: Option<String>,
+        last: usize,
+    },
     Run {
         project: PathBuf,
         /// The setups the project file declares, so a check naming another is a check-error (`DEF-06`).

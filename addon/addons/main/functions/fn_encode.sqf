@@ -10,7 +10,7 @@ switch (typeName _value) do {
     case "SCALAR";
     case "STRING";
     case "BOOL": { _value };
-    case "ARRAY": { _value apply { [_x] call skd_fnc_encode } };
+    case "ARRAY": { _value apply { if (isNil "_x") then { nil } else { [_x] call skd_fnc_encode } } };
     case "HASHMAP": {
         if ((keys _value) findIf { !(_x isEqualType "") } < 0) then {
             private _out = createHashMap;

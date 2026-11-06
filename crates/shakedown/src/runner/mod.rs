@@ -2,6 +2,7 @@
 //! tokens, routes orders to machines and writes the result file. Clients and extensions reach it
 //! on `127.0.0.1` with a token (`SEC-01`).
 
+pub mod errors;
 pub mod run;
 pub mod session;
 
@@ -18,6 +19,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
 use crate::error::CliError;
+use crate::logs::Redactor;
 use crate::paths;
 use crate::wire::{Event, Request};
 use session::Session;
@@ -37,6 +39,10 @@ pub struct Runner {
     log: Mutex<Option<std::fs::File>>,
     /// The active run's progress for `status` (`INS-02`): id, done, total, current check.
     pub(crate) progress: Mutex<Option<Value>>,
+    /// What replaces the Steam identity in everything the runner returns or stores (`LOG-02`).
+    redactor: Mutex<Redactor>,
+    /// The project and key of the check execution running now, for `logs --check` (`LOG-03`).
+    pub(crate) executing: Mutex<Option<(String, String)>>,
 }
 
 struct State {
@@ -65,6 +71,8 @@ impl Runner {
             runs: AtomicU32::new(0),
             log: Mutex::new(log),
             progress: Mutex::new(None),
+            redactor: Mutex::new(Redactor::default()),
+            executing: Mutex::new(None),
         });
         let me = Arc::clone(&runner);
         tokio::spawn(async move {
@@ -80,9 +88,18 @@ impl Runner {
     }
 
     pub fn log(&self, line: &str) {
+        let line = self.redactor().redact(line);
         if let Some(file) = self.log.lock().unwrap().as_mut() {
             let _ = writeln!(file, "{} {line}", shakedown_protocol::time::now());
         }
+    }
+
+    pub fn redactor(&self) -> Redactor {
+        self.redactor.lock().unwrap().clone()
+    }
+
+    pub(crate) fn set_redactor(&self, redactor: Redactor) {
+        *self.redactor.lock().unwrap() = redactor;
     }
 
     pub fn session(&self) -> Option<Arc<Session>> {
@@ -175,9 +192,13 @@ impl Runner {
             return;
         }
         let (tx, mut rx) = mpsc::unbounded_channel::<Event>();
+        let me = Arc::clone(self);
         let writer = tokio::spawn(async move {
             while let Some(event) = rx.recv().await {
-                let line = serde_json::to_string(&event).unwrap();
+                // Everything a client prints comes through here, redacted (LOG-02).
+                let mut value = serde_json::to_value(&event).unwrap();
+                me.redactor().redact_value(&mut value);
+                let line = value.to_string();
                 if write.write_all(format!("{line}\n").as_bytes()).await.is_err() {
                     break;
                 }
@@ -229,6 +250,23 @@ impl Runner {
                 }),
             }),
             Request::Reset => self.reset().await.map(|value| Event::Value { value }),
+            Request::Logs {
+                project,
+                machine,
+                run,
+                check,
+                grep,
+                last,
+            } => run::logs(
+                self,
+                &project,
+                &machine,
+                run.as_deref(),
+                check.as_deref(),
+                grep.as_deref(),
+                last,
+            )
+            .map(|value| Event::Value { value }),
             Request::SessionStop => match self.session() {
                 None => Err(CliError::not_now("No session runs. Nothing to stop.")),
                 Some(s) => {

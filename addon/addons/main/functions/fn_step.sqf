@@ -33,7 +33,9 @@ private _skd_step = createHashMapFromArray [
 ];
 _skd_stack pushBack (_skd_steps pushBack _skd_step);
 
-private _skd_result = _skd_args call _skd_code;
+// The value goes through a switch: code whose last statement is an assignment returns nothing,
+// and assigning nothing raises "GIAS pre stack size violation"; the switch gives nil instead.
+private _skd_result = switch (true) do { default { _skd_args call _skd_code } };
 
 _skd_step set ["state", "passed"];
 _skd_step set ["end", call skd_fnc_clocks];

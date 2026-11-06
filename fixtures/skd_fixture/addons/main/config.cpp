@@ -10,8 +10,8 @@ class CfgPatches {
         requiredVersion = 2.18;
         requiredAddons[] = {"A3_Functions_F", "A3_Weapons_F"};
         version = 0.0;
-        versionStr = "0.0.3";
-        versionAr[] = {0, 0, 3};
+        versionStr = "0.0.4";
+        versionAr[] = {0, 0, 4};
     };
 };
 
@@ -24,6 +24,7 @@ class CfgFunctions {
             class open {};
             class setFlag {};
             class setFlagLater {};
+            class throw {};
         };
     };
 };

@@ -29,7 +29,7 @@ private _originalTarget = _target;
 // The condition sees _target and _originalTarget from here and _this, the caller, from the call.
 isNil {
     _held = _caller call {
-        private _r = call _skd_condition;
+        private _r = switch (true) do { default { call _skd_condition } };
         !isNil "_r" && { _r isEqualTo true }
     };
 };

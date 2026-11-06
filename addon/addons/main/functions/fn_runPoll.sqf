@@ -11,12 +11,17 @@ private _ceiling = _order getOrDefault ["ceiling", 10];
 private _args = _order getOrDefault ["args", []];
 if (isNil "_args") then { _args = [] };
 _args = [_args] call skd_fnc_decode;
+// The lead's step the order was sent from stamps the errors raised while it runs (ERR-01).
+private _path = _order getOrDefault ["path", []];
+if (isNil "_path") then { _path = [] };
+skd_orderPaths pushBack [_id, _path];
 
 skd_compileErrors = [];
 skd_compiling = true;
 private _code = compile (_order get "source");
 skd_compiling = false;
 if (skd_compileErrors isNotEqualTo []) exitWith {
+    skd_orderPaths deleteAt (skd_orderPaths findIf { (_x select 0) isEqualTo _id });
     (skd_compileErrors select 0) params ["_text", "_line"];
     [createHashMapFromArray [
         ["kind", "result"], ["order", _id], ["state", "compile-error"],
@@ -34,7 +39,7 @@ private _script = [_args, _code, _id, _stop, _ceiling] spawn {
     private _skd_sentAt = -1;
     private _skd_reads = 0;
     while { !(_skd_stop select 0) && { diag_tickTime - _skd_start < _skd_ceiling } } do {
-        private _skd_value = [_skd_args call _skd_code] call skd_fnc_encode;
+        private _skd_value = [switch (true) do { default { _skd_args call _skd_code } }] call skd_fnc_encode;
         private _skd_text = if (isNil "_skd_value") then { "nil" } else { toJSON [_skd_value] };
         if (_skd_text isNotEqualTo _skd_sent && { diag_tickTime - _skd_sentAt >= 0.05 }) then {
             _skd_reads = _skd_reads + 1;
@@ -50,4 +55,5 @@ private _script = [_args, _code, _id, _stop, _ceiling] spawn {
 };
 waitUntil { scriptDone _script };
 skd_stops deleteAt _id;
+skd_orderPaths deleteAt (skd_orderPaths findIf { (_x select 0) isEqualTo _id });
 [createHashMapFromArray [["kind", "result"], ["order", _id], ["state", "done"]]] call skd_fnc_send;

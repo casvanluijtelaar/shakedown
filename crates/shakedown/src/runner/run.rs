@@ -2,7 +2,7 @@
 //! result file written at its end (`RES-01`).
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -13,8 +13,8 @@ use shakedown_protocol::result::{
 };
 use shakedown_protocol::time;
 
-use super::Runner;
 use super::session::{GRACE, OrderError, Session, SessionState};
+use super::{Runner, errors};
 use crate::checks::{self, CheckRef, Header};
 use crate::error::CliError;
 use crate::paths;
@@ -81,6 +81,8 @@ async fn execute(
     std::fs::create_dir_all(&folder)
         .map_err(|e| CliError::framework(format!("Cannot create the run folder {}: {e}.", folder.display())))?;
     runner.log(&format!("{} run {run_id}: {} checks", session.id, checks.len()));
+    // Every machine marks the run's start in its RPT, so the run's lines can be cut out (LOG-04).
+    mark(session, &run_id, "start", "").await;
 
     let mut executions: Vec<CheckExecution> = Vec::new();
     let mut not_run: Vec<NotRun> = Vec::new();
@@ -98,7 +100,7 @@ async fn execute(
             *n += 1;
             *n
         };
-        let execution = execute_check(runner, session, &run_id, check, setups)
+        let execution = execute_check(runner, session, &run_id, &folder, executions.len() + 1, check, setups)
             .await
             .map(|mut e| {
                 e.repeat = repeat;
@@ -117,6 +119,14 @@ async fn execute(
     }
 
     *runner.progress.lock().unwrap() = None;
+    mark(session, &run_id, "end", "").await;
+    let mut run_logs = BTreeMap::new();
+    for machine in session.machine_names() {
+        let rel = format!("logs/{machine}.log");
+        if let Some((_, rel)) = excerpt(runner, session, &machine, &run_id, &folder, &rel).await {
+            run_logs.insert(machine, rel);
+        }
+    }
     let summary = Summary::of(&executions, not_run.len());
     let result = ResultFile {
         schema: SCHEMA.into(),
@@ -146,10 +156,13 @@ async fn execute(
         checks: executions.clone(),
         not_run,
         reloads: vec![],
-        logs: BTreeMap::new(),
+        logs: run_logs,
     };
     let file = folder.join("result.json");
-    let text = serde_json::to_string_pretty(&result).expect("the result serialises");
+    // Nothing in the result file names the Steam account (LOG-02).
+    let mut value = serde_json::to_value(&result).expect("the result serialises");
+    runner.redactor().redact_value(&mut value);
+    let text = serde_json::to_string_pretty(&value).expect("the result serialises");
     std::fs::write(&file, text)
         .map_err(|e| CliError::framework(format!("Cannot write the result file {}: {e}.", file.display())))?;
     runner.log(&format!("{} run {run_id}: done, {}", session.id, file.display()));
@@ -168,11 +181,17 @@ async fn execute(
     }))
 }
 
-/// Executes one check (`P-05`); `None` when its `@setups` excludes the session's setup.
+/// Executes one check (`P-05`) as the run's `n`th execution; `None` when its `@setups` excludes
+/// the session's setup. Every machine marks the execution's start before its reset and its end
+/// after the body and the wait for errors in flight; the lines between, each machine's script
+/// errors and the `expectError` blocks decide the outcome with the lead's report (`ERR-01` to
+/// `ERR-04`, `LOG-04`).
 async fn execute_check(
     runner: &Runner,
     session: &Arc<Session>,
     run_id: &str,
+    folder: &Path,
+    n: usize,
     check: &CheckRef,
     setups: &[String],
 ) -> Option<CheckExecution> {
@@ -232,6 +251,99 @@ async fn execute_check(
             Evidence::default(),
         ));
     }
+    let key = format!("{run_id}#{n}");
+    mark(session, &key, "start", &check.id).await;
+    *runner.executing.lock().unwrap() = Some((key.clone(), check.id.clone()));
+    let (mut execution, report, executing_at) =
+        prepare_and_execute(runner, session, run_id, check, &header, &text, started, clock).await;
+    // P-05 step 9: script errors still in flight.
+    tokio::time::sleep(ERRORS_IN_FLIGHT).await;
+    mark(session, &key, "end", &check.id).await;
+    *runner.executing.lock().unwrap() = None;
+    let mut errors: Vec<Value> = session
+        .take_errors(&key)
+        .iter()
+        .map(|e| errors::from_handler(e, &check.id))
+        .collect();
+    for machine in session.machine_names() {
+        let rel = format!("checks/{n}/{machine}.log");
+        let Some((lines, rel)) = excerpt(runner, session, &machine, &key, folder, &rel).await else {
+            continue;
+        };
+        execution.evidence.logs.insert(machine.clone(), rel);
+        errors::from_rpt(&mut errors, &machine, &check.id, &lines);
+    }
+    errors::judge(&mut execution, errors, &report["expects"], executing_at.as_deref());
+    execution.ended_at = time::now();
+    execution.duration_s = round3(clock.elapsed().as_secs_f64());
+    Some(execution)
+}
+
+/// How long the runner waits after a check's end report for script errors still in flight
+/// (`P-05` step 9).
+const ERRORS_IN_FLIGHT: Duration = Duration::from_secs(1);
+/// How long the runner waits for a marker to reach a machine's RPT, which the engine writes about
+/// every 0.5 s (`SPK-13`).
+const MARKER_CEILING: Duration = Duration::from_secs(3);
+
+/// Has every machine write the marker of `key` and `edge` into its RPT (`LOG-04`), and, for a
+/// check execution, set or clear the context that stamps its script errors (`ERR-01`).
+async fn mark(session: &Arc<Session>, key: &str, edge: &str, check_id: &str) {
+    let mut handles = Vec::new();
+    for machine in session.machine_names() {
+        let session = Arc::clone(session);
+        let args = json!([key, edge, check_id]);
+        handles.push(tokio::spawn(async move {
+            let _ = session.exec(&machine, "_this call skd_fnc_context", args, 5.0).await;
+        }));
+    }
+    for h in handles {
+        let _ = h.await;
+    }
+}
+
+/// Cuts a machine's lines between the markers of `key` out of its RPT, once the end marker has
+/// reached the file, writes them redacted to `rel` in the run folder, and returns them with `rel`.
+async fn excerpt(
+    runner: &Runner,
+    session: &Session,
+    machine: &str,
+    key: &str,
+    folder: &Path,
+    rel: &str,
+) -> Option<(String, String)> {
+    let rpt = crate::logs::newest_rpt(&session.profile(machine)?)?;
+    let end = crate::logs::marker(key, "end");
+    let mut text = crate::logs::read_text(&rpt);
+    for _ in 0..(MARKER_CEILING.as_millis() / 100) {
+        if text.contains(&end) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        text = crate::logs::read_text(&rpt);
+    }
+    let lines = runner.redactor().redact(&crate::logs::cut(&text, key)?);
+    let path = folder.join(rel);
+    std::fs::create_dir_all(path.parent()?).ok()?;
+    std::fs::write(&path, &lines).ok()?;
+    Some((lines, rel.to_string()))
+}
+
+/// The reset before a check and the check's body on the lead (`P-05` steps 3 to 8): the
+/// execution, the lead's end report (`null` when there is none) and the wall-clock time the body
+/// was sent.
+#[allow(clippy::too_many_arguments)]
+async fn prepare_and_execute(
+    runner: &Runner,
+    session: &Arc<Session>,
+    run_id: &str,
+    check: &CheckRef,
+    header: &Header,
+    text: &Result<String, std::io::Error>,
+    started: SystemTime,
+    clock: Instant,
+) -> (CheckExecution, Value, Option<String>) {
+    let header = header.clone();
     let lead = session.lead();
     // P-05 step 3: the reset in place before the check (P-06, RST-01).
     if let Err(message) = reset(runner, session).await {
@@ -242,7 +354,7 @@ async fn execute_check(
             machine: Some(lead.into()),
             at: time::now(),
         };
-        return Some(ended(
+        let e = ended(
             check,
             Some(&header),
             started,
@@ -251,14 +363,15 @@ async fn execute_check(
             Some(reason),
             vec![],
             Evidence::default(),
-        ));
+        );
+        return (e, Value::Null, None);
     }
     let setup = &session.spec.setup;
     let order = json!({
         "kind": "check",
         "run_id": run_id,
         "check_id": check.id,
-        "source": checks::body_source(text.as_deref().unwrap_or_default()),
+        "source": checks::body_source(text.as_ref().map(String::as_str).unwrap_or_default()),
         "timeout": header.timeout_s,
         "machines": session.machine_names(),
         "mode": setup.mode.as_str(),
@@ -271,8 +384,12 @@ async fn execute_check(
         },
     });
     let ceiling = Duration::from_secs(header.timeout_s) + GRACE;
+    let executing_at = Some(time::now());
     match session.order(lead, order, ceiling).await {
-        Ok(report) => Some(from_report(check, &header, started, clock, &report, lead)),
+        Ok(report) => {
+            let e = from_report(check, &header, started, clock, &report, lead);
+            (e, report, executing_at)
+        }
         Err(e) => {
             let why = match e {
                 OrderError::NotConnected | OrderError::Lost => {
@@ -291,7 +408,7 @@ async fn execute_check(
                 machine: Some(lead.into()),
                 at: time::now(),
             };
-            Some(ended(
+            let e = ended(
                 check,
                 Some(&header),
                 started,
@@ -300,7 +417,8 @@ async fn execute_check(
                 Some(reason),
                 vec![],
                 Evidence::default(),
-            ))
+            );
+            (e, Value::Null, executing_at)
         }
     }
 }
@@ -521,6 +639,141 @@ fn outcome_text(e: &CheckExecution) -> String {
         text.push_str(&format!("\n        {}: {}", r.kind, r.message));
     }
     text
+}
+
+/// The most characters of lines `logs` returns itself; more go to a file (`AGT-07`).
+const LOGS_LIMIT: usize = 20_000;
+
+/// `logs` (`LOG-03`): a machine's log lines, from its running game's RPT, from a run's folder
+/// with `run`, or for one check execution with `check` (the one running now, or else its last
+/// execution in the newest run that has one), filtered by a regular expression and cut to the
+/// last `last` lines, redacted. The shape is that of the `logs` tool: `lines`, `truncated` when
+/// more lines matched than are returned, and `path`, the file holding them all when they are
+/// longer than a tool result may be.
+pub fn logs(
+    runner: &Runner,
+    project: &Path,
+    machine: &str,
+    run: Option<&str>,
+    check: Option<&str>,
+    grep: Option<&str>,
+    last: usize,
+) -> Result<Value, CliError> {
+    let filter = grep
+        .map(regex::Regex::new)
+        .transpose()
+        .map_err(|e| CliError::wrong(format!("--grep is not a regular expression: {e}. Fix the pattern.")))?;
+    let runs = project.join(".shakedown").join("runs");
+    let session = runner.session();
+    let live = |key: Option<&str>| -> Result<String, CliError> {
+        let Some(session) = &session else {
+            return Err(CliError::not_now(
+                "No session runs, so there is no live log to read. Give --run <id> to read a run's logs, or start a session.",
+            ));
+        };
+        let Some(profile) = session.profile(machine) else {
+            return Err(CliError::wrong(format!(
+                "Session {} has no machine {machine}; its machines are {}.",
+                session.id,
+                session.machine_names().join(", ")
+            )));
+        };
+        let text = crate::logs::newest_rpt(&profile)
+            .map(|p| crate::logs::read_text(&p))
+            .unwrap_or_default();
+        Ok(match key {
+            Some(key) => crate::logs::cut(&text, key).unwrap_or_default(),
+            None => text,
+        })
+    };
+    // The excerpt a run's result file names for the machine: the whole run's, or that of the
+    // check's last execution in it.
+    let from_run = |dir: &Path, check: Option<&str>| -> Option<String> {
+        let result: Value = serde_json::from_str(&std::fs::read_to_string(dir.join("result.json")).ok()?).ok()?;
+        let rel = match check {
+            None => result["logs"][machine].as_str()?.to_string(),
+            Some(id) => result["checks"]
+                .as_array()?
+                .iter()
+                .rev()
+                .find(|c| c["check_id"] == id)?["evidence"]["logs"][machine]
+                .as_str()?
+                .to_string(),
+        };
+        std::fs::read_to_string(dir.join(rel)).ok()
+    };
+    let text = match (run, check) {
+        (Some(run), check) => {
+            let dir = runs.join(run);
+            if !dir.join("result.json").is_file() {
+                return Err(CliError::wrong(format!(
+                    "No run {run} with a result file is in {}. Give the id of a run that ended.",
+                    runs.display()
+                )));
+            }
+            from_run(&dir, check).ok_or_else(|| {
+                CliError::wrong(format!(
+                    "Run {run} keeps no log of {machine}{}. Check the machine name and the check id.",
+                    check.map(|c| format!(" for check {c}")).unwrap_or_default()
+                ))
+            })?
+        }
+        (None, Some(check)) => {
+            let now = runner.executing.lock().unwrap().clone();
+            match now {
+                Some((key, id)) if id == check => live(Some(&key))?,
+                _ => {
+                    let mut dirs: Vec<PathBuf> = std::fs::read_dir(&runs)
+                        .into_iter()
+                        .flatten()
+                        .flatten()
+                        .map(|e| e.path())
+                        .collect();
+                    dirs.sort_by_key(|d| std::fs::metadata(d.join("result.json")).and_then(|m| m.modified()).ok());
+                    dirs.iter()
+                        .rev()
+                        .find_map(|d| from_run(d, Some(check)))
+                        .ok_or_else(|| {
+                            CliError::wrong(format!(
+                                "No run in {} executed check {check} with a log of {machine}. Run the check first.",
+                                runs.display()
+                            ))
+                        })?
+                }
+            }
+        }
+        (None, None) => live(None)?,
+    };
+    let text = runner.redactor().redact(&text);
+    let matched: Vec<&str> = text
+        .lines()
+        .filter(|l| filter.as_ref().is_none_or(|f| f.is_match(l)))
+        .collect();
+    let mut lines: Vec<String> = matched[matched.len().saturating_sub(last)..]
+        .iter()
+        .map(|l| l.to_string())
+        .collect();
+    let mut truncated = matched.len() > lines.len();
+    let mut path = Value::Null;
+    if lines.iter().map(|l| l.len() + 1).sum::<usize>() > LOGS_LIMIT {
+        let dir = session.as_ref().map_or_else(|| runs.clone(), |s| s.folder.clone());
+        let file = dir.join(format!("logs-{machine}-{}.log", time::stamp(SystemTime::now())));
+        if std::fs::write(&file, lines.join("\n") + "\n").is_ok() {
+            path = json!(file);
+        }
+        let mut size = 0;
+        let keep = lines
+            .iter()
+            .rev()
+            .take_while(|l| {
+                size += l.len() + 1;
+                size <= LOGS_LIMIT
+            })
+            .count();
+        lines.drain(..lines.len() - keep);
+        truncated = true;
+    }
+    Ok(json!({"lines": lines, "truncated": truncated, "path": path}))
 }
 
 #[cfg(test)]

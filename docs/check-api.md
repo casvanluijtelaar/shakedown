@@ -68,6 +68,16 @@ private _landed = ["p1", { isTouchingGround player }, "p1 landed", 3] call skd_f
 
 The operators: `==` and `!=` (any type, case-sensitive), `<`, `<=`, `>`, `>=` (numbers), `~=` (expected `[target, tolerance]`, a number or a position), `in` (actual is an element of the array expected), `contains` (expected is an element of the array actual, or a substring of the string actual). Operands of the wrong type end the check `fail` / `check-error`.
 
+## Script errors
+
+A script error on any machine during a check fails it `fail` / `script-error` once the body ends, naming the machine, the error with its file and line, and the step. `skd_fnc_expectError [text, code, args]` runs `code` with `call` and returns its value; every error on any machine whose text contains `text`, case-insensitively, from then to the end of the check is expected and fails nothing:
+
+```sqf
+["_skdfx_undefined", { ["p2", { [] call skdfx_fnc_throw; true }] call skd_fnc_on }] call skd_fnc_expectError;
+```
+
+When no such error came by the end of a check that otherwise passes, it ends `fail` / `expected-error-missing`, quoting the text. `text` must be a String that is not empty. [Script errors, logs and evidence](script-errors-and-logs.md) says which errors count and how each is traced to its step.
+
 ## Building a scene
 
 ```sqf

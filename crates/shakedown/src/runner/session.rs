@@ -115,6 +115,9 @@ struct Inner {
     streams: HashMap<String, (String, String)>,
     /// The reverse: a reference of the asking machine to the polling machine and the order id.
     refs: HashMap<String, (String, String)>,
+    /// The script errors the machines' handlers sent (`ERR-01`), until a check execution takes
+    /// those stamped with its key.
+    errors: Vec<Value>,
 }
 
 pub struct Session {
@@ -228,6 +231,27 @@ impl Session {
             .iter()
             .map(|m| m.name.clone())
             .collect()
+    }
+
+    /// Takes the script errors the handlers sent that are stamped with the key of a check
+    /// execution (`<run id>#<n>`).
+    pub fn take_errors(&self, key: &str) -> Vec<Value> {
+        let mut inner = self.inner.lock().unwrap();
+        let (taken, kept) = std::mem::take(&mut inner.errors)
+            .into_iter()
+            .partition(|e| e["key"] == key);
+        inner.errors = kept;
+        taken
+    }
+
+    /// A machine's profile folder, which holds its RPT (`LOG-01`).
+    pub fn profile(&self, machine: &str) -> Option<PathBuf> {
+        let inner = self.inner.lock().unwrap();
+        inner
+            .machines
+            .iter()
+            .find(|m| m.name == machine)
+            .map(|m| m.profile.clone())
     }
 
     /// The baseline a machine sent with `ready` (`RST-02`).
@@ -374,6 +398,8 @@ impl Session {
             }
         }
         match kind.as_str() {
+            // A script error the machine's handler caught (ERR-01).
+            "error" => inner.errors.push(message),
             // A machine asks the runner to send an order to another (P-03 step 1).
             "route" => {
                 drop(inner);
@@ -602,6 +628,26 @@ impl Session {
         if let Some(copy) = &self.mission_copy {
             let _ = std::fs::remove_dir_all(copy);
         }
+        // Every RPT of the session's machines, redacted once nothing writes it any more (LOG-02).
+        let redactor = runner.redactor();
+        let profiles: Vec<PathBuf> = self
+            .inner
+            .lock()
+            .unwrap()
+            .machines
+            .iter()
+            .map(|m| m.profile.clone())
+            .collect();
+        for profile in profiles {
+            for entry in std::fs::read_dir(&profile).into_iter().flatten().flatten() {
+                let path = entry.path();
+                if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("rpt"))
+                    && let Err(e) = redactor.redact_file(&path)
+                {
+                    runner.log(&format!("{}: could not redact {}: {e}", self.id, path.display()));
+                }
+            }
+        }
         for (name, pid) in children {
             runner.log(&format!("{} {name}: process {pid} stopped", self.id));
         }
@@ -771,6 +817,8 @@ pub async fn start(
         )));
     }
     preconditions(runner, &spec)?;
+    // The names of the logged-in Steam account, kept in memory for redaction (INT-STM-04).
+    runner.set_redactor(crate::logs::Redactor::from_steam());
     let dedicated = spec.setup.mode == Mode::Dedicated;
 
     let now = SystemTime::now();
@@ -825,6 +873,7 @@ pub async fn start(
             pending: HashMap::new(),
             streams: HashMap::new(),
             refs: HashMap::new(),
+            errors: Vec::new(),
         }),
         changed: Notify::new(),
         orders: AtomicU64::new(0),

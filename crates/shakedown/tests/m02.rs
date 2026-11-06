@@ -610,7 +610,15 @@ fn us_004_a_start_that_never_becomes_ready_ends_failed_and_leaves_nothing() {
             seen_server_alone = true;
         }
         let p2 = listed.iter().find(|m| m["name"] == "p2").cloned();
-        if let Some(pid) = p2.as_ref().and_then(|m| m["pid"].as_u64()) {
+        // p2 is ended once it has written its RPT, whose last lines the failed start names.
+        let has_rpt = |m: &Value| {
+            std::fs::read_dir(m["profile"].as_str().unwrap_or_default())
+                .into_iter()
+                .flatten()
+                .flatten()
+                .any(|e| e.path().extension().is_some_and(|x| x == "rpt"))
+        };
+        if let Some(pid) = p2.as_ref().filter(|m| has_rpt(m)).and_then(|m| m["pid"].as_u64()) {
             println!(
                 "p2 launched as {pid} in state {}; ending it",
                 p2.as_ref().unwrap()["state"]
