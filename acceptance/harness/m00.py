@@ -300,7 +300,8 @@ def res_01(ctx):
 @check("CFG-02 the project gains only .shakedown with a .gitignore that ignores everything", "session", [STEPS_ONLY])
 def cfg_02(ctx):
     entries = sorted(p.name for p in ctx.project.iterdir())
-    assert entries == [".shakedown", "checks", "shakedown.toml"], f"the project folder holds {entries}"
+    # The harness writes .mcp.json, checks and shakedown.toml; the framework adds only .shakedown.
+    assert entries == [".mcp.json", ".shakedown", "checks", "shakedown.toml"], f"the project folder holds {entries}"
     ignore = (ctx.project / ".shakedown" / ".gitignore").read_text(encoding="utf-8").split()
     assert "*" in ignore, f".shakedown/.gitignore holds {ignore}, which does not ignore everything"
 

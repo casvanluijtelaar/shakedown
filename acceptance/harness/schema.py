@@ -1,4 +1,4 @@
-"""A small JSON Schema 2020-12 validator for the keywords result.schema.json uses.
+"""A small JSON Schema 2020-12 validator for the keywords result.schema.json and the MCP tools' schemas use.
 
 It knows only the keywords listed in KNOWN. A schema that uses any other keyword is refused,
 so a new keyword in the contract shows up as a harness error instead of being skipped.
@@ -8,9 +8,9 @@ import re
 
 KNOWN = {
     "$schema", "$id", "$comment", "$defs", "$ref", "title", "description",
-    "type", "const", "enum", "pattern", "minLength", "minimum",
+    "type", "const", "enum", "pattern", "minLength", "minimum", "maximum", "exclusiveMinimum",
     "properties", "required", "additionalProperties", "propertyNames",
-    "items", "minItems", "oneOf", "allOf", "if", "then", "else",
+    "items", "minItems", "oneOf", "anyOf", "allOf", "if", "then", "else",
 }
 
 _TYPES = {
@@ -83,6 +83,10 @@ def _check(value, schema, root, path, errors):
 
     if _TYPES["number"](value) and "minimum" in schema and value < schema["minimum"]:
         errors.append(f"{path}: {value} is below {schema['minimum']}")
+    if _TYPES["number"](value) and "maximum" in schema and value > schema["maximum"]:
+        errors.append(f"{path}: {value} is above {schema['maximum']}")
+    if _TYPES["number"](value) and "exclusiveMinimum" in schema and value <= schema["exclusiveMinimum"]:
+        errors.append(f"{path}: {value} is not above {schema['exclusiveMinimum']}")
 
     if isinstance(value, dict):
         props = schema.get("properties", {})
@@ -108,6 +112,9 @@ def _check(value, schema, root, path, errors):
         passing = sum(1 for s in schema["oneOf"] if not _sub(value, s, root, path))
         if passing != 1:
             errors.append(f"{path}: matches {passing} of the oneOf branches, expected exactly 1")
+
+    if "anyOf" in schema and not any(not _sub(value, s, root, path) for s in schema["anyOf"]):
+        errors.append(f"{path}: matches none of the anyOf branches")
 
     for sub in schema.get("allOf", []):
         _check(value, sub, root, path, errors)

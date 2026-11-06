@@ -61,6 +61,8 @@ class Context:
         self.m02 = {}                # what M2's batches ran this repeat
         self.m03 = {}                # what M3's batches ran this repeat
         self.m03_keep = {}           # what M3's end checks read after the sessions stopped
+        self.m04 = {}                # what M4's batches did this repeat
+        self.m04_keep = {}           # what M4's start checks did, for its session and end checks
         self.sessions = {}           # setup -> the Session JSON of its `session start`
         self.start_answer = None     # the answer of the current session's `session start`
         self.stops = {}              # setup -> (the `session stop` answer, game pids alive when it returned)

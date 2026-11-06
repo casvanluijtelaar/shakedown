@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02, m03  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02, m03, m04  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
@@ -31,12 +31,14 @@ def find_exe(install):
 
 
 def make_project(work, game, install, cba, agh):
-    """The project: checks/ copied, the numbered copies of the templates, and four setups.
+    """The project: checks/ copied, the numbered copies of the templates, a .mcp.json, and five setups.
 
     sp loads @skd_fixture alone, so it is a setup without CBA; cba loads CBA, both fixtures and
     arma-grappling-hook's built mod, as fixture-mod.md and the M1 demo say. ded is a dedicated
     server with two clients and a headless client loading the same mods as cba; ded30 is ded
-    with a start ceiling of 30 s, which a start of about 45 s cannot meet (US-004).
+    with a start ceiling of 30 s, which a start of about 45 s cannot meet (US-004). slow is a dedicated
+    server with one client on Altis, whose start takes longer than the 50 s a session_start call waits
+    (US-050). The .mcp.json is the one docs/agent-tools.md gives.
     """
     project = work / "project"
     shutil.copytree(HERE / "checks", project / "checks")
@@ -64,7 +66,12 @@ def make_project(work, game, install, cba, agh):
         "[setups.ded]\nmode = \"dedicated\"\nclients = 2\nheadless = 1\n"
         "mods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n\n"
         "[setups.ded30]\nmode = \"dedicated\"\nclients = 2\nheadless = 1\nstart_timeout = 30\n"
-        "mods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n",
+        "mods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n\n"
+        "[setups.slow]\nmode = \"dedicated\"\nclients = 1\nworld = \"Altis\"\nstart_timeout = 300\n"
+        "mods = [\"fixture\"]\n",
+        encoding="utf-8")
+    (project / ".mcp.json").write_text(json.dumps(
+        {"mcpServers": {"shakedown": {"command": "shakedown", "args": ["mcp"], "timeout": 70000}}}, indent=2),
         encoding="utf-8")
     return project
 
@@ -111,6 +118,7 @@ def main():
 
     project = make_project(work, args.game, exe.parent, args.cba, args.agh)
     ctx = Context(driver.Shakedown(exe, project, log), project, REPO, log)
+    ctx.work, ctx.install = work, exe.parent
     results = []  # (repeat, name, ok, message)
 
     def run_check(c, repeat):
@@ -182,7 +190,7 @@ def run_session(ctx, setup, checks, repeat, run_check, log):
         raise RuntimeError(f"the session did not start: {answer}; {answer.stderr[:500]}")
     for n in range(1, repeat + 1):
         log(f"--- setup {setup}, repeat {n} of {repeat}")
-        ctx.m01, ctx.m02, ctx.m03 = {}, {}, {}
+        ctx.m01, ctx.m02, ctx.m03, ctx.m04 = {}, {}, {}, {}
         for batch_setup, fn in BATCHES:
             if batch_setup == setup:
                 try:

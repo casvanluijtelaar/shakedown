@@ -21,6 +21,8 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 | `harness/m01.py` | The checks of M1 and their batches. |
 | `harness/m02.py` | The checks of M2, their batches, and the `US-004` starts that fail. |
 | `harness/m03.py` | The checks of M3 and their batch, the reading of the Steam identity at run time, and the RPT reading of `INT-AR-07` that the `end` checks of `US-030`, `US-064`, `DEF-09` and `NFR-RL-05` use. |
+| `harness/mcp.py` | An MCP client over stdio, as Claude Code is one: it starts the server the project's `.mcp.json` declares, with the install folder on `PATH`, speaks newline-delimited JSON-RPC to it, keeps every progress notification with its time, cancels a call, and judges a tool result (`structured`, `tool_error`). Written here instead of taking an MCP SDK as a dependency. |
+| `harness/m04.py` | The checks of M4 and their batches: the tools offline, the refused and slow starts, and the CLI and tool answers of the `ded` and `sp` sessions. |
 | `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `agh/` for the M1, M2 and M3 demos against arma-grappling-hook. |
 | `templates/` | SQF checks written into the project in numbered copies. |
 
@@ -68,3 +70,16 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - `NFR-RL-05` is judged after the sessions stop: each stopped session's RPTs are cut at the check markers, and every error inside a check execution is looked up in that execution's `errors`. Errors outside any execution are counted in `harness.log`; M3 keeps none of them (`ERR-05` is M4's).
 - An M3-only run of the ten selections takes about three minutes: the `ded` start, about a minute of runs, and the `sp` start the `end` checks need.
 
+
+## What the M4 round learned
+
+- The tools are judged against their command line twins by masking only what is read at another moment: durations, clocks, `last_answer_at` and a machine's heartbeat. Everything else of the two answers must be equal.
+- A tool result over 20,000 characters is `{"result_path": ...}`: the full `list_checks` of the generated project is one, so a check that compares it reads the file.
+- A check that masks or trims an answer works on a copy: the `AGT-02` check validates every stored answer against its tool's `outputSchema` after the other checks are judged.
+- A check execution goes on about 1.5 s after its outcome is decided, through the wait for script errors in flight, so "ends at once" is judged from `started_at` to `reason.at`, not by `duration_s`.
+- `skdfx_flag` survives the reset, so the `US-023` wait waits for a value of its own execution, not for the flag to exist.
+- `compile` of text that is not SQF gives code whose text is that text, with a script error on the lead machine; sent to another machine it does not compile there. That is how a check sends code that does not compile (`US-014`). The lead's error is the check's own and decides `script-error` when it lands first, which it did in three of four executions, so the check wraps the call in `skd_fnc_expectError`.
+- A `slow` dedicated start on Altis with one client takes about 100 s, so `session_start` reliably answers `starting` at 50 s. The machine kept about 11 GB free before and after it.
+- 100 `exec` calls through the tool take 17 ms per call at the 95th percentile to a singleplayer `p1` or a client, 43 ms to the dedicated server and the headless client.
+- A run started through `run_start` has no command answer; the M4 batches add it to the suite's runs from its `run_result`, so the checks over every run (`SES-05`, `NFR-RL-05`) read its result file too.
+- In a full run the singleplayer session has served the M0 and M1 checks, `RST-05`'s killed player among them, before the M4 batch. There the game raised `Undefined variable in expression: tsw_camtargetunit` on `p1` three times during the 55 s check of `US-050`, which the framework listed in that execution's errors and failed it `script-error`. The `US-050` checks judge when `run_status` answers, not that check's outcome.
