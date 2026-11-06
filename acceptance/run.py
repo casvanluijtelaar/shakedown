@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02, m03  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
@@ -177,11 +177,12 @@ def run_session(ctx, setup, checks, repeat, run_check, log):
     ctx.session = answer.json() if answer.stdout.strip() else None
     if ctx.session:
         ctx.game_pids = {m["pid"] for m in ctx.session["machines"]}
+        ctx.sessions[setup] = ctx.session
     if answer.code != 0 or not ctx.session or ctx.session.get("state") != "ready":
         raise RuntimeError(f"the session did not start: {answer}; {answer.stderr[:500]}")
     for n in range(1, repeat + 1):
         log(f"--- setup {setup}, repeat {n} of {repeat}")
-        ctx.m01, ctx.m02 = {}, {}
+        ctx.m01, ctx.m02, ctx.m03 = {}, {}, {}
         for batch_setup, fn in BATCHES:
             if batch_setup == setup:
                 try:

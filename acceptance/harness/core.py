@@ -59,6 +59,9 @@ class Context:
         self.session_runs = []       # the runs of the current session
         self.m01 = {}                # what M1's batches ran this repeat
         self.m02 = {}                # what M2's batches ran this repeat
+        self.m03 = {}                # what M3's batches ran this repeat
+        self.m03_keep = {}           # what M3's end checks read after the sessions stopped
+        self.sessions = {}           # setup -> the Session JSON of its `session start`
         self.start_answer = None     # the answer of the current session's `session start`
         self.stops = {}              # setup -> (the `session stop` answer, game pids alive when it returned)
         self.failed_starts = []      # the Session JSON of every start the "start" checks made fail

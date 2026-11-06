@@ -20,7 +20,8 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 | `harness/m00.py` | The checks of M0 and their batch. |
 | `harness/m01.py` | The checks of M1 and their batches. |
 | `harness/m02.py` | The checks of M2, their batches, and the `US-004` starts that fail. |
-| `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `agh/` for the M1 and M2 demos against arma-grappling-hook. |
+| `harness/m03.py` | The checks of M3 and their batch, the reading of the Steam identity at run time, and the RPT reading of `INT-AR-07` that the `end` checks of `US-030`, `US-064`, `DEF-09` and `NFR-RL-05` use. |
+| `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `agh/` for the M1, M2 and M3 demos against arma-grappling-hook. |
 | `templates/` | SQF checks written into the project in numbered copies. |
 
 ## Checks
@@ -58,3 +59,12 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - `skdfx_flag` survives the reset, as `fixture-mod.md` says, so the `US-025` and `US-026` checks set it at their start.
 - `status` answers at once while a start runs in another command, and before the runner has the session it gives `session` `null`. The `US-004` checks poll it twice a second. Once a start fails, `status` gives `session` `null` again, before `session start` has returned.
 - `session start` writes its output as it ends, and the output of a failed start passes the 4 KB a Windows pipe holds, as `docs/dedicated-sessions.md` says. A command the harness starts in the background has its stdout and stderr read by two threads while it runs; with pipes nobody reads, a start that failed at 31 s returned only when the harness stopped polling, at about 104 s.
+
+## What the M3 round learned
+
+- The checks that need the Steam ID or the Steam names read them at run time, as `INT-STM-04` says the runner does, from `loginusers.vdf` under the registry's `SteamPath`. A message of the harness names a hit only as "the Steam ID", "a Steam ID" or "the Steam name", never the value, so `harness.log` and `report.json` hold neither.
+- A script error that only the RPT shows is made with `diag_log text`, one line per RPT line of the engine's error: the `Error in expression <...>` line, the indented `Error position:` and `Error <message>` lines, and the `File <file>..., line n` line, whose file the engine writes without a leading backslash.
+- The checks whose story says the run exits 1 run alone, so the exit code is theirs; the others share one run.
+- `NFR-RL-05` is judged after the sessions stop: each stopped session's RPTs are cut at the check markers, and every error inside a check execution is looked up in that execution's `errors`. Errors outside any execution are counted in `harness.log`; M3 keeps none of them (`ERR-05` is M4's).
+- An M3-only run of the ten selections takes about three minutes: the `ded` start, about a minute of runs, and the `sp` start the `end` checks need.
+
