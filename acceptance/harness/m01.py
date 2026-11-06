@@ -1,6 +1,7 @@
 """The acceptance checks of M1 A grappling-hook check in singleplayer: US-018, US-021, US-022,
 US-039, the requirements of the check API, the reset and the selection, and exit criteria 2 and 3."""
 
+import json
 import re
 
 from . import driver
@@ -61,6 +62,14 @@ SELECTIONS = [
     ("ids and tags", [SEL_B], ["acc-sel-x"]),
 ]
 
+# The runs of finding m01-3: an id given more than once (RUN-01, RUN-03, US-031 criterion 2).
+REPEATS = [
+    ("a a b", [SEL_A, SEL_A, SEL_B], []),
+    ("a b a", [SEL_A, SEL_B, SEL_A], []),
+    ("a a a", [SEL_A, SEL_A, SEL_A], []),
+    ("a a and a tag", [SEL_A, SEL_A], ["acc-sel-x"]),
+]
+
 
 # ---------------------------------------------------------------- the runs, per repeat
 
@@ -74,6 +83,23 @@ def sp_batch(ctx, checks):
         ctx.m01["rl"] = ctx.run(RL)
     if any(i in needed for i in (SEL_A, SEL_B, SEL_C)):
         ctx.m01["sel"] = {name: ctx.run(ids, tags=tags) for name, ids, tags in SELECTIONS}
+    if any(c.name.startswith("US-031") for c in checks):
+        ctx.m01["rep"] = {name: ctx.run(ids, tags=tags) for name, ids, tags in REPEATS}
+        ctx.m01["rep text"] = run_text(ctx, [SEL_A, SEL_A, SEL_B])
+
+
+def run_text(ctx, ids):
+    """`shakedown run` without --json, as a person runs it; returns the answer and the result file."""
+    before = set(ctx.sh.run_folders())
+    answer = ctx.sh("run", *ids, ceiling=600)
+    new = sorted(set(ctx.sh.run_folders()) - before)
+    assert len(new) == 1, f"{answer} made the run folders {new}, expected one"
+    path = ctx.project / ".shakedown" / "runs" / new[0] / "result.json"
+    result = json.loads(path.read_text(encoding="utf-8"))
+    out = {"run_id": new[0], "result_file": str(path)}
+    ctx.runs.append((answer, out, result, new))
+    ctx.session_runs.append((answer, out, result, new))
+    return answer, out, result
 
 
 @batch("cba")
@@ -83,7 +109,7 @@ def cba_batch(ctx, checks):
     if ids:
         ctx.m01["cba"] = ctx.run(ids)
     if DEMO_KEY in needed:
-        ctx.m01["demo"] = [ctx.run([DEMO_KEY, DEMO_ACTION]) for _ in range(DEMO_RUNS)]
+        ctx.m01["demo"] = ctx.run([DEMO_KEY, DEMO_ACTION] * DEMO_RUNS)
 
 
 def ran(ctx, key, cid):
@@ -409,19 +435,79 @@ def run_01_union(ctx):
     assert sorted(got) == [SEL_A, SEL_B, SEL_C], f"ran {got}, expected the union of {SEL_B} and the tag acc-sel-x"
 
 
+def repeated(ctx, name, ids):
+    """The run of REPEATS named name ended exit 0, every execution passed, and selection.ids is ids as given."""
+    answer, out, result = ctx.m01["rep"][name]
+    assert answer.code == 0, f"{answer}, expected exit 0"
+    assert result["run"]["selection"]["ids"] == ids, \
+        f"run.selection.ids is {result['run']['selection']['ids']}, expected the ids as given {ids}"
+    for ex in result["checks"]:
+        passed(ex)
+    assert result["not_run"] == [], f"not_run is {result['not_run']}"
+    return [(c["check_id"], c["repeat"]) for c in result["checks"]], result
+
+
+@check("US-031 m01-3 RUN-03 run a a b executes a, a, b and the result file holds three entries with repeat 1, 2, 1",
+       "session", [SEL_A, SEL_B])
+def us_031_a_a_b(ctx):
+    got, result = repeated(ctx, "a a b", [SEL_A, SEL_A, SEL_B])
+    assert got == [(SEL_A, 1), (SEL_A, 2), (SEL_B, 1)], f"ran {got}"
+    s = result["summary"]
+    assert s["total"] == 3 and s["pass"] == 3, f"summary {s}, expected 3 executions, 3 passed"
+
+
+@check("US-031 m01-3 RUN-03 run a b a executes a, b, a with repeat 1, 1, 2", "session", [SEL_A, SEL_B])
+def us_031_a_b_a(ctx):
+    got, _ = repeated(ctx, "a b a", [SEL_A, SEL_B, SEL_A])
+    assert got == [(SEL_A, 1), (SEL_B, 1), (SEL_A, 2)], f"ran {got}"
+
+
+@check("US-031 m01-3 RUN-03 run a a a executes a three times with repeat 1, 2, 3", "session", [SEL_A])
+def us_031_a_a_a(ctx):
+    got, result = repeated(ctx, "a a a", [SEL_A, SEL_A, SEL_A])
+    assert got == [(SEL_A, 1), (SEL_A, 2), (SEL_A, 3)], f"ran {got}"
+    assert result["summary"]["total"] == 3, f"summary {result['summary']}"
+
+
+@check("US-031 m01-3 RUN-01 a tag adds nothing for a check given twice by id: run a a --tag x executes a, a, c",
+       "session", [SEL_A, SEL_C])
+def us_031_a_a_tag(ctx):
+    got, _ = repeated(ctx, "a a and a tag", [SEL_A, SEL_A])
+    assert got == [(SEL_A, 1), (SEL_A, 2), (SEL_C, 1)], f"ran {got}, expected a, a by id, then c of the tag acc-sel-x"
+
+
+@check("US-031 m01-3 RUN-03 run a a b without --json prints one line per execution, the second of a marked #2",
+       "session", [SEL_A, SEL_B])
+def us_031_text(ctx):
+    answer, out, result = ctx.m01["rep text"]
+    assert answer.code == 0, f"{answer}, expected exit 0; stderr {answer.stderr[:300]!r}"
+    got = [(c["check_id"], c["repeat"]) for c in result["checks"]]
+    assert got == [(SEL_A, 1), (SEL_A, 2), (SEL_B, 1)], f"ran {got}"
+    lines = [l.rstrip() for l in answer.stdout.splitlines() if l.strip()]
+    # The wording of text output is not contract, its information is: the line of the second
+    # execution carries #2 after the check id (the line goes on with the duration).
+    marked = [l for l in lines if re.search(r"#\d+\b", l)]
+    assert len(marked) == 1 and re.search(re.escape(SEL_A) + r"\s+#2\b", marked[0]), \
+        f"the lines marked #<repeat> are {marked}, expected one line of {SEL_A} marked #2; stdout {lines}"
+    a_lines = [l for l in lines if SEL_A in l]
+    assert len(a_lines) >= 2, f"the run printed {len(a_lines)} lines naming {SEL_A}, expected one per execution: {lines}"
+    b_lines = [l for l in lines if SEL_B in l]
+    assert b_lines, f"the run printed no line naming {SEL_B}: {lines}"
+
+
 # ---------------------------------------------------------------- the demo (setup cba)
 
-@check("M1 exit 2 the demo AGH-US-009 passes 10 of 10 against one session, each run together with a second check",
+@check("M1 exit 2 the demo AGH-US-009 passes 10 of 10 in one run together with a second check against one session",
        "session", [DEMO_KEY, DEMO_ACTION], setup="cba")
 def m1_demo(ctx):
-    runs = ctx.m01["demo"]
-    assert len(runs) == DEMO_RUNS, f"{len(runs)} demo runs"
-    for n, (answer, out, result) in enumerate(runs, 1):
-        ids = [c["check_id"] for c in result["checks"]]
-        assert ids == [DEMO_KEY, DEMO_ACTION], f"run {n} ran {ids}"
-        for ex in result["checks"]:
-            assert ex["outcome"] == "pass", f"run {n}: {ex['check_id']} ended {ex['outcome']}: {ex['reason']}"
-        assert result["session"]["id"] == ctx.session["id"], f"run {n} used another session"
+    answer, out, result = ctx.m01["demo"]
+    got = [(c["check_id"], c["repeat"]) for c in result["checks"]]
+    expected = [(cid, n) for n in range(1, DEMO_RUNS + 1) for cid in (DEMO_KEY, DEMO_ACTION)]
+    assert got == expected, f"the run executed {got}, expected the demo and the second check {DEMO_RUNS} times each"
+    for ex in result["checks"]:
+        assert ex["outcome"] == "pass", f"{ex['check_id']} #{ex['repeat']} ended {ex['outcome']}: {ex['reason']}"
+    assert result["session"]["id"] == ctx.session["id"], "the run used another session"
+    assert answer.code == 0, f"{answer}, expected exit 0"
 
 
 # ---------------------------------------------------------------- the session
@@ -452,3 +538,11 @@ def ses_05_cba(ctx):
     ses_05(ctx)
     mods = {m["mod"]: m["version"] for m in ctx.session_runs[0][2]["session"]["machines"][0]["mods"]}
     assert mods.get("cba"), f"p1 reports no version for cba_main: {mods}"
+
+
+@check("US-031 m01-3 RUN-02 list a a b lists a and b once each", "offline")
+def us_031_list(ctx):
+    answer = ctx.sh("list", SEL_A, SEL_A, SEL_B, "--json", ceiling=60)
+    assert answer.code == 0, f"{answer}; stderr {answer.stderr[:300]!r}"
+    got = [c["id"] for c in answer.json()["checks"]]
+    assert sorted(got) == [SEL_A, SEL_B], f"list gave {got}, expected {SEL_A} and {SEL_B} once each"
