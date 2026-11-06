@@ -136,6 +136,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 - 2026-11-05: On the Windows test machine `python3` is the Microsoft Store alias stub and does not run. Use `python` (3.14), as in `python tools/okf_check.py`.
 - 2026-11-05: Baseline of the Windows test machine before M0: Steam running, no `arma3_x64` or `arma3server_x64` process, about 200 GB free on `C:`, about 400 folders under `%TEMP%` that are not this project's. `cargo`, `hemtt` (WinGet) and `gh` (logged in as `casvanluijtelaar`) are on the path. The bundle check passes with 114 concepts and lists 86 requirements that no story covers yet.
+- 2026-11-06: After the machine had idled overnight, the first game start died at 40 s with `Error 20 reading file 'addons\sounds_f.pbo'`, a base-game file. The file was intact and read end to end at once afterwards. A start that fails reading a base-game PBO is the machine, not the framework: start again before calling it a finding.
 - 2026-11-05: The Windows test machine has no global git identity. The repository's local config sets `user.name casvanluijtelaar` and `user.email cas.luijtelaar@umain.com`, as on the Mac; worktrees share it.
 
 ## State at the end of the last session
