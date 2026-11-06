@@ -31,9 +31,9 @@ shakedown session stop
 
 `session start` starts the server, waits for its mission, then starts every game client and headless client at once, and returns when every machine is ready: a client is ready when its agent answers and the server sees it at client state 10. On the test machine a server with two clients and a headless client is ready in 43 to 45 s, so a `start_timeout` below 60 s cannot hold it. Each game client opens a window, titled `Arma 3 - p1 (<session id>)` once its extension connects; a window renders only while someone is connected to the machine's desktop. The server and headless clients have no window.
 
-A start that fails, because a process exits or the start ceiling passes, ends with exit code 4 and stops every process it started. Its message names the machine, what state it was in, and the last 20 lines of its RPT; at the ceiling it lists every machine that was not ready. With `--json` it prints the session with state `failed` and its `reason`.
+A start that fails, because a process exits or the start ceiling passes, ends with exit code 4 and stops every process it started. Its message names the machine, what state it was in, and the last 20 lines of its RPT; at the ceiling it lists every machine that was not ready. With `--json` it prints the session with state `failed` and its `reason`. That output often passes 4 KB, so a program that runs `session start` in the background reads its stdout and stderr while it runs: the command writes them as it ends and cannot exit before they are read.
 
-`status` works at any time, also while a session starts in another command. It lists each machine from the moment its process is launched:
+`status` works at any time, also while a session starts in another command. It lists each machine from the moment its process is launched, so while the server loads its mission it lists the server alone, and the clients and headless clients appear, each with its process id, once they are started:
 
 ```
 runner: running (process 9184)

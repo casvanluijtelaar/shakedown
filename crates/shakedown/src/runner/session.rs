@@ -263,7 +263,9 @@ impl Session {
             .collect()
     }
 
-    /// The Session shape of `contract/mcp-tools.md`.
+    /// The Session shape of `contract/mcp-tools.md`. A machine is listed from the moment its
+    /// process is launched (`INS-04`), so a client the start has not launched yet, while the
+    /// server loads its mission, is not in it.
     pub fn view(&self) -> Value {
         let inner = self.inner.lock().unwrap();
         json!({
@@ -273,7 +275,7 @@ impl Session {
             "state": inner.state.as_str(),
             "started_at": self.started_at,
             "folder": self.folder,
-            "machines": inner.machines.iter().map(|m| json!({
+            "machines": inner.machines.iter().filter(|m| m.pid.is_some()).map(|m| json!({
                 "name": m.name,
                 "kind": m.kind,
                 "start": m.start,

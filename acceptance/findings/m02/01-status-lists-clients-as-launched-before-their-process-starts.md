@@ -9,7 +9,8 @@ for: developer
 checks: ["US-004 SES-04 a client ended during the start fails it with exit 4 naming p2, its state and its last RPT lines, leaving nothing running", "INS-04 m02-1 status during a dedicated start lists a machine as launched only with its process id and process start time"]
 stories: [US-002, US-004]
 generated: { by: "claude-code/tester", at: 2026-11-06T02:41:24-08:00 }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-06T04:37:47-08:00, note: "status and every session shape list a machine only once its process is launched, with its process id and start time, so the server is listed alone while it loads its mission (INS-04 made explicit in spec/03 and docs/dedicated-sessions.md). The e2e test us_004_a_start_that_never_becomes_ready_ends_failed_and_leaves_nothing in crates/shakedown/tests/m02.rs proves it on a dedicated start; both named checks pass." }
 verified: []
 ---
 

@@ -594,11 +594,22 @@ fn us_004_a_start_that_never_becomes_ready_ends_failed_and_leaves_nothing() {
         .spawn()
         .unwrap();
     let mut killed = None;
+    let mut seen_server_alone = false;
     for _ in 0..240 {
         let (_, status) = cmd(&dir, &["status"]);
-        let p2 = status["session"]["machines"]
-            .as_array()
-            .and_then(|m| m.iter().find(|m| m["name"] == "p2").cloned());
+        // INS-04: a machine is listed only once its process is launched, with its process id and
+        // process start time; while the server loads its mission, it is listed alone.
+        let listed = status["session"]["machines"].as_array().cloned().unwrap_or_default();
+        for m in &listed {
+            assert!(
+                m["pid"].is_u64() && m["process_started_at"].is_string(),
+                "INS-04: a machine listed without its process: {m}"
+            );
+        }
+        if listed.len() == 1 && listed[0]["name"] == "server" {
+            seen_server_alone = true;
+        }
+        let p2 = listed.iter().find(|m| m["name"] == "p2").cloned();
         if let Some(pid) = p2.as_ref().and_then(|m| m["pid"].as_u64()) {
             println!(
                 "p2 launched as {pid} in state {}; ending it",
@@ -611,6 +622,10 @@ fn us_004_a_start_that_never_becomes_ready_ends_failed_and_leaves_nothing() {
         std::thread::sleep(std::time::Duration::from_millis(500));
     }
     assert!(killed.is_some(), "p2 was never launched");
+    assert!(
+        seen_server_alone,
+        "status never listed the server alone while it loaded its mission"
+    );
     let out = child.wait_with_output().unwrap();
     let session: Value = serde_json::from_slice(&out.stdout).unwrap_or(Value::Null);
     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
@@ -632,12 +647,11 @@ fn us_004_a_start_that_never_becomes_ready_ends_failed_and_leaves_nothing() {
     // 2: start ceiling 30 s.
     let t = Instant::now();
     let (code, session) = cmd(&dir, &["session", "start", "--setup", "ded-slow"]);
-    println!(
-        "US-004 2: exit {code} after {:.1} s: {:#}",
-        t.elapsed().as_secs_f64(),
-        session["reason"]
-    );
+    let took = t.elapsed().as_secs_f64();
+    println!("US-004 2: exit {code} after {took:.1} s: {:#}", session["reason"]);
     assert_eq!(code, 4);
+    // SES-04: the start ends at its ceiling of 30 s, plus the stop of what it started.
+    assert!(took < 45.0, "the start of ceiling 30 s returned after {took:.1} s");
     assert_eq!(session["state"], "failed");
     let message = session["reason"]["message"].as_str().unwrap();
     assert!(message.contains("start ceiling of 30 s"), "{message}");
