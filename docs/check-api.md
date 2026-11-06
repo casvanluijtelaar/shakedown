@@ -78,7 +78,7 @@ private _enemy = ["O_Soldier_F", AGLToASL [100, 140, 0], 180] call skd_fnc_creat
 [0.9, 0.2, 0.6] call skd_fnc_setWeather;
 ```
 
-- `skd_fnc_create [class, position, direction]` creates a `CfgVehicles` class at an ASL position, direction first, and returns it; a soldier class is a unit in a new group of its config's side. An unknown class ends the check `fail` / `check-error`: `skd_fnc_create: the class "B_Soldier_Typo" is not in CfgVehicles (or is not creatable). ...`
+- `skd_fnc_create [class, position, direction]` creates a `CfgVehicles` class at an ASL position, direction first, and returns it; a soldier class is a unit in a new group of its config's side. An unknown class ends the check `fail` / `check-error`: `skd_fnc_create: the class "B_Soldier_Typo" is not in CfgVehicles (or is not creatable). ...` It returns once the server has made the object. On a dedicated session another machine sees it a moment later: a check that reads it there at once can find no object, or the object at the spot the engine made it, before it is in place. Such a check waits for it first, as [dedicated sessions](dedicated-sessions.md) shows.
 - `skd_fnc_place [unit, position, direction, ceiling]` takes an object or a machine name (that machine's player) and returns once the unit stands within 0.1 m and 3 degrees of it.
 - `skd_fnc_setDate [[year, month, day, hour, minute], ceiling]` and `skd_fnc_setWeather [overcast, fog, rain, ceiling]` (each 0 to 1) return once the machines report the new date, or the overcast within 0.01.
 

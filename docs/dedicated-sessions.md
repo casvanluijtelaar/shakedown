@@ -91,7 +91,17 @@ flag agrees: the machines did not agree within 2 s (tolerance 0): p2 read 6 wher
 
 `reason.machine` is `p2`, and the result's `evidence.observed` holds each machine's value.
 
-`skd_fnc_useAction` waits for the action and fires it on the acting client; `"server"` or a headless client as the acting machine ends `check-error`, since it has no player. `skd_fnc_pressKey` presses the keybind on the named machine. `skd_fnc_create` creates on the server; `skd_fnc_place` sets a unit where it is local, and returns once the server sees it there. `skd_fnc_setDate` and `skd_fnc_setWeather` set the date and weather on the server and on every other machine, and return once every machine reads them.
+`skd_fnc_useAction` waits for the action and fires it on the acting client; `"server"` or a headless client as the acting machine ends `check-error`, since it has no player. `skd_fnc_pressKey` presses the keybind on the named machine. `skd_fnc_create` creates on the server and returns there before every other machine sees the object in place; `skd_fnc_place` sets a unit where it is local, and returns once the server sees it there. `skd_fnc_setDate` and `skd_fnc_setWeather` set the date and weather on the server and on every other machine, and return once every machine reads them.
+
+A check that reads a just-created object on another machine waits for that machine to see it where it was put, since at first the machine can see no object, or the object at the spot the engine made it:
+
+```sqf
+private _crate = ["skdfx_Crate", AGLToASL [100, 102, 0], 0] call skd_fnc_create;
+["p2", {
+    private _c = _this select 0;
+    !isNull _c && { (getPosASL _c) distance2D [100, 102, 0] < 0.1 }
+}, "p2 sees the crate in place", 5, [_crate]] call skd_fnc_waitUntil;
+```
 
 ## The reset across machines
 
