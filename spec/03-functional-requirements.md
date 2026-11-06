@@ -164,7 +164,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 - **AGT-04** (must) A cancelled tool call stops the game-side work it started (`CR-53`).
 - **AGT-05** (must) The MCP server starts and answers `status` on a machine without the game or without a runner, saying so, instead of failing to start (`CR-53`).
 - **AGT-06** (must) A `guide` tool returns a short text on how to use the tools and write a check, for clients that do not load the project's docs (`CR-53`).
-- **AGT-07** (must) Tool results stay under 20,000 characters; anything longer is written to a file in the session or run folder and the result gives its path (`CR-53`, `CR-24`).
+- **AGT-07** (must) Tool results stay under 20,000 characters; anything longer is written to a file in the project's `.shakedown/results/` folder, which serves every tool whether or not it has a session or a run, and the result gives its path (`CR-53`, `CR-24`).
 
 ## Safety
 
