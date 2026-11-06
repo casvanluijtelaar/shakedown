@@ -7,4 +7,5 @@ params ["_skd_machine"];
 private _skd_targets = ["skd_fnc_player", 1, if (isNil "_skd_machine") then { nil } else { _skd_machine }, false] call skd_fnc_targets;
 if (isNil "_skd_targets") exitWith {};
 // In singleplayer the only machine is p1, whose player is this machine's.
-player
+if ((skd_check get "mode") isEqualTo "singleplayer") exitWith { player };
+[_skd_targets select 0] call skd_fnc_unitOf

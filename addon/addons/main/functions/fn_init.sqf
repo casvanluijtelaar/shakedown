@@ -37,6 +37,19 @@ addMissionEventHandler ["EntityCreated", {
     params ["_entity"];
     skd_created pushBack _entity;
 }];
+// On a dedicated session the mission's respawn gives a dead player a new unit at once (RST-05);
+// the body it leaves goes to the recorder, so the next reset deletes it.
+addMissionEventHandler ["EntityRespawned", {
+    params ["_new", "_old"];
+    if (!isNull _old) then { skd_created pushBack _old };
+}];
+
+// Orders a machine routed to another through the runner (P-03): their answers, the polls this
+// machine asked others for, and the polls it runs for another machine.
+skd_routes = createHashMap;
+skd_routeCount = 0;
+skd_polls = createHashMap;
+skd_stops = createHashMap;
 
 addMissionEventHandler ["ExtensionCallback", {
     params ["_name", "_function", "_data"];
@@ -48,24 +61,33 @@ addMissionEventHandler ["ExtensionCallback", {
 [_starts] spawn {
     params ["_starts"];
     // The baseline is the state the mission has once its first frames ran, after every mod's
-    // own start, with the player standing on the ground: in the first frames the engine still
+    // own start, with the player standing still on the ground in a settled animation state: in the first frames the engine still
     // has the unit at height 0 ASL before it sets it on the terrain (RST-02). The wait has a
     // ceiling of 30 s of real time.
+    // A dedicated server and a headless client have no player of their own to wait for.
     private _t = diag_tickTime;
-    waitUntil {
-        (!isNull player && { time > 0 } && { isTouchingGround player || { vehicle player isNotEqualTo player } }
-            && { vectorMagnitude velocity player < 0.1 }) || { diag_tickTime - _t > 30 }
+    if (hasInterface) then {
+        waitUntil {
+            (!isNull player && { time > 0 } && { isTouchingGround player || { vehicle player isNotEqualTo player } }
+                && { vectorMagnitude velocity player < 0.1 }
+                // A move between two animation states is named "<from>_<to>"; the baseline waits
+                // for the state it ends in.
+                && { ((animationState player) find "_") < 0 }) || { diag_tickTime - _t > 30 }
+        };
+    } else {
+        waitUntil { time > 0 || { diag_tickTime - _t > 30 } };
     };
     if (!isMultiplayer && { !isNull player }) then {
         player addEventHandler ["Killed", { _this call skd_fnc_killed }];
     };
-    if (!isNull player) then { call skd_fnc_baseline };
+    call skd_fnc_baseline;
     private _pv = productVersion;
     [createHashMapFromArray [
         ["kind", "ready"],
         ["machine", skd_machine],
         ["mission_start", _starts],
         ["game_version", format ["%1.%2 %3", ((_pv select 2) / 100) toFixed 2, _pv select 3, toLower (_pv select 4)]],
-        ["player", !isNull player]
+        ["player", hasInterface && { !isNull player }],
+        ["baseline", [skd_baseline] call skd_fnc_encode]
     ]] call skd_fnc_send;
 };

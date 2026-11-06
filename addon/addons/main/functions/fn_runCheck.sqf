@@ -81,9 +81,9 @@ private _report = createHashMapFromArray [
 if (count _end == 0) then {
     _report set ["outcome", "pass"];
 } else {
-    _end params ["_outcome", "_kind", "_message", "_at", "_observed", "_path"];
+    _end params ["_outcome", "_kind", "_message", "_at", "_observed", "_path", ["_machine", skd_machine]];
     _report set ["outcome", _outcome];
-    _report set ["reason", createHashMapFromArray [["kind", _kind], ["message", _message], ["at", _at], ["machine", skd_machine]]];
+    _report set ["reason", createHashMapFromArray [["kind", _kind], ["message", _message], ["at", _at], ["machine", _machine]]];
     if (!isNil "_observed") then { _evidence set ["observed", [_observed] call skd_fnc_encode] };
     if (!isNil "_path") then { _evidence set ["failed_step", _path] };
 };

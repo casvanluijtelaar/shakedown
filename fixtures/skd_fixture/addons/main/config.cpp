@@ -5,12 +5,37 @@ class CfgPatches {
     class skdfx_main {
         name = "Shakedown fixture";
         author = "casvanluijtelaar";
-        units[] = {};
+        units[] = {"skdfx_Crate"};
         weapons[] = {};
         requiredVersion = 2.18;
-        requiredAddons[] = {"A3_Functions_F"};
+        requiredAddons[] = {"A3_Functions_F", "A3_Weapons_F"};
         version = 0.0;
-        versionStr = "0.0.2";
-        versionAr[] = {0, 0, 2};
+        versionStr = "0.0.3";
+        versionAr[] = {0, 0, 3};
+    };
+};
+
+class CfgFunctions {
+    class skdfx {
+        class main {
+            file = "\skdfx\addons\main\functions";
+            class init { postInit = 1; };
+            class crateInit {};
+            class open {};
+            class setFlag {};
+            class setFlagLater {};
+        };
+    };
+};
+
+class CfgVehicles {
+    class Box_NATO_Ammo_F;
+    // The crate and its action (contract "The crate and its action").
+    class skdfx_Crate: Box_NATO_Ammo_F {
+        scope = 2;
+        displayName = "Shakedown fixture crate";
+        class EventHandlers {
+            init = "_this call skdfx_fnc_crateInit";
+        };
     };
 };

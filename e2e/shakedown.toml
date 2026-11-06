@@ -27,3 +27,15 @@ mods = ["fixture"]
 [setups.sp-cba]
 mode = "singleplayer"
 mods = ["cba", "fixture", "fixture-cba"]
+
+[setups.dedicated]
+mode = "dedicated"
+clients = 2
+headless = 1
+mods = ["fixture"]
+
+[setups.dedicated-cba]
+mode = "dedicated"
+clients = 2
+headless = 1
+mods = ["cba", "fixture", "fixture-cba"]

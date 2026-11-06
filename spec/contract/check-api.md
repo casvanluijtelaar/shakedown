@@ -20,13 +20,13 @@ The file starts with a header: one or more lines of the form `// @key value`, be
 |---|---|---|---|
 | `@check` | yes | The check's name: the story or requirement ID it proves, then a short sentence. The ID is capital letters and digits in parts joined by `-`, holding a digit, such as `US-012`, `NFR-PF-02` or `B3`. | - |
 | `@tags` | no | Tags separated by spaces, such as story IDs, finding IDs, `smoke`. | none |
-| `@setups` | no | Setup names separated by spaces; the check runs only in these (`RUN-07`). | every setup |
+| `@setups` | no | Setup names separated by spaces, each one the project file declares; the check runs only in these (`RUN-07`). | every setup |
 | `@timeout` | no | The check's ceiling in seconds, a whole number from 1 to 3600. | `120` |
 | `@reset` | no | `in-place` or `mission` (`RST-06`). | `in-place` |
 
-A key given twice, an unknown key, a missing `@check` or a value of the wrong form ends the check `fail` / `check-error` naming the line.
+A key given twice, an unknown key, a missing `@check`, a value of the wrong form, or an `@setups` that names a setup the project file does not declare ends the check `fail` / `check-error` naming the line; for an unknown setup it also names the setup and the setups the file declares. `list` shows the same message as the check's `error`.
 
-The rest of the file is the **body**. It is compiled with `compile` (the preprocessor does not run: no `#include`, no `#define`) and runs scheduled on the lead machine: `server` on a dedicated session, `p1` in singleplayer. `_this` is empty. The body may use any SQF.
+The rest of the file is the **body**. It is compiled with `compile` (the preprocessor does not run: no `#include`, no `#define`) and runs scheduled on the lead machine: `server` on a dedicated session, `p1` in singleplayer. `_this` is empty. The body may use any SQF. On a dedicated session the server has no player, so `player` in the body is `objNull` there; a check that runs in both kinds of setup names a player's unit with `["p1"] call skd_fnc_player`.
 
 Comments, `//` to the end of the line and `/* ... */`, may stand anywhere in the file. The runner turns every comment into spaces before it sends the body, because `compile` takes none, and keeps the line breaks, so a compile message names the line of the file. The game stands still while it compiles the body, and a long string literal compiles in time that grows with the square of its length: about half a second for 100 KB, seconds beyond. Keep data longer than a few kilobytes out of string literals in a check. A check passes when its body runs to its end without a failed assertion, a wait at its ceiling or an unexpected script error on any machine (`DM-02`).
 
@@ -69,7 +69,7 @@ private _wall = ["place a wall in front of p1", {
 |---|---|---|
 | `skd_fnc_machines` | `[]` | Array of the session's machine names, in the order `server`, `p1`..`pN`, `hc1`..`hcN`. In singleplayer `["p1"]`. |
 | `skd_fnc_setup` | `[]` | HashMap with `"name"`, `"mode"` (`"singleplayer"` or `"dedicated"`), `"clients"`, `"headless"`, `"world"`. |
-| `skd_fnc_player` | `[machine]` | The unit the player of that machine controls, as the lead machine sees it. `objNull` for `server` on a dedicated session and for a headless client. |
+| `skd_fnc_player` | `[machine]` | The unit the player of that machine controls, as the lead machine sees it: on a dedicated session the player whose name is the machine's name (`DM-11`). `objNull` for `server` on a dedicated session, for a headless client, and for a client with no unit. |
 
 ## Steps
 
@@ -104,9 +104,9 @@ The condition is evaluated on that machine every frame until it returns `true` o
 | `skd_fnc_expect` | `[actual, op, expected, description]` | `true` | At once, `fail` / `assertion`, with the actual and expected values. |
 | `skd_fnc_expectOn` | `[machine, value, op, expected, description, ceiling, args]` - `value` Code returning the value to test; `ceiling` default 10; `args` default `[]`. | The last value read. | `fail` / `assertion` at the ceiling, with the last value read (`OBS-04`). |
 | `skd_fnc_expectEach` | `[machines, value, op, expected, description, ceiling, args]` | HashMap from machine name to the last value read. | `fail` / `assertion` at the ceiling, with every machine's last value and which ones did not meet it (`OBS-06`). |
-| `skd_fnc_expectAgree` | `[machines, value, description, tolerance, ceiling, args]` - `tolerance` Number, default 0. | HashMap from machine name to the last value read. | `fail` / `assertion` at the ceiling, with every machine's last value (`OBS-06`). |
+| `skd_fnc_expectAgree` | `[machines, value, description, tolerance, ceiling, args]` - `tolerance` Number, default 0. | HashMap from machine name to the last value read. | `fail` / `assertion` at the ceiling, with every machine's last value; the message says what each machine that differs read where the first machine read its value, and `reason.machine` is the first that differs (`OBS-06`). |
 
-`skd_fnc_expectOn` and `skd_fnc_expectEach` read the value on each machine every frame until the comparison holds on every machine at once, or the ceiling passes. `skd_fnc_expectAgree` holds when every machine's value equals the first machine's value of the list, within `tolerance` for numbers and for positions (arrays of 2 or 3 numbers, by distance).
+`skd_fnc_expectOn` and `skd_fnc_expectEach` read the value on each machine every frame until the comparison holds on every machine at once, or the ceiling passes. A machine other than the lead sends each new value it reads to the lead through the runner, at most one every 0.05 s (`P-03` step 6), so the lead compares each machine's newest value. `skd_fnc_expectEach` names the first machine that did not meet it in `reason.machine`. `skd_fnc_expectAgree` holds when every machine's value equals the first machine's value of the list, within `tolerance` for numbers and for positions (arrays of 2 or 3 numbers, by distance).
 
 The operators:
 
@@ -144,10 +144,10 @@ Any script error on any machine whose text contains `text` (case-insensitive), f
 
 | Function | Arguments | Returns | Fails |
 |---|---|---|---|
-| `skd_fnc_useAction` | `[machine, target, title, ceiling]` - `machine` the acting player's machine; `target` the object carrying the action; `title` String; `ceiling` default 10. | `true` once the action was fired. | At the ceiling, `fail` / `assertion` with the reason: no action with that title (listing the titles on the target), its condition false, or the player's distance and the action's radius. `fail` / `check-error` when the machine has no player. |
+| `skd_fnc_useAction` | `[machine, target, title, ceiling]` - `machine` the acting player's machine; `target` the object carrying the action; `title` String; `ceiling` default 10. | `true` once the action was fired. | At the ceiling, `fail` / `assertion` with the reason: no action with that title (listing the titles on the target), its condition false, or the player's distance and the action's radius; `reason.machine` is the acting machine. `fail` / `check-error` when the machine has no player, and when `target` is `objNull`; on a dedicated session that message says `player` in the body is `objNull` and names `skd_fnc_player`. |
 | `skd_fnc_pressKey` | `[machine, mod, action, mode]` - `mod` and `action` the names the mod registered its CBA keybind with; `mode` `"press"` (down then up), `"down"` or `"up"`, default `"press"`. | `true` once the keybind's code ran. | `fail` / `check-error` when CBA is not loaded on that machine or the keybind is not registered, listing the keybinds registered for that mod, in lower case as CBA keeps them (`ACT-03`). |
 
-`skd_fnc_useAction` matches the title after removing structured-text tags (`<...>`) from the action's title, exactly and case-sensitively. It waits until the action exists, its condition holds and the player is within its radius, then fires it with `action ["User", target, id]` on the acting machine (`ACT-01`). The condition is evaluated with `_target` the object carrying the action and `_this` the player; a radius of -1 is no limit. The engine itself runs an action fired that way whatever its condition and radius (`SPK-10`). `skd_fnc_pressKey` calls the code `CBA_fnc_getKeybind` returns with `[findDisplay 46, DIK, shift, ctrl, alt]` for the first bound key (`ACT-02`).
+`skd_fnc_useAction` matches the title after removing structured-text tags (`<...>`) from the action's title, exactly and case-sensitively. It waits on the acting machine until the action exists, its condition holds and the player is within its radius, then fires it there with `action ["User", target, id]` (`ACT-01`); the target travels by net id and is looked up every frame, so an object the server has just created is found once it reaches the acting machine. The condition is evaluated with `_target` the object carrying the action and `_this` the player; a radius of -1 is no limit. The engine itself runs an action fired that way whatever its condition and radius (`SPK-10`). `skd_fnc_pressKey` calls the code `CBA_fnc_getKeybind` returns with `[findDisplay 46, DIK, shift, ctrl, alt]` for the first bound key (`ACT-02`).
 
 ## Ending a check and keeping evidence
 

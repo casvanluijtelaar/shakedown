@@ -46,7 +46,7 @@ The fixtures are small mods the framework's own tests run against ([spec/contrac
 python tools/install.py --game D:\Games\Arma3
 ```
 
-`shakedown.exe` finds `@shakedown` next to itself, so keep them together. Put the folder on `PATH` to call `shakedown` from any project, or call it by its full path.
+`shakedown.exe` finds `@shakedown` next to itself, so keep them together. The first dedicated session links `<game>\@shakedown` to that installed `@shakedown`, and every later dedicated start points the link at the `@shakedown` of the `shakedown.exe` that starts it. Put the folder on `PATH` to call `shakedown` from any project, or call it by its full path.
 
 Install again while no runner runs: Windows keeps the binary of a running runner locked. A runner exits by itself 60 s after its last session stopped.
 

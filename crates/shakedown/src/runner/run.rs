@@ -22,6 +22,7 @@ use crate::paths;
 pub async fn run(
     runner: &Arc<Runner>,
     project: PathBuf,
+    setups: Vec<String>,
     checks: Vec<CheckRef>,
     ids: Vec<String>,
     tags: Vec<String>,
@@ -40,7 +41,7 @@ pub async fn run(
         )));
     }
     session.set_state(SessionState::Running);
-    let result = execute(runner, &session, project, checks, ids, tags, emit).await;
+    let result = execute(runner, &session, project, &setups, checks, ids, tags, emit).await;
     if session.state() == SessionState::Running {
         session.set_state(SessionState::Ready);
     }
@@ -52,6 +53,7 @@ fn session_state_word(state: SessionState) -> &'static str {
         SessionState::Starting => "starting",
         SessionState::Ready => "ready",
         SessionState::Running => "running a run",
+        SessionState::Reloading => "busy with a reset",
         SessionState::Broken => "broken",
         SessionState::Failed => "failed",
         SessionState::Stopping => "stopping",
@@ -59,10 +61,12 @@ fn session_state_word(state: SessionState) -> &'static str {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn execute(
     runner: &Arc<Runner>,
     session: &Arc<Session>,
     project: PathBuf,
+    setups: &[String],
     checks: Vec<CheckRef>,
     ids: Vec<String>,
     tags: Vec<String>,
@@ -82,16 +86,24 @@ async fn execute(
     let mut not_run: Vec<NotRun> = Vec::new();
     // How often each check has come up in this run: its executions' `repeat` (`RUN-03`).
     let mut times: BTreeMap<String, u32> = BTreeMap::new();
-    for check in &checks {
+    let progress = |done: usize, current: Option<&str>| {
+        *runner.progress.lock().unwrap() = Some(json!({
+            "id": run_id, "state": "running", "done": done, "total": checks.len(), "current_check": current,
+        }));
+    };
+    for (n, check) in checks.iter().enumerate() {
+        progress(n, Some(&check.id));
         let repeat = {
             let n = times.entry(check.id.clone()).or_insert(0);
             *n += 1;
             *n
         };
-        let execution = execute_check(runner, session, &run_id, check).await.map(|mut e| {
-            e.repeat = repeat;
-            e
-        });
+        let execution = execute_check(runner, session, &run_id, check, setups)
+            .await
+            .map(|mut e| {
+                e.repeat = repeat;
+                e
+            });
         let Some(execution) = execution else {
             not_run.push(NotRun {
                 check_id: check.id.clone(),
@@ -104,6 +116,7 @@ async fn execute(
         executions.push(execution);
     }
 
+    *runner.progress.lock().unwrap() = None;
     let summary = Summary::of(&executions, not_run.len());
     let result = ResultFile {
         schema: SCHEMA.into(),
@@ -161,6 +174,7 @@ async fn execute_check(
     session: &Arc<Session>,
     run_id: &str,
     check: &CheckRef,
+    setups: &[String],
 ) -> Option<CheckExecution> {
     let started = SystemTime::now();
     let clock = Instant::now();
@@ -169,7 +183,7 @@ async fn execute_check(
     let header = text
         .as_ref()
         .map_err(|e| format!("cannot read the check file: {e}"))
-        .and_then(|t| checks::parse_header(t));
+        .and_then(|t| checks::parse_header_in(t, Some(setups)));
     let header = match header {
         Ok(h) => h,
         Err(message) => {
@@ -292,47 +306,78 @@ async fn execute_check(
 }
 
 /// The ceiling of a reset (`RST-04`).
-const RESET_CEILING_S: f64 = 15.0;
+pub const RESET_CEILING_S: f64 = 15.0;
 
-/// Resets the session in place through the lead (`P-06`). Returns what did not match when the
-/// reset failed, or the lead did not answer.
-async fn reset(runner: &Runner, session: &Session) -> Result<(), String> {
+/// Resets the session in place (`P-06`): the cleanups on the lead, then the phases `free`,
+/// `restore` and `verify` on every machine at once, each phase waiting for every machine. Returns
+/// how long it took, or what did not match when it failed or a machine did not answer.
+pub async fn reset(runner: &Runner, session: &Arc<Session>) -> Result<f64, String> {
+    let clock = Instant::now();
     let lead = session.lead();
-    let answer = session
-        // The order's own ceiling is a second longer, so the reset reports what did not match.
-        .exec(
-            lead,
-            "_this call skd_fnc_reset",
-            json!([RESET_CEILING_S]),
-            RESET_CEILING_S + 1.0,
-        )
-        .await;
-    match answer {
-        Ok(a) if a["state"] == "done" && a["value"]["state"] == "done" => {
-            runner.log(&format!(
-                "{} reset done in {} s",
-                session.id,
-                a["value"]["duration_s"].as_str().unwrap_or("?")
-            ));
-            Ok(())
+    let left = || (RESET_CEILING_S - clock.elapsed().as_secs_f64()).max(0.1);
+    let world = session.baseline(lead);
+    let names = session.machine_names();
+    let players: Vec<Value> = names
+        .iter()
+        .filter(|n| n.starts_with('p'))
+        .filter_map(|n| {
+            let b = session.baseline(n);
+            (!b["position"].is_null()).then(|| json!([n, b["position"], b["direction"]]))
+        })
+        .collect();
+    let phase = |name: &'static str, on: Vec<String>, args: Value| {
+        let session = Arc::clone(session);
+        async move {
+            let mut handles = Vec::new();
+            for machine in on {
+                let session = Arc::clone(&session);
+                let args = args.clone();
+                // The order's own ceiling is a second longer, so the phase reports what did not match.
+                let ceiling = args[0].as_f64().unwrap_or(RESET_CEILING_S) + 1.0;
+                handles.push(tokio::spawn(async move {
+                    let answer = session
+                        .exec(&machine, "_this call skd_fnc_reset", json!([name, args]), ceiling)
+                        .await;
+                    match answer {
+                        Ok(a) if a["state"] == "done" => a["value"]
+                            .as_array()
+                            .map(|m| m.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+                            .unwrap_or_default(),
+                        Ok(a) => vec![format!(
+                            "{machine} did not finish the reset's {name} within its ceiling ({})",
+                            a["state"]
+                        )],
+                        Err(e) => vec![format!("{machine} did not answer the reset's {name} ({e:?})")],
+                    }
+                }));
+            }
+            let mut out: Vec<String> = Vec::new();
+            for h in handles {
+                out.extend(
+                    h.await
+                        .unwrap_or_else(|e| vec![format!("the reset's {name} failed: {e}")]),
+                );
+            }
+            out
         }
-        Ok(a) if a["state"] == "done" => {
-            let mismatches: Vec<String> = a["value"]["mismatches"]
-                .as_array()
-                .map(|m| m.iter().filter_map(|x| x.as_str().map(String::from)).collect())
-                .unwrap_or_default();
-            runner.log(&format!("{} reset failed: {}", session.id, mismatches.join("; ")));
-            Err(if mismatches.is_empty() {
-                "the reset reported no result".into()
-            } else {
-                mismatches.join("; ")
-            })
-        }
-        Ok(a) => Err(format!(
-            "{lead} did not finish the reset within its ceiling of {RESET_CEILING_S} s ({})",
-            a["state"]
-        )),
-        Err(e) => Err(format!("{lead} did not answer the reset order ({e:?})")),
+    };
+    let mut mismatches = phase("cleanups", vec![lead.to_string()], json!([left()])).await;
+    if mismatches.is_empty() {
+        mismatches = phase("free", names.clone(), json!([left()])).await;
+    }
+    if mismatches.is_empty() {
+        mismatches = phase("restore", names.clone(), json!([left(), world.clone()])).await;
+    }
+    if mismatches.is_empty() {
+        mismatches = phase("verify", names.clone(), json!([left(), world, players])).await;
+    }
+    let duration = clock.elapsed().as_secs_f64();
+    if mismatches.is_empty() {
+        runner.log(&format!("{} reset done in {duration:.3} s", session.id));
+        Ok(duration)
+    } else {
+        runner.log(&format!("{} reset failed: {}", session.id, mismatches.join("; ")));
+        Err(mismatches.join("; "))
     }
 }
 

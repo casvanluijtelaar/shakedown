@@ -26,6 +26,29 @@ private _order = fromJSON (_parts joinString "");
 switch (_order get "kind") do {
     case "exec": { [_order] call skd_fnc_runExec };
     case "check": { [_order] call skd_fnc_runCheck };
+    case "poll": { [_order] call skd_fnc_runPoll };
+    // A poll this machine runs for another is told to stop.
+    case "stop": {
+        private _flag = skd_stops getOrDefault [_order get "poll", []];
+        if (count _flag > 0) then { _flag set [0, true] };
+    };
+    // The answer to an order this machine routed to another.
+    case "routed": {
+        private _box = skd_routes getOrDefault [_order get "ref", []];
+        private _answer = _order get "answer";
+        if (isNil "_answer") then { _answer = createHashMap };
+        _box pushBack _answer;
+    };
+    // A value a poll on another machine read for this one; a newer read replaces an older one.
+    case "routed-poll": {
+        private _poller = skd_polls getOrDefault [_order get "ref", []];
+        private _reads = _order getOrDefault ["reads", 0];
+        if (count _poller > 0 && { _reads > (_poller select 1) }) then {
+            private _value = _order get "value";
+            _poller set [0, if (isNil "_value") then { [] } else { [[_value] call skd_fnc_decode] }];
+            _poller set [1, _reads];
+        };
+    };
     default {
         diag_log text format ["[shakedown] unknown order kind %1", _order get "kind"];
     };

@@ -22,7 +22,7 @@ private _skd_config = configFile >> "CfgVehicles" >> _skd_class;
 if (!isClass _skd_config || { getNumber (_skd_config >> "scope") < 1 }) exitWith {
     ["fail", "check-error", format ["skd_fnc_create: the class %1 is not in CfgVehicles (or is not creatable). Check its spelling and that its mod is in the setup.", str _skd_class]] call skd_fnc_end;
 };
-// In singleplayer the server is this machine.
+// The lead machine runs the body and is the server: p1 in singleplayer, server on a dedicated session.
 private _skd_object = objNull;
 if (_skd_class isKindOf "CAManBase") then {
     private _skd_side = [east, west, independent, civilian] param [getNumber (_skd_config >> "side"), civilian];

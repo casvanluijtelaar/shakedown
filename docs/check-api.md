@@ -1,18 +1,18 @@
 ---
 type: Documentation
 title: The check API by example
-description: Every skd_fnc function a singleplayer check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, cleanups and ending a check - and what each does when it fails.
+description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, cleanups and ending a check - and what each does when it fails.
 status: draft
 ---
 
 # The check API by example
 
-A check's body calls these functions, each as `[arguments] call skd_fnc_name`. Their contract is [spec/contract/check-api.md](../spec/contract/check-api.md); this page shows each one at work in a singleplayer session, where the only machine is `p1` and `"server"` names it too. [Writing and running a check](writing-and-running-checks.md) covers the file, the header and the commands.
+A check's body calls these functions, each as `[arguments] call skd_fnc_name`. Their contract is [spec/contract/check-api.md](../spec/contract/check-api.md); this page shows each one at work in a singleplayer session, where the only machine is `p1` and `"server"` names it too. On a dedicated session the same functions reach the server, the clients and the headless clients by name; [Dedicated sessions](dedicated-sessions.md) shows how. [Writing and running a check](writing-and-running-checks.md) covers the file, the header and the commands.
 
 Rules for all of them:
 
 - An argument of the wrong type, or a value out of range, ends the check `fail` / `check-error` with the function, the argument's number and name, what it takes and what it got: `skd_fnc_place: argument 2 (position) must be an ASL position [x, y, z] of three numbers, got STRING "here".`
-- A machine is `"p1"` (or `"server"`); where a function takes several, `"all"`, `"clients"` or an array of names. Any other name ends the check `fail` / `check-error` naming the session's machines.
+- A machine is `"p1"` (or `"server"`) in singleplayer, and `"server"`, `"p1"` to `"pN"` or `"hc1"` to `"hcN"` on a dedicated session; where a function takes several, `"all"`, `"clients"`, `"headless"` or an array of names. Any other name ends the check `fail` / `check-error` naming the session's machines.
 - Code given to a machine is compiled from its text there: it does not see the check's local variables, so pass what it needs in `args`, which arrive as `_this`. Objects and groups in `args` and in results arrive as the object or group; code arrives as a tagged value, not as code. `skd_fnc_*` functions cannot be called inside it.
 - Every function that waits takes a `ceiling` in seconds of real time, default 10. A ceiling that reaches past the check's `@timeout` is cut to the time left, and the check then ends `check-timeout`.
 - A function that fails does not return. The check ends there, and the reason is recorded against the innermost step.
@@ -22,7 +22,7 @@ Rules for all of them:
 ```sqf
 private _machines = call skd_fnc_machines;      // ["p1"]
 private _setup = call skd_fnc_setup;            // HashMap: name, mode, clients, headless, world
-private _unit = ["p1"] call skd_fnc_player;     // the unit p1's player controls
+private _unit = ["p1"] call skd_fnc_player;     // the unit p1's player controls; objNull for "server" and "hc1" on a dedicated session
 [_setup get "mode", "==", "singleplayer", "the session is singleplayer"] call skd_fnc_expect;
 ```
 
@@ -110,6 +110,6 @@ if (_n > 3) then { ["too many boxes"] call skd_fnc_fail };
 
 ## The reset between checks
 
-Before every check the session is reset in place, in well under a second: the previous check's cleanups run, every unit, vehicle and object created since the mission started is deleted (whatever created it), the player is brought out of any vehicle, alive, with the loadout, position, direction and damage it had at the mission's start, and the date and weather are put back. A player who dies during a check is handed a new unit where it fell at once, so the mission goes on; the reset brings that unit back to the start. What the reset does not touch: variables set on units or in `missionNamespace`, actions added to the player, a mod's own state. A check that changes those registers a cleanup.
+Before every check the session is reset in place, in under a second: the previous check's cleanups run, every unit, vehicle and object created since the mission started is deleted (whatever created it, on whichever machine), every player is brought out of any vehicle, alive, with the loadout, position, direction, damage and animation it had at the mission's start, and the date and weather are put back on every machine. In singleplayer a player who dies during a check is handed a new unit where it fell at once, so the mission goes on; on a dedicated session it respawns at once. The reset brings that unit back to the start and deletes the body. `shakedown reset` runs the same reset by hand. What the reset does not touch: variables set on units or in `missionNamespace`, actions added to the player, a mod's own state. A check that changes those registers a cleanup.
 
 A reset that cannot bring the session back within 15 s ends the next check `invalid` / `reset-failed` with what did not match, and leaves the session broken: every check after it is `invalid` / `session-broken` until the session is stopped and started again.

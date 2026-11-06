@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use serde_json::json;
+use serde_json::{Value, json};
 use shakedown_protocol::Hello;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
@@ -35,6 +35,8 @@ pub struct Runner {
     state: Mutex<State>,
     runs: AtomicU32,
     log: Mutex<Option<std::fs::File>>,
+    /// The active run's progress for `status` (`INS-02`): id, done, total, current check.
+    pub(crate) progress: Mutex<Option<Value>>,
 }
 
 struct State {
@@ -62,6 +64,7 @@ impl Runner {
             }),
             runs: AtomicU32::new(0),
             log: Mutex::new(log),
+            progress: Mutex::new(None),
         });
         let me = Arc::clone(&runner);
         tokio::spawn(async move {
@@ -215,6 +218,17 @@ impl Runner {
                         session: Some(s.view()),
                     })
             }
+            Request::Status => Ok(Event::Value {
+                value: json!({
+                    "runner": "running",
+                    "runner_pid": std::process::id(),
+                    "version": shakedown_protocol::VERSION,
+                    "session": self.session().map(|s| s.view()),
+                    "run": self.progress.lock().unwrap().clone(),
+                    "last_reload": null,
+                }),
+            }),
+            Request::Reset => self.reset().await.map(|value| Event::Value { value }),
             Request::SessionStop => match self.session() {
                 None => Err(CliError::not_now("No session runs. Nothing to stop.")),
                 Some(s) => {
@@ -226,6 +240,7 @@ impl Runner {
             },
             Request::Run {
                 project,
+                setups,
                 checks,
                 ids,
                 tags,
@@ -233,12 +248,74 @@ impl Runner {
                 let emit = |line: serde_json::Value, text: String| {
                     let _ = tx.send(Event::Check { line, text });
                 };
-                run::run(self, project, checks, ids, tags, &emit)
+                run::run(self, project, setups, checks, ids, tags, &emit)
                     .await
                     .map(|result| Event::RunDone { result })
             }
         };
         answer.unwrap_or_else(|error| Event::Error { error })
+    }
+}
+
+impl Runner {
+    /// `reset` outside a run (`RST-03`): refused with no session, on a `broken` session with the
+    /// reason and the ways out, and while a run or another reset is in progress.
+    async fn reset(self: &Arc<Self>) -> Result<Value, CliError> {
+        let Some(session) = self.session() else {
+            return Err(CliError::not_now(
+                "No session runs, so there is nothing to reset. Start one with `shakedown session start --setup <name>`.",
+            ));
+        };
+        match session.state() {
+            session::SessionState::Ready => {}
+            session::SessionState::Broken => {
+                return Err(CliError::not_now(format!(
+                    "Session {} is broken: {}. It cannot be reset. Bring every machine back with a game-restart reload, or stop it with `shakedown session stop`.",
+                    session.id,
+                    session.broken_reason()
+                )));
+            }
+            session::SessionState::Running => {
+                let progress = self.progress.lock().unwrap().clone().unwrap_or(Value::Null);
+                return Err(CliError::not_now(format!(
+                    "Session {} is running run {} ({} of {} checks done). Wait for it to end, or stop it with `shakedown run stop`.",
+                    session.id, progress["id"], progress["done"], progress["total"]
+                )));
+            }
+            other => {
+                return Err(CliError::not_now(format!(
+                    "Session {} is {}, so it cannot be reset now. Wait for it to be ready.",
+                    session.id,
+                    if other == session::SessionState::Reloading {
+                        "busy with a reset"
+                    } else {
+                        other.as_str()
+                    }
+                )));
+            }
+        }
+        if !session.transition(session::SessionState::Ready, session::SessionState::Reloading) {
+            return Err(CliError::not_now(format!(
+                "Session {} became busy; try the reset again when it is ready.",
+                session.id
+            )));
+        }
+        let clock = Instant::now();
+        let outcome = run::reset(self, &session).await;
+        let duration = (clock.elapsed().as_secs_f64() * 1000.0).round() / 1000.0;
+        let clock_done = match &outcome {
+            Ok(_) => json!({"state": "done", "duration_s": duration, "mismatches": []}),
+            Err(m) => {
+                json!({"state": "failed", "duration_s": duration, "mismatches": m.split("; ").collect::<Vec<_>>()})
+            }
+        };
+        match outcome {
+            Ok(_) => {
+                session.transition(session::SessionState::Reloading, session::SessionState::Ready);
+            }
+            Err(m) => session.set_broken(session.lead(), format!("the reset failed: {m}")),
+        }
+        Ok(clock_done)
     }
 }
 

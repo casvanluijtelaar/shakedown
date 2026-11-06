@@ -75,7 +75,7 @@ private _meets = {
     _r select 0
 };
 
-private _pollers = _targets apply { [_x, _compiled, _args] call skd_fnc_poller };
+private _pollers = _targets apply { [_x, _compiled, _args, _ceiling] call skd_fnc_poller };
 private _start = diag_tickTime;
 private _typeError = [];
 private _held = false;
@@ -108,8 +108,13 @@ if (_held) exitWith {
 call skd_fnc_atCeiling;
 private _values = (_targets apply { format ["%1 %2", _x, [(_pollers select (_targets find _x)) select 0] call skd_fnc_show] }) joinString ", ";
 private _message = if (_agree) then {
-    format ["%1: the machines did not agree within %2 s (tolerance %3): %4; %5 differ from %6.",
-        _description, _ceiling, _tolerance, _values, _missing joinString ", ", _targets select 0]
+    private _first = _targets select 0;
+    private _firstShown = [(_pollers select 0) select 0] call skd_fnc_show;
+    private _differ = (_missing apply {
+        format ["%1 read %2 where %3 read %4", _x, [(_pollers select (_targets find _x)) select 0] call skd_fnc_show, _first, _firstShown]
+    }) joinString "; ";
+    format ["%1: the machines did not agree within %2 s (tolerance %3): %4. Every machine read: %5.",
+        _description, _ceiling, _tolerance, _differ, _values]
 } else {
     if (_kind isEqualTo "on") then {
         format ["%1: expected %2 %3 on %4 within %5 s, last read %6.",
@@ -119,4 +124,4 @@ private _message = if (_agree) then {
             _description, _op, [_expectedW] call skd_fnc_show, _ceiling, _values, _missing joinString ", "]
     };
 };
-["fail", "assertion", _message, _observed] call skd_fnc_end;
+["fail", "assertion", _message, _observed, if (_missing isEqualTo []) then { skd_machine } else { _missing select 0 }] call skd_fnc_end;

@@ -15,3 +15,8 @@ patch = "agh_main"
 [setups.sp]
 mode = "singleplayer"
 mods = ["cba", "agh"]
+
+[setups.dedicated]
+mode = "dedicated"
+clients = 2
+mods = ["cba", "agh"]

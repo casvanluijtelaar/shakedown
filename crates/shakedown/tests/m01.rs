@@ -595,7 +595,8 @@ fn m1_demo_us_009_ten_times_with_a_second_check() {
 
 /// `US-031` criterion 2, finding `m01-3`: `run a a b` against a running session executes `a`,
 /// `a`, `b` in the game, three executions in that order with `repeat` 1, 2 and 1, each a step of
-/// its own in the game, and prints a line per execution, the second of `a` ending in `#2`.
+/// its own in the game, and prints a line per execution, the second of `a` carrying `#2` right
+/// after its check id, before the duration.
 #[test]
 #[ignore = "starts Arma 3; run on the test machine"]
 fn us_031_m01_3_a_check_given_twice_runs_twice_in_the_order_given() {

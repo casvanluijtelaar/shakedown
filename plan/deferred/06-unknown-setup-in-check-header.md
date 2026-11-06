@@ -3,7 +3,7 @@ type: Deferred
 title: "A check whose @setups names an unknown setup is not reported"
 description: "A check whose @setups names a setup the project file does not declare, such as @setups nosuch, is listed with no error and skipped in every session."
 id: DEF-06
-state: open
+state: done
 milestone: M2
 status: stable
 ---

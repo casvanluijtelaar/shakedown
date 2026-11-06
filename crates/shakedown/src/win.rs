@@ -271,6 +271,40 @@ mod imp {
         }
     }
 
+    /// Sets the title of every visible top-level window of a process, so a person can tell the
+    /// game clients apart (`INT-AR-02`). Touches no input, focus or foreground. Returns whether a
+    /// window was found.
+    pub fn set_window_title(pid: u32, title: &str) -> bool {
+        use windows::Win32::Foundation::{HWND, LPARAM};
+        use windows::Win32::UI::WindowsAndMessaging::{
+            EnumWindows, GetWindowThreadProcessId, IsWindowVisible, SetWindowTextW,
+        };
+        struct Search {
+            pid: u32,
+            found: Vec<HWND>,
+        }
+        unsafe extern "system" fn each(hwnd: HWND, lparam: LPARAM) -> windows::core::BOOL {
+            let search = unsafe { &mut *(lparam.0 as *mut Search) };
+            let mut owner = 0u32;
+            unsafe { GetWindowThreadProcessId(hwnd, Some(&mut owner)) };
+            if owner == search.pid && unsafe { IsWindowVisible(hwnd) }.as_bool() {
+                search.found.push(hwnd);
+            }
+            true.into()
+        }
+        let mut search = Search { pid, found: vec![] };
+        unsafe {
+            let _ = EnumWindows(Some(each), LPARAM(&mut search as *mut Search as isize));
+        }
+        let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+        for hwnd in &search.found {
+            unsafe {
+                let _ = SetWindowTextW(*hwnd, PCWSTR(wide.as_ptr()));
+            }
+        }
+        !search.found.is_empty()
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -353,6 +387,10 @@ mod imp {
     pub fn steam_running() -> bool {
         false
     }
+
+    pub fn set_window_title(_pid: u32, _title: &str) -> bool {
+        false
+    }
 }
 
 #[cfg(not(windows))]
@@ -366,4 +404,9 @@ pub fn exited(child: &Child) -> Option<u32> {
 /// The game executable of a machine kind in the game folder.
 pub fn game_exe(game: &Path) -> std::path::PathBuf {
     game.join("arma3_x64.exe")
+}
+
+/// The dedicated server and headless client executable in the game folder.
+pub fn server_exe(game: &Path) -> std::path::PathBuf {
+    game.join("arma3server_x64.exe")
 }

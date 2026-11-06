@@ -7,8 +7,8 @@ class CfgPatches {
         requiredVersion = 2.18;
         requiredAddons[] = {"A3_Functions_F"};
         version = 0.0;
-        versionStr = "0.0.2";
-        versionAr[] = {0, 0, 2};
+        versionStr = "0.0.3";
+        versionAr[] = {0, 0, 3};
     };
 };
 
@@ -44,6 +44,12 @@ class CfgFunctions {
             class actionState {};
             class baseline {};
             class killed {};
+            class clientState {};
+            class route {};
+            class runPoll {};
+            class unitOf {};
+            class useActionLocal {};
+            class pressKeyLocal {};
             class reset {};
         };
         // The check API (spec/contract/check-api.md).

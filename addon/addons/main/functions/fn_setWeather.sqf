@@ -21,14 +21,31 @@ if (_skd_bad >= 0) exitWith {
 };
 _skd_ceiling = ["skd_fnc_setWeather", 4, if (isNil "_skd_ceiling") then { nil } else { _skd_ceiling }] call skd_fnc_ceiling;
 if (isNil "_skd_ceiling") exitWith {};
-// In singleplayer the server and every machine are this one.
-0 setOvercast _skd_overcast;
-0 setFog _skd_fog;
-0 setRain _skd_rain;
-forceWeatherChange;
+// The server sets the weather and forces the change; each machine sets it too, so it does not
+// wait for the server's weather to reach it, and reports what it then reads, polled to the
+// ceiling (SCN-03). In singleplayer every machine is this one.
+private _skd_apply = {
+    params ["_o", "_f", "_r", "_c"];
+    0 setOvercast _o;
+    0 setFog _f;
+    0 setRain _r;
+    forceWeatherChange;
+    private _s = diag_tickTime;
+    waitUntil { abs (overcast - _o) <= 0.01 || { diag_tickTime - _s > _c } };
+    [overcast, fog, rain]
+};
+private _skd_seen = createHashMap;
 private _skd_start = diag_tickTime;
-waitUntil { abs (overcast - _skd_overcast) <= 0.01 || { diag_tickTime - _skd_start > _skd_ceiling } };
-if (abs (overcast - _skd_overcast) <= 0.01) exitWith { true };
+{
+    private _skd_left = (_skd_ceiling - (diag_tickTime - _skd_start)) max 0.001;
+    ([_x, _skd_apply, [_skd_overcast, _skd_fog, _skd_rain, _skd_left], _skd_left + 1] call skd_fnc_runOn) params ["_skd_done", "_skd_value"];
+    _skd_seen set [_x, if (_skd_value isEqualTo []) then { nil } else { _skd_value select 0 }];
+} forEach ([skd_machine] + ((skd_check get "machines") - [skd_machine]));
+private _skd_off = (keys _skd_seen) select {
+    private _v = _skd_seen getOrDefault [_x, []];
+    !(_v isEqualType []) || { count _v < 1 } || { abs ((_v select 0) - _skd_overcast) > 0.01 }
+};
+if (_skd_off isEqualTo []) exitWith { true };
 call skd_fnc_atCeiling;
-["fail", "wait-ceiling", format ["skd_fnc_setWeather: the machines did not report an overcast of %1 within %2 s; %3 reported overcast %4, fog %5, rain %6.",
-    _skd_overcast, _skd_ceiling, skd_machine, overcast, fog, rain]] call skd_fnc_end;
+["fail", "wait-ceiling", format ["skd_fnc_setWeather: the machines did not report an overcast of %1 within %2 s; %3.", _skd_overcast, _skd_ceiling,
+    (_skd_off apply { format ["%1 reported overcast, fog, rain %2", _x, _skd_seen getOrDefault [_x, "nothing"]] }) joinString ", "], _skd_seen] call skd_fnc_end;

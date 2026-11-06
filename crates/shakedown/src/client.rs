@@ -44,6 +44,18 @@ pub fn connect() -> Result<Conn, CliError> {
     }
 }
 
+/// The running runner, without starting one: `Ok(None)` when none runs, an error naming its process
+/// when it does not answer or runs another version (`P-01`).
+pub fn existing() -> Result<Option<Conn>, CliError> {
+    try_existing()
+}
+
+/// The process id `runner.json` names, if the file can be read.
+pub fn runner_pid() -> Option<u32> {
+    let text = std::fs::read_to_string(paths::runner_file()).ok()?;
+    serde_json::from_str::<RunnerFile>(&text).ok().map(|f| f.pid)
+}
+
 /// `Ok(None)` when no runner runs: no `runner.json`, or nothing listens on its port.
 fn try_existing() -> Result<Option<Conn>, CliError> {
     let Ok(text) = std::fs::read_to_string(paths::runner_file()) else {

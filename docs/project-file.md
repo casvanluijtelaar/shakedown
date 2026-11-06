@@ -1,13 +1,13 @@
 ---
 type: Documentation
-title: The project file for a singleplayer setup
-description: The keys of shakedown.toml a singleplayer setup needs, with an example, how relative paths and defaults work, and what a mistake in the file looks like.
+title: The project file
+description: The keys of shakedown.toml for singleplayer and dedicated setups, with an example, how relative paths and defaults work, and what a mistake in the file looks like.
 status: draft
 ---
 
-# The project file for a singleplayer setup
+# The project file
 
-A project is a folder with a `shakedown.toml` file. Every command finds it from the current folder upward, or takes `--project <dir>`. The file is read fresh by every command. Its full contract is [spec/contract/cli.md](../spec/contract/cli.md); this page covers what a singleplayer setup needs.
+A project is a folder with a `shakedown.toml` file. Every command finds it from the current folder upward, or takes `--project <dir>`. The file is read fresh by every command. Its full contract is [spec/contract/cli.md](../spec/contract/cli.md); this page covers what a singleplayer and a dedicated setup need. [Dedicated sessions](dedicated-sessions.md) says how a dedicated session runs.
 
 ## Example
 
@@ -22,6 +22,12 @@ patch = "cba_main"
 [setups.sp]
 mode = "singleplayer"
 mods = ["cba"]
+
+[setups.dedicated]
+mode = "dedicated"
+clients = 2
+headless = 1
+mods = ["cba"]
 ```
 
 A project with no mod declares `mods = []` in its setup and no `[mods.*]` table; `e2e/shakedown.toml` in this repository is one.
@@ -32,13 +38,16 @@ A project with no mod declares `mods = []` in its setup and no `[mods.*]` table;
 |---|---|---|
 | `game` | yes | The Arma 3 folder, the one that holds `arma3_x64.exe`. |
 | `checks` | no, default `checks` | The folder of the check files. |
+| `base_port` | no, default 2402 | A dedicated server's game port, 1024 to 65530; it and the next four ports must be free. |
 | `mods.<name>.path` | yes, for each mod | The mod's folder, such as a Workshop folder or a `@mod` folder. |
 | `mods.<name>.patch` | no | A `CfgPatches` class of the mod; the result file records its `versionStr` as the game loaded it. |
-| `setups.<name>.mode` | yes | `"singleplayer"`. |
+| `setups.<name>.mode` | yes | `"singleplayer"` or `"dedicated"`. |
+| `setups.<name>.clients` | no, default 1 | A dedicated setup's game clients, `p1` to `pN`, 1 to 8. |
+| `setups.<name>.headless` | no, default 0 | A dedicated setup's headless clients, `hc1` to `hcN`, 0 to 8. |
 | `setups.<name>.mods` | yes | The names of the mods to load, in load order. The framework's own addon is loaded after them. |
 | `setups.<name>.world` | no, default `"VR"` | The world the session mission is on. |
-| `setups.<name>.spawn` | no, default `[100, 100]` | Where the player starts. |
-| `setups.<name>.start_timeout` | no, default 180 | Seconds from the game's launch to the session being ready, 30 to 1800. |
+| `setups.<name>.spawn` | no, default `[100, 100]` | Where `p1` starts; `pN` starts 10 m further east per N. |
+| `setups.<name>.start_timeout` | no, default 180 | Seconds from the first launch to the session being ready, 30 to 1800. A dedicated start of a server, two clients and a headless client takes about 45 s on the test machine. |
 
 A singleplayer setup always has one game client, `p1`, and no headless client; `clients` and `headless` are ignored for it. Single quotes keep backslashes in Windows paths as they are. A relative path is relative to the project folder. Mod and setup names are letters, digits and `-`, starting with a letter.
 

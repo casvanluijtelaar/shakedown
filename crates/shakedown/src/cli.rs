@@ -45,6 +45,10 @@ enum Command {
         #[command(subcommand)]
         action: SessionAction,
     },
+    /// The runner, the session and its machines, and the active run (INS-02, INS-04).
+    Status,
+    /// Resets the session in place (RST-03).
+    Reset,
     /// The framework version.
     Version,
     /// Runs the runner. Started by the other commands; not for direct use.
@@ -106,7 +110,11 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
                 seen.push(c.id.clone());
                 first
             });
-            let listed: Vec<checks::Listed> = selected.iter().map(checks::read_listed).collect();
+            let declared: Vec<String> = project.setups.keys().cloned().collect();
+            let listed: Vec<checks::Listed> = selected
+                .iter()
+                .map(|c| checks::read_listed(c, Some(&declared)))
+                .collect();
             if cli.json {
                 out.json(&json!({"checks": listed}));
             } else {
@@ -141,6 +149,13 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
                 |e| out.progress(e),
             )?;
             let session = session_of(last);
+            if session["state"] == "failed" {
+                // A start that failed is the session in state `failed`, with exit code 4 (`SES-04`).
+                if cli.json {
+                    out.json(&session);
+                }
+                return Err(crate::runner::session::start_failed(&session));
+            }
             if cli.json {
                 out.json(&session);
             } else {
@@ -166,6 +181,56 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
             Ok(0)
         }
         Command::Run { ids, tags, setup } => run(cli, &out, ids, tags, setup.as_deref()),
+        Command::Status => {
+            let status = match client::existing() {
+                Ok(None) => json!({
+                    "runner": "not-running", "runner_pid": null, "version": shakedown_protocol::VERSION,
+                    "session": null, "run": null, "last_reload": null,
+                }),
+                Ok(Some(mut conn)) => match conn.request(&Request::Status, |_| {})? {
+                    Event::Value { value } => value,
+                    _ => return Err(CliError::framework("The runner answered status with something else.")),
+                },
+                Err(_) => json!({
+                    "runner": "unreachable", "runner_pid": client::runner_pid(), "version": shakedown_protocol::VERSION,
+                    "session": null, "run": null, "last_reload": null,
+                }),
+            };
+            if cli.json {
+                out.json(&status);
+            } else {
+                print_status(&status);
+            }
+            Ok(0)
+        }
+        Command::Reset => {
+            let mut conn = client::connect()?;
+            let Event::Value { value } = conn.request(&Request::Reset, |e| out.progress(e))? else {
+                return Err(CliError::framework("The runner answered reset with something else."));
+            };
+            if cli.json {
+                out.json(&value);
+            } else {
+                println!(
+                    "reset {} in {} s",
+                    value["state"].as_str().unwrap_or("?"),
+                    value["duration_s"]
+                );
+                if let Some(m) = value["mismatches"].as_array().filter(|m| !m.is_empty()) {
+                    for x in m {
+                        println!("  {}", x.as_str().unwrap_or_default());
+                    }
+                }
+            }
+            if value["state"] == "done" {
+                Ok(0)
+            } else {
+                if !cli.json {
+                    eprintln!("The reset failed and left the session broken. Stop it with `shakedown session stop`.");
+                }
+                Ok(4)
+            }
+        }
         Command::Runner => unreachable!("handled before dispatch"),
     }
 }
@@ -180,13 +245,16 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
     let mut started_here = false;
     match (&spec, running.is_null()) {
         (Some(spec), true) => {
-            conn.request(
+            let started = session_of(conn.request(
                 &Request::SessionStart {
                     project: project.root.clone(),
                     spec: spec.clone(),
                 },
                 |e| out.progress(e),
-            )?;
+            )?);
+            if started["state"] == "failed" {
+                return Err(crate::runner::session::start_failed(&started));
+            }
             started_here = true;
         }
         (Some(spec), false) if running["setup"] != spec.setup.name.as_str() => {
@@ -206,6 +274,7 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
     }
     let request = Request::Run {
         project: project.root.clone(),
+        setups: project.setups.keys().cloned().collect(),
         checks: selected,
         ids: ids.to_vec(),
         tags: tags.to_vec(),
@@ -241,6 +310,52 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
     })
 }
 
+/// `status` for a person: the runner, the session and one line per machine.
+fn print_status(status: &Value) {
+    println!(
+        "runner: {}{}",
+        status["runner"].as_str().unwrap_or("?"),
+        status["runner_pid"]
+            .as_u64()
+            .map(|p| format!(" (process {p})"))
+            .unwrap_or_default()
+    );
+    let session = &status["session"];
+    if session.is_null() {
+        println!("session: none");
+        return;
+    }
+    println!(
+        "session: {} of setup {}, {}",
+        session["id"].as_str().unwrap_or("?"),
+        session["setup"].as_str().unwrap_or("?"),
+        session["state"].as_str().unwrap_or("?")
+    );
+    if let Some(reason) = session["reason"]["message"].as_str() {
+        println!("  reason: {reason}");
+    }
+    for m in session["machines"].as_array().into_iter().flatten() {
+        println!(
+            "  {:<7} {:<9} {:<10} start {} process {} profile {}",
+            m["name"].as_str().unwrap_or("?"),
+            m["kind"].as_str().unwrap_or("?"),
+            m["state"].as_str().unwrap_or("?"),
+            m["start"],
+            m["pid"],
+            m["profile"].as_str().unwrap_or("?")
+        );
+    }
+    if let Some(run) = status["run"].as_object() {
+        println!(
+            "run: {} {} of {} done, now {}",
+            run["id"].as_str().unwrap_or("?"),
+            run["done"],
+            run["total"],
+            run["current_check"]
+        );
+    }
+}
+
 fn project(cli: &Cli) -> Result<config::Project, CliError> {
     let cwd =
         std::env::current_dir().map_err(|e| CliError::framework(format!("Cannot read the current folder: {e}.")))?;
@@ -265,6 +380,7 @@ fn spec(project: &config::Project, name: &str) -> Result<SetupSpec, CliError> {
         setup,
         game: project.game.clone(),
         mods,
+        base_port: project.base_port,
     })
 }
 

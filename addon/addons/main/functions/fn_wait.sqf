@@ -25,7 +25,7 @@ private _target = _targets select 0;
 private _compiled = [_function, _target, _condition] call skd_fnc_compileFor;
 if (isNil "_compiled") exitWith {};
 
-private _poller = [_target, _compiled, _args] call skd_fnc_poller;
+private _poller = [_target, _compiled, _args, _ceiling] call skd_fnc_poller;
 private _start = diag_tickTime;
 private _met = false;
 private _wrong = [];

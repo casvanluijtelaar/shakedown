@@ -7,9 +7,10 @@ pub fn folder_name(session_id: &str, world: &str) -> String {
     format!("shakedown_{session_id}.{world}")
 }
 
-/// `mission.sqm` with one playable rifleman per game client and a `respawn_west` marker at the
-/// spawn point. Positions in a mission file are `{x, height, y}`.
-pub fn mission_sqm(clients: u32, spawn: [f64; 2]) -> String {
+/// `mission.sqm` with one playable rifleman per game client, one playable `HeadlessClient_F` per
+/// headless client and a `respawn_west` marker at the spawn point. Positions in a mission file are
+/// `{x, height, y}`.
+pub fn mission_sqm(clients: u32, headless: u32, spawn: [f64; 2]) -> String {
     let mut items = String::new();
     let mut id = 0;
     for n in 0..clients {
@@ -51,6 +52,28 @@ pub fn mission_sqm(clients: u32, spawn: [f64; 2]) -> String {
         ));
         id += 2;
     }
+    for h in 0..headless {
+        items.push_str(&format!(
+            r#"        class Item{n}
+        {{
+            dataType="Logic";
+            class PositionInfo
+            {{
+                position[]={{{x},0,{y}}};
+            }};
+            name="skd_hc{number}";
+            isPlayable=1;
+            id={id};
+            type="HeadlessClient_F";
+        }};
+"#,
+            n = clients + h,
+            x = spawn[0] - 10.0 * (h + 1) as f64,
+            y = spawn[1] - 10.0,
+            number = h + 1,
+        ));
+        id += 1;
+    }
     items.push_str(&format!(
         r#"        class Item{n}
         {{
@@ -61,14 +84,14 @@ pub fn mission_sqm(clients: u32, spawn: [f64; 2]) -> String {
             id={id};
         }};
 "#,
-        n = clients,
+        n = clients + headless,
         x = spawn[0],
         y = spawn[1],
     ));
     format!(
         r#"version=54;
 binarizationWanted=0;
-addons[]={{"A3_Characters_F"}};
+addons[]={{"A3_Characters_F","A3_Modules_F"}};
 randomSeed=1;
 class ScenarioData
 {{
@@ -95,7 +118,7 @@ class Mission
 {items}    }};
 }};
 "#,
-        count = clients + 1,
+        count = clients + headless + 1,
     )
 }
 
@@ -132,6 +155,35 @@ class CfgSettings
     )
 }
 
+/// `server.cfg` of a dedicated session (`INT-AR-05`).
+pub fn server_cfg(session_id: &str, world: &str, password: &str, command_password: &str, max_players: u32) -> String {
+    format!(
+        r#"hostname = "shakedown {session_id}";
+password = "{password}";
+serverCommandPassword = "{command_password}";
+loopback = 1;
+kickDuplicate = 0;
+BattlEye = 0;
+verifySignatures = 0;
+allowedFilePatching = 2;
+persistent = 1;
+kickTimeout[] = {{{{0, 0}}, {{1, 0}}, {{2, 0}}, {{3, 0}}}};
+headlessClients[] = {{"127.0.0.1"}};
+localClient[] = {{"127.0.0.1"}};
+maxPlayers = {max_players};
+class Missions
+{{
+    class session
+    {{
+        template = "{folder}";
+        difficulty = "Regular";
+    }};
+}};
+"#,
+        folder = folder_name(session_id, world),
+    )
+}
+
 /// `autotest.cfg`: the session mission listed 100 times, so ending it loads it again.
 pub fn autotest_cfg(mission: &Path) -> String {
     let mut out = String::from("class TestMissions\n{\n");
@@ -151,11 +203,42 @@ mod tests {
 
     #[test]
     fn int_ar_04_one_player_and_the_respawn_marker() {
-        let sqm = mission_sqm(1, [100.0, 100.0]);
+        let sqm = mission_sqm(1, 0, [100.0, 100.0]);
         assert_eq!(sqm.matches("B_Soldier_F").count(), 1);
         assert!(sqm.contains("respawn_west"));
         assert!(sqm.contains("position[]={100,0,100};"));
         assert!(sqm.contains("items=2;"));
+    }
+
+    #[test]
+    fn int_ar_04_two_clients_and_a_headless_client_are_playable() {
+        let sqm = mission_sqm(2, 1, [100.0, 100.0]);
+        assert_eq!(sqm.matches("B_Soldier_F").count(), 2);
+        assert!(sqm.contains("position[]={110,0,100};"));
+        assert_eq!(sqm.matches("HeadlessClient_F").count(), 1);
+        assert!(sqm.contains("items=4;"));
+    }
+
+    #[test]
+    fn int_ar_05_server_cfg_names_the_mission_and_the_one_machine_rules() {
+        let cfg = server_cfg("s-1", "VR", "pw", "cpw", 3);
+        for line in [
+            "password = \"pw\";",
+            "serverCommandPassword = \"cpw\";",
+            "loopback = 1;",
+            "kickDuplicate = 0;",
+            "BattlEye = 0;",
+            "persistent = 1;",
+            "kickTimeout[] = {{0, 0}, {1, 0}, {2, 0}, {3, 0}};",
+            "maxPlayers = 3;",
+            "template = \"shakedown_s-1.VR\";",
+        ] {
+            assert!(
+                cfg.contains(line),
+                "{line}
+{cfg}"
+            );
+        }
     }
 
     #[test]

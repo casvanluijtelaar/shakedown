@@ -70,6 +70,12 @@ fn is_id(word: &str) -> bool {
 /// Reads the header of a check file. An error names the line and the key (`US-038`). A UTF-8 byte
 /// order mark before the first line is skipped.
 pub fn parse_header(text: &str) -> Result<Header, String> {
+    parse_header_in(text, None)
+}
+
+/// Reads the header as `parse_header` does, and with `declared`, the setups the project file
+/// declares, refuses an `@setups` that names another setup (`DEF-06`).
+pub fn parse_header_in(text: &str, declared: Option<&[String]>) -> Result<Header, String> {
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut seen: Vec<(String, usize, String)> = Vec::new();
     for (i, raw) in text.lines().enumerate() {
@@ -141,6 +147,18 @@ pub fn parse_header(text: &str) -> Result<Header, String> {
     {
         return Err(format!(
             "line {line}: @setups names no setup. Name one or more, or leave the line out."
+        ));
+    }
+    if let (Some((_, line, v)), Some(declared)) = (get("setups"), declared)
+        && let Some(unknown) = v.split_whitespace().find(|s| !declared.iter().any(|d| d == s))
+    {
+        return Err(format!(
+            "line {line}: @setups names the setup `{unknown}`, which shakedown.toml does not declare; it declares: {}. Fix the name.",
+            if declared.is_empty() {
+                "none".to_string()
+            } else {
+                declared.join(", ")
+            }
         ));
     }
     Ok(Header {
@@ -246,10 +264,10 @@ pub struct Listed {
     pub error: Option<String>,
 }
 
-pub fn read_listed(check: &CheckRef) -> Listed {
+pub fn read_listed(check: &CheckRef, declared: Option<&[String]>) -> Listed {
     let parsed = std::fs::read_to_string(&check.path)
         .map_err(|e| format!("cannot read the file: {e}"))
-        .and_then(|t| parse_header(&t));
+        .and_then(|t| parse_header_in(&t, declared));
     match parsed {
         Ok(h) => Listed {
             id: check.id.clone(),
@@ -300,7 +318,7 @@ pub fn select(all: &[CheckRef], ids: &[String], tags: &[String]) -> Result<Vec<C
     }
     if !tags.is_empty() {
         for c in all {
-            let listed = read_listed(c);
+            let listed = read_listed(c, None);
             if listed.tags.iter().any(|t| tags.contains(t)) && !out.contains(c) {
                 out.push(c.clone());
             }
@@ -382,6 +400,30 @@ mod tests {
         let body = body_source(text);
         assert!(!body.contains('\u{feff}'));
         assert_eq!(body.lines().count(), 3);
+    }
+
+    #[test]
+    fn def_06_an_unknown_setup_names_the_line_the_name_and_the_declared_setups() {
+        let declared = vec!["sp".to_string(), "dedicated".to_string()];
+        let e = parse_header_in(
+            "// @check US-038 x
+// @setups sp nosuch
+",
+            Some(&declared),
+        )
+        .unwrap_err();
+        assert!(
+            e.contains("line 2") && e.contains("nosuch") && e.contains("sp, dedicated"),
+            "{e}"
+        );
+        let h = parse_header_in(
+            "// @check US-038 x
+// @setups dedicated
+",
+            Some(&declared),
+        )
+        .unwrap();
+        assert_eq!(h.setups, Some(vec!["dedicated".to_string()]));
     }
 
     #[test]
