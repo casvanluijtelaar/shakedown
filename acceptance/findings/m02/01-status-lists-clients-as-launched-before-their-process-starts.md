@@ -11,7 +11,8 @@ stories: [US-002, US-004]
 generated: { by: "claude-code/tester", at: 2026-11-06T02:41:24-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-06T04:37:47-08:00, note: "status and every session shape list a machine only once its process is launched, with its process id and start time, so the server is listed alone while it loads its mission (INS-04 made explicit in spec/03 and docs/dedicated-sessions.md). The e2e test us_004_a_start_that_never_becomes_ready_ends_failed_and_leaves_nothing in crates/shakedown/tests/m02.rs proves it on a dedicated start; both named checks pass." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-06T04:59:30-08:00 }
 ---
 
 # Status lists the clients and the headless client as launched before their processes start

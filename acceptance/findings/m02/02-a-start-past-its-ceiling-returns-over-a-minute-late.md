@@ -9,8 +9,10 @@ for: developer
 checks: ["US-004 SES-04 a setup with start_timeout 30 fails at about 30 s with exit 4, naming each machine not ready and its state"]
 stories: [US-004]
 generated: { by: "claude-code/tester", at: 2026-11-06T02:54:30-08:00 }
-addressed: []
-verified: []
+addressed:
+  - { by: "claude-code/tester", at: 2026-11-06T04:59:00-08:00, note: "A mistake in the check: it polled status without reading the background session start's stdout and stderr, so the failure output, over the 4 KB a Windows pipe holds, kept the command from exiting until the check stopped polling. The harness reads both while it polls (acceptance/docs/harness.md); a start with pipes read returned at 31.2 s, status gave no session and no game process ran from 31.6 s, and the named check passed 3 of 3 at 31.4 to 31.5 s." }
+verified:
+  - { by: "claude-code/tester", at: 2026-11-06T04:59:30-08:00 }
 ---
 
 # A start past its ceiling of 30 s returns more than a minute late

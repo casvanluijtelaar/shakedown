@@ -153,6 +153,9 @@ def poll_start(ctx, proc, ceiling, until=None):
             seen.append((time.monotonic(), session))
             if until and until(session):
                 break
+        elif seen:
+            ctx.log("status gives no session while session start has not yet returned")
+            break
         time.sleep(0.5)
     return seen
 

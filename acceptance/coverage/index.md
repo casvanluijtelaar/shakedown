@@ -9,4 +9,4 @@ description: The result of the last full acceptance run of each milestone, one C
 
 * [M0 Walking skeleton: coverage](m00.md) - The last full acceptance run of M0: every check of US-037 and US-038, and of the demo's requirements, passed three times in one singleplayer session.
 * [M1 A grappling-hook check in singleplayer: coverage](m01.md) - The last full acceptance run of M1: all 65 checks passed, every acceptance criterion of US-018, US-021, US-022 and US-039, the demo ten times in one run with a second check, 20 resets in one session, and the checks of findings m01-1, m01-2 and m01-3.
-* [M2 Dedicated sessions: coverage](m02.md) - The last full acceptance run of M2: every check of US-002, US-008, US-009, US-017, US-019, US-020, US-025 and US-026 passed three times in one dedicated session, the demo 30 of 30, and the M1 checks still pass; US-004 fails on findings m02-1 and m02-2.
+* [M2 Dedicated sessions: coverage](m02.md) - The last full acceptance run of M2: all 266 check executions passed, every check of the nine M2 stories three times in one dedicated session, the demo 30 of 30, both failing starts of US-004 in time, and every M0 and M1 check beside them.

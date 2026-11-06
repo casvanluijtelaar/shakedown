@@ -9,6 +9,7 @@ import io
 import json
 import os
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -43,14 +44,45 @@ class Shakedown:
         return answer
 
     def start(self, *args):
-        """Starts `shakedown <args>` without waiting for it; returns the Popen. The caller ends it."""
+        """Starts `shakedown <args>` without waiting for it; returns a Background. The caller ends it."""
         self.log(f"`shakedown {' '.join(args)}` started in the background")
-        return subprocess.Popen([self.exe, *args], cwd=self.project, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                text=True, encoding="utf-8", errors="replace")
+        return Background([self.exe, *args], self.project)
 
     def run_folders(self):
         runs = self.project / ".shakedown" / "runs"
         return sorted(p.name for p in runs.iterdir()) if runs.is_dir() else []
+
+
+class Background:
+    """A command running in the background whose stdout and stderr are read while it runs.
+
+    A command writes its output as it ends, and the output of a failed start passes the 4 KB a
+    Windows pipe holds, so a pipe nobody reads keeps the command from exiting (docs/dedicated-sessions.md).
+    """
+
+    def __init__(self, argv, cwd):
+        self.proc = subprocess.Popen(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     text=True, encoding="utf-8", errors="replace")
+        self.pid = self.proc.pid
+        self.out, self.err = [], []
+        self.readers = [threading.Thread(target=lambda s=s, b=b: b.append(s.read()), daemon=True)
+                        for s, b in ((self.proc.stdout, self.out), (self.proc.stderr, self.err))]
+        for r in self.readers:
+            r.start()
+
+    def poll(self):
+        return self.proc.poll()
+
+    @property
+    def returncode(self):
+        return self.proc.returncode
+
+    def communicate(self, timeout):
+        """Waits up to `timeout` s for the command to exit; returns (stdout, stderr). Raises TimeoutExpired."""
+        self.proc.wait(timeout=timeout)
+        for r in self.readers:
+            r.join(timeout=30)
+        return "".join(self.out), "".join(self.err)
 
 
 def pids(image):
