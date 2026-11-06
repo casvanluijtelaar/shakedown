@@ -1,8 +1,8 @@
 /*
     The wait behind skd_fnc_waitUntil and skd_fnc_tryWaitUntil (check API, "Waits"; OBS-01, OBS-07):
     evaluates the condition on the machine every frame until it returns true or the ceiling passes.
-    A condition that returns anything but a Boolean ends the check fail / check-error naming the
-    type it returned.
+    A condition that raises a script error ends the check fail / script-error at that evaluation;
+    one that returns anything but a Boolean ends it fail / check-error naming the type it returned.
 
     Arguments: [function, try, [machine, condition, description, ceiling, args]]
     Returns: true when the condition held; false at the ceiling for skd_fnc_tryWaitUntil.
@@ -29,17 +29,23 @@ private _poller = [_target, _compiled, _args, _ceiling] call skd_fnc_poller;
 private _start = diag_tickTime;
 private _met = false;
 private _wrong = [];
+private _raised = "";
 waitUntil {
-    if ((_poller select 1) > 0) then {
+    _raised = _poller select 5;
+    if (_raised isEqualTo "" && { (_poller select 1) > 0 }) then {
         private _last = _poller select 0;
         if (_last isEqualTo [true]) then { _met = true } else {
-            if !(_last isEqualTo [false]) then { _wrong = [[_last] call skd_fnc_show, if (_last isEqualTo []) then { "nothing" } else { typeName (_last select 0) }] };
+            if !(_last isEqualTo [false]) then { _wrong = [[_last] call skd_fnc_show, [_last] call skd_fnc_typeName] };
         };
     };
-    _met || { _wrong isNotEqualTo [] } || { diag_tickTime - _start > _ceiling }
+    _met || { _raised isNotEqualTo "" } || { _wrong isNotEqualTo [] } || { diag_tickTime - _start > _ceiling }
 };
 [_poller] call skd_fnc_stopPoller;
 if (_met) exitWith { true };
+if (_raised isNotEqualTo "") exitWith {
+    ["fail", "script-error", format ["%1: the condition for ""%2"" on %3 raised a script error: %4. Fix the condition or the code it calls.",
+        _function, _description, _target, _raised], nil, _target] call skd_fnc_end;
+};
 if (_wrong isNotEqualTo []) exitWith {
     ["fail", "check-error", format ["%1: the condition for ""%2"" on %3 returned %4 (%5), not a Boolean. Make it return true or false.",
         _function, _description, _target, _wrong select 1, _wrong select 0]] call skd_fnc_end;

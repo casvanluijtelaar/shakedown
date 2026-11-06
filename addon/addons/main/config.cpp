@@ -53,6 +53,10 @@ class CfgFunctions {
             class reset {};
             class context {};
             class stepPath {};
+            class cliWait {};
+            class cliExpect {};
+            class inspect {};
+            class typeName {};
         };
         // The check API (spec/contract/check-api.md).
         class api {

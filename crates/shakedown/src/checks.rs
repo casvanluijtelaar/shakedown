@@ -49,7 +49,8 @@ pub fn discover(dir: &Path) -> Result<Vec<CheckRef>, CliError> {
         return Err(CliError::wrong(format!(
             "The checks folder {} does not exist. Create it, or set `checks` in shakedown.toml.",
             dir.display()
-        )));
+        ))
+        .tag("config-error"));
     }
     walk(dir, dir, &mut out)
         .map_err(|e| CliError::framework(format!("Cannot read the checks folder {}: {e}.", dir.display())))?;
@@ -299,7 +300,8 @@ pub fn select(all: &[CheckRef], ids: &[String], tags: &[String]) -> Result<Vec<C
         if all.is_empty() {
             return Err(CliError::wrong(
                 "The checks folder holds no check. Add a .sqf file with a `// @check` header.",
-            ));
+            )
+            .tag("unknown-check"));
         }
         return Ok(all.to_vec());
     }
@@ -312,7 +314,8 @@ pub fn select(all: &[CheckRef], ids: &[String], tags: &[String]) -> Result<Vec<C
                 return Err(CliError::wrong(format!(
                     "No check has the id `{id}`. The checks are: {}.",
                     all.iter().map(|c| c.id.as_str()).collect::<Vec<_>>().join(", ")
-                )));
+                ))
+                .tag("unknown-check"));
             }
         }
     }
@@ -325,10 +328,19 @@ pub fn select(all: &[CheckRef], ids: &[String], tags: &[String]) -> Result<Vec<C
         }
     }
     if out.is_empty() {
+        let mut known: Vec<String> = all.iter().flat_map(|c| read_listed(c, None).tags).collect();
+        known.sort();
+        known.dedup();
         return Err(CliError::wrong(format!(
-            "No check carries the tag {}. Run `shakedown list` to see each check's tags.",
-            tags.join(" or ")
-        )));
+            "No check carries the tag {}. The tags that exist are: {}. Select checks by one of those; `shakedown list` shows each check's tags.",
+            tags.join(" or "),
+            if known.is_empty() {
+                "none".to_string()
+            } else {
+                known.join(", ")
+            }
+        ))
+        .tag("unknown-check"));
     }
     Ok(out)
 }

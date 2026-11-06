@@ -19,6 +19,7 @@ As a test author, I want what a run leaves behind to hold no trace of the Steam 
 1. After a run on a dedicated session with two clients and `session stop`, a search of `result.json`, every file under the run folder's `logs/` and `checks/`, and every machine's RPT in the session folder for the test machine's steamID64, its Steam account name and its persona name finds none of the three.
 2. Every game process of the session has `-name=<machine name>` on its command line, and `name player` read on `p1` and `p2` returns `p1` and `p2`.
 3. `shakedown logs --machine server --last 500` and `shakedown logs --machine p1 --last 500` print none of the three either.
+4. After a dedicated start that fails once its game clients have logged in (`US-004`), the output of `session start`, the `reason` that `status` shows and every RPT of that session's machines hold none of the three.
 
 ## Next to
 

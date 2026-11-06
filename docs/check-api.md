@@ -53,7 +53,7 @@ private _each = ["all", { getDir (_this select 0) }, [_box]] call skd_fnc_onEach
 private _landed = ["p1", { isTouchingGround player }, "p1 landed", 3] call skd_fnc_tryWaitUntil;
 ```
 
-`skd_fnc_waitUntil [machine, condition, description, ceiling, args]` evaluates the condition every frame and returns `true` once it holds; at the ceiling the check ends `fail` / `wait-ceiling` with the description. `skd_fnc_tryWaitUntil` takes the same arguments and returns `false` at its ceiling instead. A condition that returns anything but `true` or `false` ends the check `fail` / `check-error` naming what it returned. There is no sleep: every wait has a condition.
+`skd_fnc_waitUntil [machine, condition, description, ceiling, args]` evaluates the condition every frame and returns `true` once it holds; at the ceiling the check ends `fail` / `wait-ceiling` with the description. `skd_fnc_tryWaitUntil` takes the same arguments and returns `false` at its ceiling instead. A condition that raises a script error ends the check at that evaluation, `fail` / `script-error` naming the machine and the error; one that returns anything but `true` or `false` ends it `fail` / `check-error` naming what it returned, such as `a String`. `skd_fnc_tryWaitUntil` ends the check the same way; it returns `false` only at its ceiling. There is no sleep: every wait has a condition.
 
 ## Assertions
 

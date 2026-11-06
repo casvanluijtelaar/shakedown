@@ -32,13 +32,18 @@ if (skd_compileErrors isNotEqualTo []) exitWith {
 
 private _start = diag_tickTime;
 private _box = [nil];
-private _script = [_args, _code, _box] spawn {
-    params ["_skd_args", "_skd_code", "_skd_box"];
+private _script = [_args, _code, _box, _id] spawn {
+    params ["_skd_args", "_skd_code", "_skd_box", "_skd_order"];
+    // Named by its order, so inspect lists it and leaves out its own (INS-01).
+    scriptName format ["skd_exec %1", _skd_order];
     private _skd_remote = true;
     // A switch turns the nothing of code ending in an assignment into nil (fn_step.sqf).
     _skd_box set [0, switch (true) do { default { _skd_args call _skd_code } }];
 };
+// A cancelled order (AGT-04) is terminated by the order of kind cancel, through skd_execs.
+skd_execs set [_id, _script];
 waitUntil { scriptDone _script || { diag_tickTime - _start > _ceiling } };
+skd_execs deleteAt _id;
 
 private _message = createHashMapFromArray [["kind", "result"], ["order", _id], ["duration_s", (diag_tickTime - _start) toFixed 3]];
 if (scriptDone _script) then {

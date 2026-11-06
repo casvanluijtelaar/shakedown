@@ -52,7 +52,59 @@ pub enum Request {
         checks: Vec<CheckRef>,
         ids: Vec<String>,
         tags: Vec<String>,
+        /// The id `ReserveRun` gave, for a run whose id the client handed out before it began.
+        #[serde(default)]
+        run_id: Option<String>,
     },
+    /// A run id handed out before the run begins, so `run_start` returns it at once (`AGT-03`).
+    ReserveRun,
+    /// SQF on a machine or a group (`CTL-01`, `CTL-05`).
+    Exec {
+        machine: String,
+        code: String,
+        args: Value,
+        ceiling: f64,
+    },
+    /// A wait for a condition on a machine (`OBS-01`).
+    Wait {
+        machine: String,
+        condition: String,
+        description: Option<String>,
+        args: Value,
+        ceiling: f64,
+    },
+    /// An assertion tried live (`OBS-06`).
+    Expect {
+        machine: String,
+        value: String,
+        op: String,
+        expected: Value,
+        args: Value,
+        ceiling: f64,
+    },
+    /// A machine's state summary (`INS-01`).
+    Inspect {
+        machine: String,
+        near: Option<String>,
+        radius: f64,
+    },
+    /// The script errors the session caught (`ERR-05`).
+    Errors {
+        machine: Option<String>,
+        run: Option<String>,
+        check: Option<String>,
+    },
+}
+
+impl Request {
+    /// A request whose work in the game stops when its client goes away before the answer
+    /// (`AGT-04`). The others run to their end, so no session or run is left half done.
+    pub fn cancellable(&self) -> bool {
+        matches!(
+            self,
+            Request::Exec { .. } | Request::Wait { .. } | Request::Expect { .. } | Request::Inspect { .. }
+        )
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,6 +113,11 @@ pub enum Event {
     /// A line for a person while a request is in progress.
     Progress {
         message: String,
+    },
+    /// A run began: its id and how many check executions it has.
+    RunStarted {
+        run_id: String,
+        total: usize,
     },
     /// One check execution ended.
     Check {

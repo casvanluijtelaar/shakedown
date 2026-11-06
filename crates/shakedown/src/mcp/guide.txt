@@ -1,0 +1,48 @@
+Shakedown runs automated checks of an Arma 3 mod inside the running game, in singleplayer or on a dedicated server with game clients and headless clients.
+
+THE PROJECT
+The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under checks/; a check's id is its path there without .sqf.
+
+START A SESSION
+1. status: is a runner up, does a session run? It works with no game.
+2. session_start {"setup": "<name>"}: starts the game processes. It returns when the session is ready or failed, or after 50 s with state starting: then call status until the session is ready or failed. A failed session carries reason.message and the last RPT lines of the machine at fault.
+3. One session serves many runs; start it once. session_stop ends every process of it.
+Machines are named server, p1..pN (game clients) and hc1..hcN (headless clients). In singleplayer p1 is the only machine and server names it too. Groups: all, clients, headless.
+
+RUN CHECKS
+1. list_checks {"tags": ["US-019"]} shows which checks a selection takes, without the game.
+2. run_start {"ids": [...]} or {"tags": [...]} returns a run_id at once. ids run in the order given; an id given twice runs twice. With "setup" and no session, the run starts one and stops it at its end.
+3. run_status {"run_id": "...", "wait_s": 50} returns as soon as a check ends, with each outcome so far. Call it again until state is finished.
+4. run_result {"run_id": "..."}: the summary, each check's outcome, reason and failed step, and result_file, the full result as JSON.
+
+READ A RESULT
+Each check execution ends pass, fail or invalid. fail is the mod's or the check's fault, with reason.kind: assertion, wait-ceiling, script-error, expected-error-missing, check-timeout, explicit, or check-error (the check itself is wrong: fix it). invalid means the framework could not judge (a machine lost, a reset failed): run it again. The result file holds per check its steps, errors (script errors with machine, step, file and line), evidence.failed_step, evidence.observed (the last value each machine read) and evidence.logs (each machine's log lines for the check). A check that fails is a normal result, never a tool error.
+
+ASK THE RUNNING GAME
+- exec {"machine": "p1", "code": "getPosASL player"}: runs SQF and returns the value as data, and any script errors it raised. args become _this. ceiling at most 50 s.
+- wait_until {"machine": "server", "condition": "!isNil 'my_flag'", "ceiling": 20}: polls every frame; never sleep a fixed time.
+- expect {"machine": "p1", "value": "damage player", "op": "<", "expected": 0.5}: an assertion tried live.
+- inspect {"machine": "p1"}: the player, nearby objects, running scripts, the last errors, the check running.
+- logs {"machine": "p1", "check_id": "...", "grep": "Error", "last": 50}: a machine's log lines.
+- errors {"machine": "p1"}: script errors caught in the session, in checks and outside.
+- reset: puts the session back to its start state; every check starts with one anyway.
+
+WRITE A CHECK
+A check is a file checks/<id>.sqf. Its header is comment lines:
+  // @check US-019 The crate opens with the mod's action
+  // @tags US-019 crate
+  // @setups sp            (optional: only these setups)
+  // @timeout 60           (optional, seconds, default 120)
+The body is SQF run on the lead machine (server, or p1 in singleplayer), with the skd_fnc_* functions:
+  ["open the crate", {
+      private _crate = ["skdfx_Crate", AGLToASL [100, 105, 0]] call skd_fnc_create;
+      ["p1", _crate, "Open crate"] call skd_fnc_useAction;
+      ["server", {(_this select 0) getVariable ["skdfx_open", false]}, "crate open on the server", 10, [_crate]] call skd_fnc_waitUntil;
+  }] call skd_fnc_step;
+  ["p1", {damage player}, "<", 0.5, "p1 unhurt"] call skd_fnc_expectOn;
+- ["p2", {code}, [args]] call skd_fnc_on runs code on a machine and returns its value; code sent to a machine sees only _this, not the check's local variables.
+- skd_fnc_waitUntil [machine, condition, description, ceiling, args] waits with a ceiling; skd_fnc_tryWaitUntil returns false at the ceiling instead of failing.
+- skd_fnc_expectOn [machine, value, op, expected, description, ceiling, args]; skd_fnc_expectEach for several machines; skd_fnc_expectAgree for machines that must read the same.
+- skd_fnc_expectError [text, code] for an error the mod should raise; any other script error on any machine fails the check.
+- skd_fnc_evidence [label, value] attaches a value to the result.
+Every check starts from a reset session, so it needs no cleanup of what it created. Run it with run_start, read the outcome, fix, and run it again: the file is read fresh each time. The project's docs folder has the whole check API.

@@ -118,7 +118,13 @@ struct Inner {
     /// The script errors the machines' handlers sent (`ERR-01`), until a check execution takes
     /// those stamped with its key.
     errors: Vec<Value>,
+    /// Every script error the handlers sent in this session, inside a check or not, the newest
+    /// last, for `errors` and `inspect` (`ERR-05`, `INS-01`).
+    history: Vec<Value>,
 }
+
+/// The most script errors a session keeps for `errors`.
+const HISTORY_LIMIT: usize = 1000;
 
 pub struct Session {
     pub id: String,
@@ -134,6 +140,39 @@ pub struct Session {
     inner: Mutex<Inner>,
     changed: Notify,
     orders: AtomicU64,
+}
+
+/// Tells a machine to stop an order's code when the request that sent it is dropped before the
+/// answer came (`AGT-04`).
+struct CancelOnDrop<'a> {
+    session: &'a Session,
+    machine: String,
+    order: String,
+    armed: bool,
+}
+
+impl Drop for CancelOnDrop<'_> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.session.inner.lock().unwrap().pending.remove(&self.order);
+            self.session
+                .push(&self.machine, json!({"kind": "cancel", "order": self.order}));
+        }
+    }
+}
+
+fn machine_view(m: &Machine) -> Value {
+    json!({
+        "name": m.name,
+        "kind": m.kind,
+        "start": m.start,
+        "state": m.state,
+        "pid": m.pid,
+        "process_started_at": m.process_started_at,
+        "profile": m.profile,
+        "last_answer_at": m.last_answer_at,
+        "health": {"flag": null, "since": null, "heartbeat": null},
+    })
 }
 
 /// Why an order got no answer.
@@ -299,19 +338,45 @@ impl Session {
             "state": inner.state.as_str(),
             "started_at": self.started_at,
             "folder": self.folder,
-            "machines": inner.machines.iter().filter(|m| m.pid.is_some()).map(|m| json!({
-                "name": m.name,
-                "kind": m.kind,
-                "start": m.start,
-                "state": m.state,
-                "pid": m.pid,
-                "process_started_at": m.process_started_at,
-                "profile": m.profile,
-                "last_answer_at": m.last_answer_at,
-                "health": {"flag": null, "since": null, "heartbeat": null},
-            })).collect::<Vec<_>>(),
+            "machines": inner.machines.iter().filter(|m| m.pid.is_some()).map(machine_view).collect::<Vec<_>>(),
             "reason": inner.reason,
         })
+    }
+
+    /// One machine in the Machine shape of `contract/mcp-tools.md`.
+    pub fn machine(&self, name: &str) -> Option<Value> {
+        let inner = self.inner.lock().unwrap();
+        inner.machines.iter().find(|m| m.name == name).map(machine_view)
+    }
+
+    /// Every script error the session's handlers sent, the oldest first (`ERR-05`).
+    pub fn history(&self) -> Vec<Value> {
+        self.inner.lock().unwrap().history.clone()
+    }
+
+    /// Sends `exec` like [`Session::exec`] and also returns the order's id, which stamps the
+    /// script errors the code raises. Dropped before the answer, it tells the machine to stop the
+    /// code (`AGT-04`).
+    pub async fn exec_tracked(
+        &self,
+        machine: &str,
+        source: &str,
+        args: Value,
+        ceiling_s: f64,
+    ) -> (String, Result<Value, OrderError>) {
+        let id = format!("o{}", self.orders.fetch_add(1, Ordering::SeqCst) + 1);
+        let order = json!({"kind": "exec", "source": source, "args": args, "ceiling": ceiling_s});
+        let mut guard = CancelOnDrop {
+            session: self,
+            machine: machine.to_string(),
+            order: id.clone(),
+            armed: true,
+        };
+        let answer = self
+            .order_as(machine, order, id.clone(), Duration::from_secs_f64(ceiling_s) + GRACE)
+            .await;
+        guard.armed = false;
+        (id, answer)
     }
 
     /// Serves one machine's extension connection until it closes.
@@ -399,7 +464,13 @@ impl Session {
         }
         match kind.as_str() {
             // A script error the machine's handler caught (ERR-01).
-            "error" => inner.errors.push(message),
+            "error" => {
+                inner.history.push(message.clone());
+                if inner.history.len() > HISTORY_LIMIT {
+                    inner.history.remove(0);
+                }
+                inner.errors.push(message);
+            }
             // A machine asks the runner to send an order to another (P-03 step 1).
             "route" => {
                 drop(inner);
@@ -437,7 +508,7 @@ impl Session {
                         let _ = tx.send(
                             json!({
                                 "id": id, "kind": "routed-poll", "ref": reference,
-                                "value": message["value"], "reads": message["reads"],
+                                "value": message["value"], "reads": message["reads"], "error": message["error"],
                             })
                             .to_string(),
                         );
@@ -814,7 +885,8 @@ pub async fn start(
         return Err(CliError::not_now(format!(
             "A session runs already: {} of setup {}. Stop it with `shakedown session stop`, or run against it without --setup.",
             s.id, s.spec.setup.name
-        )));
+        ))
+        .tag("session-exists"));
     }
     preconditions(runner, &spec)?;
     // The names of the logged-in Steam account, kept in memory for redaction (INT-STM-04).
@@ -874,6 +946,7 @@ pub async fn start(
             streams: HashMap::new(),
             refs: HashMap::new(),
             errors: Vec::new(),
+            history: Vec::new(),
         }),
         changed: Notify::new(),
         orders: AtomicU64::new(0),
@@ -1097,9 +1170,10 @@ fn preconditions(runner: &Runner, spec: &SetupSpec) -> Result<(), CliError> {
         Ok(())
     } else {
         Err(CliError::not_now(format!(
-            "The session cannot start; missing: {}.",
+            "The session cannot start; missing: {}. Provide what is missing and start the session again.",
             missing.join("; ")
-        )))
+        ))
+        .tag("precondition-failed"))
     }
 }
 

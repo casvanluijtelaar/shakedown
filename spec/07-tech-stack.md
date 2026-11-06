@@ -34,10 +34,10 @@ Versions were looked up on 2026-11-04 from crates.io, GitHub releases, `static.r
 | HEMTT | 1.23.1 (2026-10-25) | Building the framework's addon; the mod under test's dev build (`INT-HEM-01`). | GitHub release |
 | Rust | 1.99.1 stable (2026-10-15), edition 2024 | The runner, command line, MCP server and extension. | `channel-rust-stable.toml` |
 | `arma-rs` | 1.13.0, taken from crates.io under its declared MIT license (its repository's LICENSE file says GPL-2.0; research `20-licenses-and-rules.md`) | The extension's entry points, callback and retry. | crates.io |
-| `rmcp` | 3.8.0 | The MCP server over stdio; protocol 2026-07-28 with negotiation of earlier revisions (`INT-MCP-01`). | crates.io, GitHub release |
+| `rmcp` | 3.9.0, its features `server` and `transport-io` (looked up 2026-11-06) | The MCP server over stdio; protocol 2026-07-28 with negotiation of earlier revisions (`INT-MCP-01`). | crates.io, GitHub release |
 | `tokio` | 1.54.1 | The runner's sockets, timers and process waits. | crates.io |
 | `serde`, `serde_json` | 1.0.229, 1.0.154 | Every message, the result file, the runner files. | crates.io |
-| `schemars` | 1.2.3 | Tool `outputSchema`s generated from the same types as the result file. | crates.io |
+| `schemars` | 1.2.3, through `rmcp` | `rmcp`'s own protocol types. The tools' `inputSchema`s and `outputSchema`s are JSON Schema in `crates/shakedown/src/mcp/tools.json`; the shapes a tool shares with the result file, such as `ScriptError` and `Clocks`, are taken from [contract/result.schema.json](contract/result.schema.json) when the server starts, so a tool and the result file cannot disagree. | crates.io |
 | `clap` | 4.6.7 | The command line. | crates.io |
 | `toml` | 1.2.0 | Reading `shakedown.toml`. | crates.io |
 | `windows` | 0.62.2 | Job objects, process creation and WMI on Windows. | crates.io |
@@ -72,7 +72,7 @@ What is written in the project instead of taken as a dependency: the FNV-1a hash
 | Values as JSON through `toJSON`/`fromJSON` | + | | | | | | + | + | + |
 | MCP over stdio with `rmcp` | | | + | | + | | + | + | |
 | Loopback, per-session token in the environment | + | | | | + | | | + | |
-| `schemars` types shared by tools and result file | | | + | | | | + | | + |
+| Tool schemas that take their shared shapes from `result.schema.json` | | | + | | | | + | | + |
 | TOML project file | | | + | | | | | + | + |
 
 The one cost: SQF cannot be unit-tested outside the game (EP-09). The in-game agent is kept small, and the end-to-end tests on the test machine cover it.

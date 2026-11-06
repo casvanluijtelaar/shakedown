@@ -39,7 +39,13 @@ private _script = [_args, _code, _id, _stop, _ceiling] spawn {
     private _skd_sentAt = -1;
     private _skd_reads = 0;
     while { !(_skd_stop select 0) && { diag_tickTime - _skd_start < _skd_ceiling } } do {
+        private _skd_errors = skd_errorCount;
         private _skd_value = [switch (true) do { default { _skd_args call _skd_code } }] call skd_fnc_encode;
+        // A read that raises a script error ends the poll and tells the lead (OBS-01).
+        if (skd_errorCount > _skd_errors) exitWith {
+            _skd_reads = _skd_reads + 1;
+            [createHashMapFromArray [["kind", "poll"], ["order", _skd_id], ["reads", _skd_reads], ["error", skd_lastError]]] call skd_fnc_send;
+        };
         private _skd_text = if (isNil "_skd_value") then { "nil" } else { toJSON [_skd_value] };
         if (_skd_text isNotEqualTo _skd_sent && { diag_tickTime - _skd_sentAt >= 0.05 }) then {
             _skd_reads = _skd_reads + 1;

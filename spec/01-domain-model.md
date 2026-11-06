@@ -63,7 +63,7 @@ starting ─────────────▶ ready ◀──────�
 | `running` | A run is executing checks. | `ready` when the run ends; `broken` when a machine is lost. |
 | `reloading` | A reload or a reset (`RST-03`) is in progress. | `ready` when it completes; `broken` when it fails. |
 | `broken` | A machine is lost, a reset failed or a reload failed. No check runs: any check started is `invalid` with the reason that broke the session. | `reloading` by a `game-restart` reload, which brings every machine back; `stopping`. |
-| `failed` | The session never became ready. Every process it started has been stopped. | Terminal. |
+| `failed` | The session never became ready. Every process it started has been stopped. `status` shows it, with its reason, until the next `session start` or `session stop` (`INS-02`). | Terminal. |
 | `stopping` | Processes are being stopped and files cleaned up. | `stopped`. |
 | `stopped` | Nothing of the session runs. Its folder stays. | Terminal. |
 

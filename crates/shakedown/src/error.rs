@@ -7,6 +7,10 @@ use serde::{Deserialize, Serialize};
 pub struct CliError {
     pub code: u8,
     pub message: String,
+    /// The error code of the MCP contract (`contract/mcp-tools.md`), such as `unknown-machine`,
+    /// for an error the AI agent can fix; `None` takes the code from the exit code.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
 }
 
 impl CliError {
@@ -15,6 +19,7 @@ impl CliError {
         CliError {
             code: 3,
             message: message.into(),
+            tag: None,
         }
     }
 
@@ -23,6 +28,7 @@ impl CliError {
         CliError {
             code: 4,
             message: message.into(),
+            tag: None,
         }
     }
 
@@ -31,6 +37,24 @@ impl CliError {
         CliError {
             code: 5,
             message: message.into(),
+            tag: None,
+        }
+    }
+
+    /// Gives the error the MCP contract's code.
+    pub fn tag(mut self, tag: &str) -> Self {
+        self.tag = Some(tag.into());
+        self
+    }
+
+    /// The MCP contract's code: the tag, or for an untagged error what its exit code means;
+    /// `None` for a failure of the framework, which the agent cannot fix.
+    pub fn mcp_code(&self) -> Option<&str> {
+        match (&self.tag, self.code) {
+            (Some(t), _) => Some(t),
+            (None, 3) => Some("bad-arguments"),
+            (None, 4) => Some("session-busy"),
+            _ => None,
         }
     }
 }

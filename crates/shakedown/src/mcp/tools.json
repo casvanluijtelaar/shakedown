@@ -1,0 +1,406 @@
+{
+  "defs": {
+    "Session": {
+      "type": "object",
+      "required": ["id", "setup", "mode", "state", "started_at", "folder", "machines", "reason"],
+      "properties": {
+        "id": {"type": "string"},
+        "setup": {"type": "string"},
+        "mode": {"enum": ["singleplayer", "dedicated"]},
+        "state": {"enum": ["starting", "ready", "running", "reloading", "broken", "failed", "stopping", "stopped"]},
+        "started_at": {"$ref": "#/$defs/Time"},
+        "folder": {"type": "string"},
+        "machines": {"type": "array", "items": {"$ref": "#/$defs/LiveMachine"}},
+        "reason": {
+          "type": ["object", "null"],
+          "properties": {
+            "message": {"type": "string"},
+            "machine": {"type": ["string", "null"]},
+            "rpt_tail": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "LiveMachine": {
+      "type": "object",
+      "required": ["name", "kind", "start", "state", "pid", "process_started_at", "profile", "last_answer_at", "health"],
+      "properties": {
+        "name": {"$ref": "#/$defs/MachineName"},
+        "kind": {"enum": ["server", "client", "headless"]},
+        "start": {"type": "integer", "minimum": 1},
+        "state": {"enum": ["launched", "connected", "ready", "busy", "lost", "stopped"]},
+        "pid": {"type": ["integer", "null"]},
+        "process_started_at": {"type": ["string", "null"]},
+        "profile": {"type": "string"},
+        "last_answer_at": {"type": ["string", "null"]},
+        "health": {
+          "type": "object",
+          "properties": {
+            "flag": {"enum": [null, "mission-time", "frame"]},
+            "since": {"type": ["string", "null"]},
+            "heartbeat": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/Clocks"}]}
+          }
+        }
+      }
+    },
+    "OutcomeLine": {
+      "type": "object",
+      "required": ["check_id", "repeat", "outcome", "reason", "duration_s"],
+      "properties": {
+        "check_id": {"$ref": "#/$defs/CheckId"},
+        "repeat": {"type": "integer", "minimum": 1},
+        "outcome": {"enum": ["pass", "fail", "invalid"]},
+        "reason": {
+          "type": ["object", "null"],
+          "properties": {"kind": {"type": "string"}, "message": {"type": "string"}}
+        },
+        "duration_s": {"type": "number", "minimum": 0}
+      }
+    },
+    "Args": {
+      "description": "Arguments the code gets as _this, as JSON; objects travel as DM-13's tagged values.",
+      "type": "array"
+    }
+  },
+  "tools": [
+    {
+      "name": "status",
+      "description": "The runner, the session with each machine's state, the active run's progress and the last reload. Works with no runner and no game. Use it to follow a session start or a run.",
+      "annotations": {"readOnlyHint": true},
+      "inputSchema": {"type": "object", "additionalProperties": false, "properties": {}},
+      "outputSchema": {
+        "type": "object",
+        "required": ["runner", "runner_pid", "version", "session", "run", "last_reload"],
+        "properties": {
+          "runner": {"enum": ["running", "not-running", "unreachable"]},
+          "runner_pid": {"type": ["integer", "null"]},
+          "version": {"type": "string"},
+          "session": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/Session"}]},
+          "run": {
+            "type": ["object", "null"],
+            "properties": {
+              "id": {"type": "string"},
+              "state": {"type": "string"},
+              "done": {"type": "integer"},
+              "total": {"type": "integer"},
+              "current_check": {"type": ["string", "null"]}
+            }
+          },
+          "last_reload": {"type": ["object", "null"]}
+        }
+      }
+    },
+    {
+      "name": "session_start",
+      "description": "Starts a session of a setup from shakedown.toml. Returns when it is ready or failed, or after 50 s with state starting; then follow it with status.",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["setup"],
+        "properties": {"setup": {"type": "string", "description": "A setup name from shakedown.toml."}}
+      },
+      "outputSchema": {"$ref": "#/$defs/Session"}
+    },
+    {
+      "name": "session_stop",
+      "description": "Stops the session and returns when nothing of it runs. On a failed start that status still shows, clears it.",
+      "inputSchema": {"type": "object", "additionalProperties": false, "properties": {}},
+      "outputSchema": {"$ref": "#/$defs/Session"}
+    },
+    {
+      "name": "list_checks",
+      "description": "Lists checks from the check files, each selected check once, with no runner and no game. No ids and no tags lists every check.",
+      "annotations": {"readOnlyHint": true},
+      "inputSchema": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "ids": {"type": "array", "items": {"type": "string"}},
+          "tags": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "outputSchema": {
+        "type": "object", "required": ["checks"],
+        "properties": {
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "tags", "setups", "timeout_s", "reset", "error"],
+              "properties": {
+                "id": {"type": "string"},
+                "name": {"type": ["string", "null"]},
+                "tags": {"type": "array", "items": {"type": "string"}},
+                "setups": {"type": ["array", "null"], "items": {"type": "string"}},
+                "timeout_s": {"type": ["integer", "null"]},
+                "reset": {"type": ["string", "null"]},
+                "error": {"type": ["string", "null"]}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "run_start",
+      "description": "Starts a run of the selected checks against the session and returns its run_id at once; follow it with run_status and read it with run_result. ids run in the order given, once per time given. With setup and no session, the run starts a session and stops it at its end.",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "ids": {"type": "array", "items": {"type": "string"}},
+          "tags": {"type": "array", "items": {"type": "string"}},
+          "setup": {"type": "string"}
+        }
+      },
+      "outputSchema": {
+        "type": "object", "required": ["run_id", "state", "total"],
+        "properties": {
+          "run_id": {"type": "string"},
+          "state": {"enum": ["running", "starting-session"]},
+          "total": {"type": "integer"}
+        }
+      }
+    },
+    {
+      "name": "run_status",
+      "description": "A run's progress and the outcome of each check execution so far. With wait_s (at most 50) it returns as soon as a check or the run ends, or at wait_s.",
+      "annotations": {"readOnlyHint": true},
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["run_id"],
+        "properties": {
+          "run_id": {"type": "string"},
+          "wait_s": {"type": "number", "exclusiveMinimum": 0, "maximum": 50}
+        }
+      },
+      "outputSchema": {
+        "type": "object", "required": ["run_id", "state", "done", "total", "current_check", "outcomes"],
+        "properties": {
+          "run_id": {"type": "string"},
+          "state": {"enum": ["starting-session", "running", "finished", "stopped"]},
+          "done": {"type": "integer"},
+          "total": {"type": "integer"},
+          "current_check": {"type": ["string", "null"]},
+          "outcomes": {"type": "array", "items": {"$ref": "#/$defs/OutcomeLine"}}
+        }
+      }
+    },
+    {
+      "name": "run_result",
+      "description": "The result of a run that ended: the summary, each check execution's outcome with its failed step, and the path of the full result file. A check that failed is a result, not an error.",
+      "annotations": {"readOnlyHint": true},
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["run_id"],
+        "properties": {"run_id": {"type": "string"}}
+      },
+      "outputSchema": {
+        "type": "object", "required": ["run_id", "state", "summary", "outcomes", "result_file"],
+        "properties": {
+          "run_id": {"type": "string"},
+          "state": {"type": "string"},
+          "summary": {
+            "type": "object",
+            "properties": {
+              "total": {"type": "integer"}, "pass": {"type": "integer"}, "fail": {"type": "integer"},
+              "invalid": {"type": "integer"}, "not_run": {"type": "integer"}
+            }
+          },
+          "outcomes": {
+            "type": "array",
+            "items": {
+              "allOf": [{"$ref": "#/$defs/OutcomeLine"}],
+              "properties": {
+                "failed_step": {"type": ["array", "null"], "items": {"type": "string"}},
+                "evidence_path": {"type": "string"}
+              }
+            }
+          },
+          "result_file": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "reset",
+      "description": "Resets the session in place to the state its mission started in.",
+      "inputSchema": {"type": "object", "additionalProperties": false, "properties": {}},
+      "outputSchema": {
+        "type": "object", "required": ["state", "duration_s", "mismatches"],
+        "properties": {
+          "state": {"enum": ["done", "failed"]},
+          "duration_s": {"type": "number"},
+          "mismatches": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    {
+      "name": "exec",
+      "description": "Runs SQF on a machine (server, p1, p2, hc1, ...) or a group (all, clients, headless) and returns each machine's value as data, with any script errors the code raised. ceiling at most 50 s, default 10.",
+      "annotations": {"destructiveHint": true},
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["machine", "code"],
+        "properties": {
+          "machine": {"type": "string"},
+          "code": {"type": "string", "description": "SQF; its arguments are _this."},
+          "args": {"$ref": "#/$defs/Args"},
+          "ceiling": {"type": "number", "exclusiveMinimum": 0, "maximum": 50}
+        }
+      },
+      "outputSchema": {
+        "type": "object", "required": ["results", "errors"],
+        "properties": {
+          "results": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object", "required": ["state", "value", "duration_s"],
+              "properties": {
+                "state": {"enum": ["done", "ceiling", "lost"]},
+                "value": {"$ref": "#/$defs/Value"},
+                "duration_s": {"type": "number"}
+              }
+            }
+          },
+          "errors": {"type": "array", "items": {"$ref": "#/$defs/ScriptError"}}
+        }
+      }
+    },
+    {
+      "name": "wait_until",
+      "description": "Waits until an SQF condition returns true on a machine, polling every frame, or until the ceiling (at most 50 s, default 10). A condition that raises a script error or returns no Boolean ends the wait at once with met false and the cause in error.",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["machine", "condition"],
+        "properties": {
+          "machine": {"type": "string"},
+          "condition": {"type": "string"},
+          "description": {"type": "string"},
+          "args": {"$ref": "#/$defs/Args"},
+          "ceiling": {"type": "number", "exclusiveMinimum": 0, "maximum": 50}
+        }
+      },
+      "outputSchema": {
+        "type": "object", "required": ["met", "waited_s", "error"],
+        "properties": {
+          "met": {"type": "boolean"},
+          "waited_s": {"type": "number"},
+          "error": {"type": ["string", "null"]}
+        }
+      }
+    },
+    {
+      "name": "expect",
+      "description": "Tries an assertion live, as skd_fnc_expectOn would, without a check: reads the SQF value on a machine every frame until value op expected holds, or the ceiling (at most 50 s, default 10). op is one of == != < <= > >= ~= in contains.",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["machine", "value", "op", "expected"],
+        "properties": {
+          "machine": {"type": "string"},
+          "value": {"type": "string"},
+          "op": {"enum": ["==", "!=", "<", "<=", ">", ">=", "~=", "in", "contains"]},
+          "expected": {"$ref": "#/$defs/Value"},
+          "args": {"$ref": "#/$defs/Args"},
+          "ceiling": {"type": "number", "exclusiveMinimum": 0, "maximum": 50}
+        }
+      },
+      "outputSchema": {
+        "type": "object", "required": ["passed", "last_value", "waited_s"],
+        "properties": {
+          "passed": {"type": "boolean"},
+          "last_value": {"$ref": "#/$defs/Value"},
+          "waited_s": {"type": "number"}
+        }
+      }
+    },
+    {
+      "name": "inspect",
+      "description": "A compact summary of a machine without stopping anything: its state, the mission and clocks, the run, check and step running, the player unit, objects near the player or an object, running scripts and the last script errors.",
+      "annotations": {"readOnlyHint": true},
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["machine"],
+        "properties": {
+          "machine": {"type": "string"},
+          "near": {"type": "string", "description": "The net id of an object to look around instead of the player."},
+          "radius": {"type": "number", "exclusiveMinimum": 0}
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["machine", "mission", "mission_start", "time", "tick", "fps", "frame", "run_id", "check_id", "step_path", "player", "nearby", "scripts", "errors"],
+        "properties": {
+          "machine": {"$ref": "#/$defs/LiveMachine"},
+          "mission": {"type": ["string", "null"]},
+          "mission_start": {"type": ["integer", "null"]},
+          "time": {"type": ["number", "null"]},
+          "tick": {"type": ["number", "null"]},
+          "fps": {"type": ["number", "null"]},
+          "frame": {"type": ["integer", "null"]},
+          "run_id": {"type": ["string", "null"]},
+          "check_id": {"type": ["string", "null"]},
+          "step_path": {"type": ["array", "null"], "items": {"type": "string"}},
+          "player": {
+            "type": ["object", "null"],
+            "properties": {
+              "class": {"type": "string"}, "position": {"type": "array"}, "direction": {"type": "number"},
+              "damage": {"type": "number"}, "alive": {"type": "boolean"}, "vehicle": {}, "animation": {"type": "string"}
+            }
+          },
+          "nearby": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {"class": {"type": "string"}, "net_id": {"type": "string"}, "position": {"type": "array"}, "distance": {"type": "number"}}
+            }
+          },
+          "scripts": {
+            "type": ["array", "null"],
+            "items": {"type": "object", "properties": {"name": {"type": "string"}, "file": {"type": "string"}, "line": {"type": "integer"}}}
+          },
+          "errors": {"type": ["array", "null"], "items": {"$ref": "#/$defs/ScriptError"}}
+        }
+      }
+    },
+    {
+      "name": "logs",
+      "description": "A machine's log lines, redacted: from its running game, from a run with run_id, or for one check with check_id; grep narrows them by a regular expression and last (default 200) keeps the last lines.",
+      "annotations": {"readOnlyHint": true},
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["machine"],
+        "properties": {
+          "machine": {"type": "string"},
+          "run_id": {"type": "string"},
+          "check_id": {"type": "string"},
+          "grep": {"type": "string"},
+          "last": {"type": "integer", "minimum": 1}
+        }
+      },
+      "outputSchema": {
+        "type": "object", "required": ["lines", "truncated", "path"],
+        "properties": {
+          "lines": {"type": "array", "items": {"type": "string"}},
+          "truncated": {"type": "boolean"},
+          "path": {"type": ["string", "null"]}
+        }
+      }
+    },
+    {
+      "name": "errors",
+      "description": "The script errors the session caught, inside checks and outside, with their machine and time, narrowed to a machine, a run or a check.",
+      "annotations": {"readOnlyHint": true},
+      "inputSchema": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "machine": {"type": "string"},
+          "run_id": {"type": "string"},
+          "check_id": {"type": "string"}
+        }
+      },
+      "outputSchema": {
+        "type": "object", "required": ["errors"],
+        "properties": {"errors": {"type": "array", "items": {"$ref": "#/$defs/ScriptError"}}}
+      }
+    },
+    {
+      "name": "guide",
+      "description": "How to start a session, run checks, read a result and write a check, in short. Read it first.",
+      "annotations": {"readOnlyHint": true},
+      "inputSchema": {"type": "object", "additionalProperties": false, "properties": {}},
+      "outputSchema": {
+        "type": "object", "required": ["text"],
+        "properties": {"text": {"type": "string"}}
+      }
+    }
+  ]
+}

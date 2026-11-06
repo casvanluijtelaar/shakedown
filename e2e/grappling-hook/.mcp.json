@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "shakedown": { "command": "shakedown", "args": ["mcp"], "timeout": 70000 }
+  }
+}

@@ -28,6 +28,16 @@ pub struct Conn {
     writer: TcpStream,
 }
 
+/// A handle that closes a connection from another thread, which tells the runner the client went
+/// away (`AGT-04`).
+pub struct Closer(TcpStream);
+
+impl Closer {
+    pub fn close(&self) {
+        let _ = self.0.shutdown(std::net::Shutdown::Both);
+    }
+}
+
 /// Connects to the running runner, or starts one when none runs.
 pub fn connect() -> Result<Conn, CliError> {
     match try_existing()? {
@@ -75,6 +85,7 @@ fn try_existing() -> Result<Option<Conn>, CliError> {
             "The runner (process {}) {detail}. Ending that process ends its session's game processes with it; the next command then starts a fresh runner.",
             file.pid
         ))
+        .tag("runner-unreachable")
     };
     let _ = stream.set_nodelay(true);
     let mut writer = stream
@@ -145,6 +156,10 @@ fn start_runner() -> Result<(), CliError> {
 }
 
 impl Conn {
+    pub fn closer(&self) -> Option<Closer> {
+        self.writer.try_clone().ok().map(Closer)
+    }
+
     /// Sends a request and returns its last event; `on_event` sees every event before it.
     pub fn request(&mut self, request: &Request, mut on_event: impl FnMut(&Event)) -> Result<Event, CliError> {
         let lost = || {
@@ -165,7 +180,7 @@ impl Conn {
             let event: Event = serde_json::from_str(&line)
                 .map_err(|e| CliError::framework(format!("The runner sent an unreadable answer: {e}.")))?;
             match event {
-                Event::Progress { .. } | Event::Check { .. } => on_event(&event),
+                Event::Progress { .. } | Event::Check { .. } | Event::RunStarted { .. } => on_event(&event),
                 Event::Error { error } => return Err(error),
                 last => return Ok(last),
             }

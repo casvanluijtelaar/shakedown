@@ -26,7 +26,12 @@ if (isNil { skd_check get "end" }) then {
         _innermost set ["error", _message];
         _path = _innermost get "path";
     };
-    skd_check set ["end", [_outcome, _kind, _message, _clocks get "utc", _observed, _path, _machine]];
+    // A nil local named in an array literal is an undefined variable to the engine, so the
+    // optional parts go in only when they are set.
+    private _end = [_outcome, _kind, _message, _clocks get "utc", nil, nil, _machine];
+    if (!isNil "_observed") then { _end set [4, _observed] };
+    if (!isNil "_path") then { _end set [5, _path] };
+    skd_check set ["end", _end];
 };
 private _body = skd_check getOrDefault ["body", scriptNull];
 if (!isNull _body && { !scriptDone _body }) then { terminate _body };

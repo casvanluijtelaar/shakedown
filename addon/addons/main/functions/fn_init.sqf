@@ -28,11 +28,18 @@ skd_compiling = false;
 skd_compileErrors = [];
 skd_context = ["", ""];
 skd_orderPaths = [];
+// The count of script errors on this machine and the newest one's text, by which a wait sees that
+// its condition raised one (OBS-01).
+skd_errorCount = 0;
+skd_lastError = "";
+skd_execs = createHashMap;
 addMissionEventHandler ["ScriptError", {
     params ["_text", "_file", "_line", "_position", "_content", "_stack"];
     if (skd_compiling) then {
         skd_compileErrors pushBack [_text, _line];
     };
+    skd_errorCount = skd_errorCount + 1;
+    skd_lastError = format ["%1 (%2, line %3)", _text, [_file, "no file"] select (_file isEqualTo ""), _line];
     private _path = [];
     if (!isNil "skd_check" && { !(skd_check get "done") } && { (skd_check get "id") isEqualTo (skd_context select 1) }) then {
         _path = call skd_fnc_stepPath;
@@ -55,6 +62,9 @@ addMissionEventHandler ["ScriptError", {
         ["key", skd_context select 0],
         ["check_id", skd_context select 1],
         ["step_path", _path],
+        // The newest order still running here, whose code the error most likely came from: an
+        // exec answers with the errors stamped with its order (CTL-05).
+        ["order", if (count skd_orderPaths > 0) then { (skd_orderPaths select -1) select 0 } else { "" }],
         ["compile", skd_compiling]
     ]] call skd_fnc_send;
 }];

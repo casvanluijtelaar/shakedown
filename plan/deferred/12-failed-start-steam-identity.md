@@ -3,7 +3,7 @@ type: Deferred
 title: "No check has searched a failed start for the Steam identity"
 description: "US-064 searches a stopped session after a run for the Steam ID and the Steam name; no check has searched what a failed start prints or keeps for them."
 id: DEF-12
-state: planned
+state: done
 milestone: M4
 status: stable
 ---

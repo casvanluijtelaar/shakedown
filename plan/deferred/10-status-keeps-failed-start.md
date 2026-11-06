@@ -3,7 +3,7 @@ type: Deferred
 title: "status drops a failed start at once"
 description: "Once a start fails, status no longer shows the session, so a program that only watches status cannot see the failed state or its reason; status is to keep the failed start until the next start or stop."
 id: DEF-10
-state: planned
+state: done
 milestone: M4
 status: stable
 ---

@@ -102,7 +102,8 @@ pub fn find_root(given: Option<&Path>, start: &Path) -> Result<PathBuf, CliError
         return Err(CliError::wrong(format!(
             "{} holds no {FILE}. Give --project the folder that holds the project file.",
             dir.display()
-        )));
+        ))
+        .tag("config-error"));
     }
     let mut dir = Some(start);
     while let Some(d) = dir {
@@ -114,14 +115,15 @@ pub fn find_root(given: Option<&Path>, start: &Path) -> Result<PathBuf, CliError
     Err(CliError::wrong(format!(
         "No {FILE} in {} or any folder above it. Run the command inside a project, or give --project <dir>.",
         start.display()
-    )))
+    ))
+    .tag("config-error"))
 }
 
 pub fn load(root: &Path) -> Result<Project, CliError> {
     let path = root.join(FILE);
     let text =
         std::fs::read_to_string(&path).map_err(|e| CliError::wrong(format!("Cannot read {}: {e}.", path.display())))?;
-    parse(root, &text)
+    parse(root, &text).map_err(|e| e.tag("config-error"))
 }
 
 /// Parses the project file text; `root` resolves relative paths.
@@ -131,10 +133,22 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
     let raw: RawProject = toml::from_str(text).map_err(|e| {
         let msg = e.message().trim().to_string();
         match e.span() {
-            Some(span) => fail(
-                span,
-                format!("{msg}. Fix the key as contract/cli.md describes the project file."),
-            ),
+            Some(span) => {
+                // The key of a value of the wrong type is the left side of its line.
+                let start = text[..span.start.min(text.len())].rfind('\n').map_or(0, |i| i + 1);
+                let key = text[start..]
+                    .lines()
+                    .next()
+                    .and_then(|l| l.split_once('='))
+                    .map(|(k, _)| k.trim())
+                    .filter(|k| !k.is_empty() && !msg.contains(&format!("`{k}`")))
+                    .map(|k| format!("key `{k}`: "))
+                    .unwrap_or_default();
+                fail(
+                    span,
+                    format!("{key}{msg}. Fix the key as contract/cli.md describes the project file."),
+                )
+            }
             None => CliError::wrong(format!("{FILE}: {msg}.")),
         }
     })?;
@@ -278,6 +292,7 @@ impl Project {
                     known.join(", ")
                 }
             ))
+            .tag("unknown-setup")
         })
     }
 }

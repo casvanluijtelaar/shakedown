@@ -27,6 +27,12 @@ switch (_order get "kind") do {
     case "exec": { [_order] call skd_fnc_runExec };
     case "check": { [_order] call skd_fnc_runCheck };
     case "poll": { [_order] call skd_fnc_runPoll };
+    // The runner's request for an exec order went away before its answer (AGT-04): its code
+    // stops here.
+    case "cancel": {
+        private _script = skd_execs getOrDefault [_order get "order", scriptNull];
+        if (!isNull _script) then { terminate _script };
+    };
     // A poll this machine runs for another is told to stop.
     case "stop": {
         private _flag = skd_stops getOrDefault [_order get "poll", []];
@@ -43,6 +49,8 @@ switch (_order get "kind") do {
     case "routed-poll": {
         private _poller = skd_polls getOrDefault [_order get "ref", []];
         private _reads = _order getOrDefault ["reads", 0];
+        private _error = _order getOrDefault ["error", ""];
+        if (count _poller > 0 && { !isNil "_error" } && { _error isNotEqualTo "" }) then { _poller set [5, _error] };
         if (count _poller > 0 && { _reads > (_poller select 1) }) then {
             private _value = _order get "value";
             _poller set [0, if (isNil "_value") then { [] } else { [[_value] call skd_fnc_decode] }];

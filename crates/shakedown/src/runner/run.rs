@@ -19,6 +19,12 @@ use crate::checks::{self, CheckRef, Header};
 use crate::error::CliError;
 use crate::paths;
 
+/// A new run id, `r-<UTC time>-<n>`.
+pub fn new_run_id(runner: &Runner) -> String {
+    format!("r-{}-{}", time::stamp(SystemTime::now()), runner.next_run_number())
+}
+
+#[allow(clippy::too_many_arguments)]
 pub async fn run(
     runner: &Arc<Runner>,
     project: PathBuf,
@@ -26,22 +32,32 @@ pub async fn run(
     checks: Vec<CheckRef>,
     ids: Vec<String>,
     tags: Vec<String>,
+    run_id: Option<String>,
+    started: &(dyn Fn(String, usize) + Sync),
     emit: &(dyn Fn(Value, String) + Sync),
 ) -> Result<Value, CliError> {
     let Some(session) = runner.session() else {
         return Err(CliError::not_now(
             "No session runs. Start one with `shakedown session start --setup <name>`, or give `run` a --setup.",
-        ));
+        )
+        .tag("no-session"));
     };
     if session.state() != SessionState::Ready {
         return Err(CliError::not_now(format!(
             "Session {} is {}, not ready, so it cannot run checks now. Wait for it, or stop it with `shakedown session stop`.",
             session.id,
             session_state_word(session.state())
-        )));
+        ))
+        .tag(if session.state() == SessionState::Broken {
+            "session-broken"
+        } else {
+            "session-busy"
+        }));
     }
     session.set_state(SessionState::Running);
-    let result = execute(runner, &session, project, &setups, checks, ids, tags, emit).await;
+    let run_id = run_id.unwrap_or_else(|| new_run_id(runner));
+    started(run_id.clone(), checks.len());
+    let result = execute(runner, &session, project, &setups, checks, ids, tags, run_id, emit).await;
     if session.state() == SessionState::Running {
         session.set_state(SessionState::Ready);
     }
@@ -70,11 +86,11 @@ async fn execute(
     checks: Vec<CheckRef>,
     ids: Vec<String>,
     tags: Vec<String>,
+    run_id: String,
     emit: &(dyn Fn(Value, String) + Sync),
 ) -> Result<Value, CliError> {
     let started = SystemTime::now();
     let clock = Instant::now();
-    let run_id = format!("r-{}-{}", time::stamp(started), runner.next_run_number());
     let state_dir = paths::project_state_dir(&project)
         .map_err(|e| CliError::framework(format!("Cannot create .shakedown in {}: {e}.", project.display())))?;
     let folder = state_dir.join("runs").join(&run_id);
@@ -167,18 +183,36 @@ async fn execute(
         .map_err(|e| CliError::framework(format!("Cannot write the result file {}: {e}.", file.display())))?;
     runner.log(&format!("{} run {run_id}: done, {}", session.id, file.display()));
 
-    Ok(json!({
-        "run_id": run_id,
-        "state": "finished",
-        "summary": summary,
-        "outcomes": executions.iter().enumerate().map(|(i, e)| {
-            let mut line = outcome_line(e, i);
-            line["failed_step"] = json!(e.evidence.failed_step);
-            line["evidence_path"] = json!(format!("result.json#/checks/{i}/evidence"));
-            line
-        }).collect::<Vec<_>>(),
+    Ok(run_result_of(&value, &file))
+}
+
+/// The `run_result` shape of `contract/mcp-tools.md` from a result file's content, so the command
+/// line's `run --json` and the `run_result` tool give the same JSON (`NFR-US-03`).
+pub fn run_result_of(result: &Value, file: &Path) -> Value {
+    let outcomes: Vec<Value> = result["checks"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .enumerate()
+        .map(|(i, c)| {
+            json!({
+                "check_id": c["check_id"],
+                "repeat": c["repeat"],
+                "outcome": c["outcome"],
+                "reason": if c["reason"].is_null() { Value::Null } else { json!({"kind": c["reason"]["kind"], "message": c["reason"]["message"]}) },
+                "duration_s": c["duration_s"],
+                "failed_step": c["evidence"]["failed_step"],
+                "evidence_path": format!("result.json#/checks/{i}/evidence"),
+            })
+        })
+        .collect();
+    json!({
+        "run_id": result["run"]["id"],
+        "state": result["run"]["state"],
+        "summary": result["summary"],
+        "outcomes": outcomes,
         "result_file": file,
-    }))
+    })
 }
 
 /// Executes one check (`P-05`) as the run's `n`th execution; `None` when its `@setups` excludes
@@ -641,8 +675,9 @@ fn outcome_text(e: &CheckExecution) -> String {
     text
 }
 
-/// The most characters of lines `logs` returns itself; more go to a file (`AGT-07`).
-const LOGS_LIMIT: usize = 20_000;
+/// The most characters of lines `logs` returns itself, so its JSON stays under the 20,000 of a
+/// tool result; more go to a file (`AGT-07`).
+const LOGS_LIMIT: usize = 18_000;
 
 /// `logs` (`LOG-03`): a machine's log lines, from its running game's RPT, from a run's folder
 /// with `run`, or for one check execution with `check` (the one running now, or else its last
@@ -669,14 +704,16 @@ pub fn logs(
         let Some(session) = &session else {
             return Err(CliError::not_now(
                 "No session runs, so there is no live log to read. Give --run <id> to read a run's logs, or start a session.",
-            ));
+            )
+            .tag("no-session"));
         };
         let Some(profile) = session.profile(machine) else {
             return Err(CliError::wrong(format!(
-                "Session {} has no machine {machine}; its machines are {}.",
+                "Session {} has no machine {machine}; its machines are {}. Use one of those.",
                 session.id,
                 session.machine_names().join(", ")
-            )));
+            ))
+            .tag("unknown-machine"));
         };
         let text = crate::logs::newest_rpt(&profile)
             .map(|p| crate::logs::read_text(&p))
@@ -709,7 +746,8 @@ pub fn logs(
                 return Err(CliError::wrong(format!(
                     "No run {run} with a result file is in {}. Give the id of a run that ended.",
                     runs.display()
-                )));
+                ))
+                .tag("unknown-run"));
             }
             from_run(&dir, check).ok_or_else(|| {
                 CliError::wrong(format!(
@@ -755,7 +793,9 @@ pub fn logs(
         .collect();
     let mut truncated = matched.len() > lines.len();
     let mut path = Value::Null;
-    if lines.iter().map(|l| l.len() + 1).sum::<usize>() > LOGS_LIMIT {
+    // Each line's length as JSON, which escapes the backslashes of paths.
+    let json_len = |l: &String| serde_json::to_string(l).map_or(l.len(), |j| j.len()) + 1;
+    if lines.iter().map(json_len).sum::<usize>() > LOGS_LIMIT {
         let dir = session.as_ref().map_or_else(|| runs.clone(), |s| s.folder.clone());
         let file = dir.join(format!("logs-{machine}-{}.log", time::stamp(SystemTime::now())));
         if std::fs::write(&file, lines.join("\n") + "\n").is_ok() {
@@ -766,7 +806,7 @@ pub fn logs(
             .iter()
             .rev()
             .take_while(|l| {
-                size += l.len() + 1;
+                size += json_len(l);
                 size <= LOGS_LIMIT
             })
             .count();

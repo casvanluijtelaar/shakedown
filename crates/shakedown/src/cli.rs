@@ -7,9 +7,9 @@ use serde_json::{Value, json};
 
 use crate::checks;
 use crate::client;
-use crate::config;
 use crate::error::CliError;
-use crate::wire::{Event, Request, SetupSpec};
+use crate::ops;
+use crate::wire::{Event, Request};
 
 #[derive(Parser)]
 #[command(name = "shakedown", version, about = "Test automation for Arma 3 mods.")]
@@ -49,6 +49,58 @@ enum Command {
     Status,
     /// Resets the session in place (RST-03).
     Reset,
+    /// Runs SQF on a machine or a group and prints the value and any script errors (CTL-01, CTL-05).
+    Exec {
+        #[arg(long)]
+        machine: String,
+        #[arg(long, conflicts_with = "file", required_unless_present = "file")]
+        code: Option<String>,
+        #[arg(long)]
+        file: Option<PathBuf>,
+        /// The arguments, a JSON array the code gets as _this.
+        #[arg(long)]
+        args: Option<String>,
+        #[arg(long, default_value_t = 10.0)]
+        ceiling: f64,
+    },
+    /// Waits for a condition on a machine (OBS-01).
+    Wait {
+        #[arg(long)]
+        machine: String,
+        #[arg(long)]
+        condition: String,
+        #[arg(long)]
+        description: Option<String>,
+        #[arg(long)]
+        args: Option<String>,
+        #[arg(long, default_value_t = 10.0)]
+        ceiling: f64,
+    },
+    /// Tries an assertion live, as skd_fnc_expectOn would, without a check (OBS-06).
+    Expect {
+        #[arg(long)]
+        machine: String,
+        #[arg(long)]
+        value: String,
+        #[arg(long)]
+        op: String,
+        /// The expected value, as JSON.
+        #[arg(long)]
+        expected: String,
+        #[arg(long)]
+        args: Option<String>,
+        #[arg(long, default_value_t = 10.0)]
+        ceiling: f64,
+    },
+    /// A compact state summary of a machine (INS-01).
+    Inspect {
+        #[arg(long)]
+        machine: String,
+        #[arg(long)]
+        near: Option<String>,
+        #[arg(long, default_value_t = 50.0)]
+        radius: f64,
+    },
     /// A machine's log lines, redacted (LOG-03).
     Logs {
         #[arg(long)]
@@ -62,8 +114,21 @@ enum Command {
         #[arg(long, default_value_t = 200)]
         last: usize,
     },
+    /// Script errors caught in the session (ERR-05).
+    Errors {
+        #[arg(long)]
+        machine: Option<String>,
+        #[arg(long)]
+        run: Option<String>,
+        #[arg(long)]
+        check: Option<String>,
+    },
+    /// How to use Shakedown and write a check, in short (AGT-06).
+    Guide,
     /// The framework version.
     Version,
+    /// Runs the MCP server on stdio (AGT-01).
+    Mcp,
     /// Runs the runner. Started by the other commands; not for direct use.
     #[command(hide = true)]
     Runner,
@@ -89,8 +154,10 @@ pub fn main() -> u8 {
             return code;
         }
     };
-    if let Command::Runner = cli.command {
-        return crate::runner::main();
+    match cli.command {
+        Command::Runner => return crate::runner::main(),
+        Command::Mcp => return crate::mcp::main(cli.project.clone()),
+        _ => {}
     }
     match dispatch(&cli) {
         Ok(code) => code,
@@ -101,8 +168,28 @@ pub fn main() -> u8 {
     }
 }
 
+/// A JSON argument of the command line.
+fn json_arg(name: &str, text: Option<&str>) -> Result<Value, CliError> {
+    match text {
+        None => Ok(Value::Null),
+        Some(t) => serde_json::from_str(t).map_err(|e| {
+            CliError::wrong(format!(
+                "--{name} is not JSON: {e}. Give it as JSON, such as [1, \"a\"]."
+            ))
+            .tag("bad-arguments")
+        }),
+    }
+}
+
 fn dispatch(cli: &Cli) -> Result<u8, CliError> {
     let out = Out { json: cli.json };
+    let given = cli.project.as_deref();
+    // A command that asks the session names the project's setups when none runs (US-047).
+    let asked = |request: Request| -> Result<Value, CliError> {
+        let project = ops::project(given).ok();
+        let mut conn = client::connect()?;
+        ops::value(&mut conn, &request, |e| out.progress(e)).map_err(|e| ops::with_setups(e, project.as_ref()))
+    };
     match &cli.command {
         Command::Version => {
             if cli.json {
@@ -112,37 +199,39 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
             }
             Ok(0)
         }
-        Command::List { ids, tags } => {
-            let project = project(cli)?;
-            let all = checks::discover(&project.checks)?;
-            let mut selected = checks::select(&all, ids, tags)?;
-            // `list` names each selected check once, however often an id was given (`RUN-02`).
-            let mut seen = Vec::new();
-            selected.retain(|c| {
-                let first = !seen.contains(&c.id);
-                seen.push(c.id.clone());
-                first
-            });
-            let declared: Vec<String> = project.setups.keys().cloned().collect();
-            let listed: Vec<checks::Listed> = selected
-                .iter()
-                .map(|c| checks::read_listed(c, Some(&declared)))
-                .collect();
+        Command::Guide => {
             if cli.json {
-                out.json(&json!({"checks": listed}));
+                out.json(&json!({"text": ops::GUIDE}));
             } else {
-                for c in &listed {
-                    match (&c.name, &c.error) {
+                print!("{}", ops::GUIDE);
+            }
+            Ok(0)
+        }
+        Command::List { ids, tags } => {
+            let project = ops::project(given)?;
+            let listed = ops::list(&project, ids, tags)?;
+            if cli.json {
+                out.json(&listed);
+            } else {
+                for c in listed["checks"].as_array().into_iter().flatten() {
+                    let id = c["id"].as_str().unwrap_or("?");
+                    match (c["name"].as_str(), c["error"].as_str()) {
                         (Some(name), _) => {
-                            let tags = if c.tags.is_empty() {
+                            let tags: Vec<&str> = c["tags"]
+                                .as_array()
+                                .into_iter()
+                                .flatten()
+                                .filter_map(|t| t.as_str())
+                                .collect();
+                            let tags = if tags.is_empty() {
                                 String::new()
                             } else {
-                                format!("  [{}]", c.tags.join(" "))
+                                format!("  [{}]", tags.join(" "))
                             };
-                            println!("{}  {name}{tags}", c.id);
+                            println!("{id}  {name}{tags}");
                         }
-                        (None, Some(e)) => println!("{}  (header error: {e})", c.id),
-                        (None, None) => println!("{}", c.id),
+                        (None, Some(e)) => println!("{id}  (header error: {e})"),
+                        (None, None) => println!("{id}"),
                     }
                 }
             }
@@ -151,8 +240,8 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
         Command::Session {
             action: SessionAction::Start { setup },
         } => {
-            let project = project(cli)?;
-            let spec = spec(&project, setup)?;
+            let project = ops::project(given)?;
+            let spec = ops::spec(&project, setup)?;
             let mut conn = client::connect()?;
             let last = conn.request(
                 &Request::SessionStart {
@@ -161,17 +250,15 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
                 },
                 |e| out.progress(e),
             )?;
-            let session = session_of(last);
-            if session["state"] == "failed" {
-                // A start that failed is the session in state `failed`, with exit code 4 (`SES-04`).
-                if cli.json {
-                    out.json(&session);
-                }
-                return Err(crate::runner::session::start_failed(&session));
-            }
+            let session = ops::session_of(last);
             if cli.json {
                 out.json(&session);
-            } else {
+            }
+            if session["state"] == "failed" {
+                // A start that failed is the session in state `failed`, with exit code 4 (`SES-04`).
+                return Err(crate::runner::session::start_failed(&session));
+            }
+            if !cli.json {
                 println!(
                     "session {} ready (setup {})",
                     session["id"].as_str().unwrap_or("?"),
@@ -185,9 +272,14 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
         } => {
             let mut conn = client::connect()?;
             let last = conn.request(&Request::SessionStop, |e| out.progress(e))?;
-            let session = session_of(last);
+            let session = ops::session_of(last);
             if cli.json {
                 out.json(&session);
+            } else if session["state"] == "failed" {
+                println!(
+                    "the failed start of session {} is cleared",
+                    session["id"].as_str().unwrap_or("?")
+                );
             } else {
                 println!("session {} stopped", session["id"].as_str().unwrap_or("?"));
             }
@@ -195,20 +287,7 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
         }
         Command::Run { ids, tags, setup } => run(cli, &out, ids, tags, setup.as_deref()),
         Command::Status => {
-            let status = match client::existing() {
-                Ok(None) => json!({
-                    "runner": "not-running", "runner_pid": null, "version": shakedown_protocol::VERSION,
-                    "session": null, "run": null, "last_reload": null,
-                }),
-                Ok(Some(mut conn)) => match conn.request(&Request::Status, |_| {})? {
-                    Event::Value { value } => value,
-                    _ => return Err(CliError::framework("The runner answered status with something else.")),
-                },
-                Err(_) => json!({
-                    "runner": "unreachable", "runner_pid": client::runner_pid(), "version": shakedown_protocol::VERSION,
-                    "session": null, "run": null, "last_reload": null,
-                }),
-            };
+            let status = ops::status()?;
             if cli.json {
                 out.json(&status);
             } else {
@@ -217,10 +296,7 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
             Ok(0)
         }
         Command::Reset => {
-            let mut conn = client::connect()?;
-            let Event::Value { value } = conn.request(&Request::Reset, |e| out.progress(e))? else {
-                return Err(CliError::framework("The runner answered reset with something else."));
-            };
+            let value = asked(Request::Reset)?;
             if cli.json {
                 out.json(&value);
             } else {
@@ -244,6 +320,128 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
                 Ok(4)
             }
         }
+        Command::Exec {
+            machine,
+            code,
+            file,
+            args,
+            ceiling,
+        } => {
+            let code = match (code, file) {
+                (Some(c), _) => c.clone(),
+                (None, Some(f)) => std::fs::read_to_string(f).map_err(|e| {
+                    CliError::wrong(format!("Cannot read {}: {e}. Give a file that exists.", f.display()))
+                        .tag("bad-arguments")
+                })?,
+                (None, None) => unreachable!("clap requires --code or --file"),
+            };
+            let value = asked(Request::Exec {
+                machine: machine.clone(),
+                code,
+                args: json_arg("args", args.as_deref())?,
+                ceiling: *ceiling,
+            })?;
+            if cli.json {
+                out.json(&value);
+            } else {
+                for (name, r) in value["results"].as_object().into_iter().flatten() {
+                    println!(
+                        "{name}  {}  {}  ({} s)",
+                        r["state"].as_str().unwrap_or("?"),
+                        r["value"],
+                        r["duration_s"]
+                    );
+                }
+                print_errors(&value["errors"]);
+            }
+            Ok(0)
+        }
+        Command::Wait {
+            machine,
+            condition,
+            description,
+            args,
+            ceiling,
+        } => {
+            let value = asked(Request::Wait {
+                machine: machine.clone(),
+                condition: condition.clone(),
+                description: description.clone(),
+                args: json_arg("args", args.as_deref())?,
+                ceiling: *ceiling,
+            })?;
+            if cli.json {
+                out.json(&value);
+            } else {
+                match (value["met"] == true, value["error"].as_str()) {
+                    (true, _) => println!("met after {} s", value["waited_s"]),
+                    (false, Some(e)) => println!("not met: {e} (after {} s)", value["waited_s"]),
+                    (false, None) => println!("not met within its ceiling of {ceiling} s"),
+                }
+            }
+            Ok(0)
+        }
+        Command::Expect {
+            machine,
+            value,
+            op,
+            expected,
+            args,
+            ceiling,
+        } => {
+            let answer = asked(Request::Expect {
+                machine: machine.clone(),
+                value: value.clone(),
+                op: op.clone(),
+                expected: json_arg("expected", Some(expected))?,
+                args: json_arg("args", args.as_deref())?,
+                ceiling: *ceiling,
+            })?;
+            if cli.json {
+                out.json(&answer);
+            } else {
+                println!(
+                    "{}: last read {} after {} s",
+                    if answer["passed"] == true {
+                        "held"
+                    } else {
+                        "did not hold"
+                    },
+                    answer["last_value"],
+                    answer["waited_s"]
+                );
+            }
+            Ok(0)
+        }
+        Command::Inspect { machine, near, radius } => {
+            let value = asked(Request::Inspect {
+                machine: machine.clone(),
+                near: near.clone(),
+                radius: *radius,
+            })?;
+            if cli.json {
+                out.json(&value);
+            } else {
+                print_inspect(&value);
+            }
+            Ok(0)
+        }
+        Command::Errors { machine, run, check } => {
+            let value = asked(Request::Errors {
+                machine: machine.clone(),
+                run: run.clone(),
+                check: check.clone(),
+            })?;
+            if cli.json {
+                out.json(&value);
+            } else {
+                print_errors(&value["errors"]);
+                if value["errors"].as_array().is_none_or(|e| e.is_empty()) {
+                    println!("no script errors");
+                }
+            }
+            Ok(0)
+        }
         Command::Logs {
             machine,
             run,
@@ -251,7 +449,7 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
             grep,
             last,
         } => {
-            let project = project(cli)?;
+            let project = ops::project(given)?;
             let mut conn = client::connect()?;
             let request = Request::Logs {
                 project: project.root.clone(),
@@ -261,9 +459,7 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
                 grep: grep.clone(),
                 last: *last,
             };
-            let Event::Value { value } = conn.request(&request, |e| out.progress(e))? else {
-                return Err(CliError::framework("The runner answered logs with something else."));
-            };
+            let value = ops::value(&mut conn, &request, |e| out.progress(e))?;
             if cli.json {
                 out.json(&value);
             } else {
@@ -276,21 +472,21 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
             }
             Ok(0)
         }
-        Command::Runner => unreachable!("handled before dispatch"),
+        Command::Runner | Command::Mcp => unreachable!("handled before dispatch"),
     }
 }
 
 fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str>) -> Result<u8, CliError> {
-    let project = project(cli)?;
+    let project = ops::project(cli.project.as_deref())?;
     let all = checks::discover(&project.checks)?;
     let selected = checks::select(&all, ids, tags)?;
-    let spec = setup.map(|s| spec(&project, s)).transpose()?;
+    let spec = setup.map(|s| ops::spec(&project, s)).transpose()?;
     let mut conn = client::connect()?;
-    let running = session_of(conn.request(&Request::SessionInfo, |_| {})?);
+    let running = ops::session_of(conn.request(&Request::SessionInfo, |_| {})?);
     let mut started_here = false;
     match (&spec, running.is_null()) {
         (Some(spec), true) => {
-            let started = session_of(conn.request(
+            let started = ops::session_of(conn.request(
                 &Request::SessionStart {
                     project: project.root.clone(),
                     spec: spec.clone(),
@@ -303,16 +499,12 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
             started_here = true;
         }
         (Some(spec), false) if running["setup"] != spec.setup.name.as_str() => {
-            return Err(CliError::not_now(format!(
-                "Session {} of setup {} runs, not one of setup {}. Stop it with `shakedown session stop`, or run without --setup against it.",
-                running["id"].as_str().unwrap_or("?"),
-                running["setup"].as_str().unwrap_or("?"),
-                spec.setup.name
-            )));
+            return Err(other_setup(&running, &spec.setup.name));
         }
         (None, true) => {
-            return Err(CliError::not_now(
-                "No session runs. Give `run` a --setup to start one for this run, or start one with `shakedown session start --setup <name>`.",
+            return Err(ops::with_setups(
+                CliError::not_now("No session runs.").tag("no-session"),
+                Some(&project),
             ));
         }
         _ => {}
@@ -323,6 +515,7 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
         checks: selected,
         ids: ids.to_vec(),
         tags: tags.to_vec(),
+        run_id: None,
     };
     let result = conn.request(&request, |e| out.progress(e));
     // A run that started its own session stops it, whatever the outcomes (RUN-04).
@@ -353,6 +546,79 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
     } else {
         0
     })
+}
+
+/// The refusal of a run with `--setup` naming another setup than the running session's.
+pub fn other_setup(running: &Value, setup: &str) -> CliError {
+    CliError::not_now(format!(
+        "Session {} of setup {} runs, not one of setup {setup}. Stop it with `shakedown session stop`, or run without --setup against it.",
+        running["id"].as_str().unwrap_or("?"),
+        running["setup"].as_str().unwrap_or("?"),
+    ))
+    .tag("session-exists")
+}
+
+fn print_errors(errors: &Value) {
+    for e in errors.as_array().into_iter().flatten() {
+        println!(
+            "error on {} at {}: {} ({}, line {}){}",
+            e["machine"].as_str().unwrap_or("?"),
+            e["at"]["utc"].as_str().unwrap_or("?"),
+            e["text"].as_str().unwrap_or("?"),
+            e["file"].as_str().filter(|f| !f.is_empty()).unwrap_or("no file"),
+            e["line"],
+            e["check_id"]
+                .as_str()
+                .map(|c| format!(" in check {c}"))
+                .unwrap_or_else(|| " outside any check".into())
+        );
+    }
+}
+
+fn print_inspect(v: &Value) {
+    let m = &v["machine"];
+    println!(
+        "{} ({}) {}, start {}",
+        m["name"].as_str().unwrap_or("?"),
+        m["kind"].as_str().unwrap_or("?"),
+        m["state"].as_str().unwrap_or("?"),
+        m["start"]
+    );
+    if v["mission"].is_null() {
+        return;
+    }
+    println!(
+        "mission {} (start {}), time {} s, tick {} s, {} fps, frame {}",
+        v["mission"].as_str().unwrap_or("?"),
+        v["mission_start"],
+        v["time"],
+        v["tick"],
+        v["fps"],
+        v["frame"]
+    );
+    if let Some(check) = v["check_id"].as_str() {
+        println!("run {} check {check} step {}", v["run_id"], v["step_path"]);
+    }
+    if !v["player"].is_null() {
+        println!("player: {}", v["player"]);
+    }
+    for o in v["nearby"].as_array().into_iter().flatten() {
+        println!(
+            "  near: {} {} at {} m",
+            o["class"].as_str().unwrap_or("?"),
+            o["net_id"].as_str().unwrap_or("?"),
+            o["distance"]
+        );
+    }
+    for s in v["scripts"].as_array().into_iter().flatten() {
+        println!(
+            "  script: {} {}:{}",
+            s["name"].as_str().unwrap_or("?"),
+            s["file"].as_str().unwrap_or(""),
+            s["line"]
+        );
+    }
+    print_errors(&v["errors"]);
 }
 
 /// `status` for a person: the runner, the session and one line per machine.
@@ -398,41 +664,6 @@ fn print_status(status: &Value) {
             run["total"],
             run["current_check"]
         );
-    }
-}
-
-fn project(cli: &Cli) -> Result<config::Project, CliError> {
-    let cwd =
-        std::env::current_dir().map_err(|e| CliError::framework(format!("Cannot read the current folder: {e}.")))?;
-    let root = config::find_root(cli.project.as_deref(), &cwd)?;
-    let root = std::fs::canonicalize(&root).map(strip_verbatim).unwrap_or(root);
-    config::load(&root)
-}
-
-/// `canonicalize` on Windows gives `\\?\C:\...`, which the game's options do not take.
-fn strip_verbatim(p: PathBuf) -> PathBuf {
-    let s = p.to_string_lossy();
-    match s.strip_prefix(r"\\?\") {
-        Some(rest) if !rest.starts_with("UNC") => PathBuf::from(rest),
-        _ => p,
-    }
-}
-
-fn spec(project: &config::Project, name: &str) -> Result<SetupSpec, CliError> {
-    let setup = project.setup(name)?.clone();
-    let mods = setup.mods.iter().map(|m| project.mods[m].clone()).collect();
-    Ok(SetupSpec {
-        setup,
-        game: project.game.clone(),
-        mods,
-        base_port: project.base_port,
-    })
-}
-
-fn session_of(event: Event) -> Value {
-    match event {
-        Event::Session { session } => session.unwrap_or(Value::Null),
-        _ => Value::Null,
     }
 }
 

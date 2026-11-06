@@ -2,6 +2,7 @@
 //! tokens, routes orders to machines and writes the result file. Clients and extensions reach it
 //! on `127.0.0.1` with a token (`SEC-01`).
 
+pub mod control;
 pub mod errors;
 pub mod run;
 pub mod session;
@@ -43,6 +44,9 @@ pub struct Runner {
     redactor: Mutex<Redactor>,
     /// The project and key of the check execution running now, for `logs --check` (`LOG-03`).
     pub(crate) executing: Mutex<Option<(String, String)>>,
+    /// The last start that failed, with its reason, which `status` shows until the next start or
+    /// `stop` (`INS-02`).
+    failed: Mutex<Option<Value>>,
 }
 
 struct State {
@@ -73,6 +77,7 @@ impl Runner {
             progress: Mutex::new(None),
             redactor: Mutex::new(Redactor::default()),
             executing: Mutex::new(None),
+            failed: Mutex::new(None),
         });
         let me = Arc::clone(&runner);
         tokio::spawn(async move {
@@ -204,14 +209,47 @@ impl Runner {
                 }
             }
         });
-        while let Ok(Some(line)) = lines.next_line().await {
-            let event = match serde_json::from_str::<Request>(&line) {
-                Ok(request) => self.request(request, &tx).await,
-                Err(e) => Event::Error {
-                    error: CliError::framework(format!("The runner could not read a request: {e}.")),
+        let mut queued: Option<String> = None;
+        loop {
+            let line = match queued.take() {
+                Some(line) => line,
+                None => match lines.next_line().await {
+                    Ok(Some(line)) => line,
+                    _ => break,
                 },
             };
-            let _ = tx.send(event);
+            let request = match serde_json::from_str::<Request>(&line) {
+                Ok(request) => request,
+                Err(e) => {
+                    let _ = tx.send(Event::Error {
+                        error: CliError::framework(format!("The runner could not read a request: {e}.")),
+                    });
+                    continue;
+                }
+            };
+            if !request.cancellable() {
+                let _ = tx.send(self.request(request, &tx).await);
+                continue;
+            }
+            // A client that goes away before the answer cancels the request: dropping it stops
+            // the work it started in the game (AGT-04).
+            let answer = self.request(request, &tx);
+            tokio::pin!(answer);
+            tokio::select! {
+                event = &mut answer => {
+                    let _ = tx.send(event);
+                }
+                next = lines.next_line() => match next {
+                    Ok(Some(line)) => {
+                        queued = Some(line);
+                        let _ = tx.send(answer.await);
+                    }
+                    _ => {
+                        self.log("a client went away during its request; the request is cancelled");
+                        break;
+                    }
+                },
+            }
         }
         drop(tx);
         let _ = writer.await;
@@ -233,22 +271,64 @@ impl Runner {
                 session: self.session().map(|s| s.view()),
             }),
             Request::SessionStart { project, spec } => {
-                session::start(self, project, spec, &progress)
-                    .await
-                    .map(|s| Event::Session {
-                        session: Some(s.view()),
-                    })
+                if self.session().is_none() {
+                    *self.failed.lock().unwrap() = None;
+                }
+                session::start(self, project, spec, &progress).await.map(|s| {
+                    let view = s.view();
+                    if s.state() == session::SessionState::Failed {
+                        *self.failed.lock().unwrap() = Some(view.clone());
+                    }
+                    Event::Session { session: Some(view) }
+                })
             }
             Request::Status => Ok(Event::Value {
                 value: json!({
                     "runner": "running",
                     "runner_pid": std::process::id(),
                     "version": shakedown_protocol::VERSION,
-                    "session": self.session().map(|s| s.view()),
+                    "session": self.session().map(|s| s.view()).or_else(|| self.failed.lock().unwrap().clone()),
                     "run": self.progress.lock().unwrap().clone(),
                     "last_reload": null,
                 }),
             }),
+            Request::ReserveRun => Ok(Event::Value {
+                value: json!({"run_id": run::new_run_id(self)}),
+            }),
+            Request::Exec {
+                machine,
+                code,
+                args,
+                ceiling,
+            } => control::exec(self, &machine, &code, args, ceiling)
+                .await
+                .map(|value| Event::Value { value }),
+            Request::Wait {
+                machine,
+                condition,
+                description,
+                args,
+                ceiling,
+            } => control::wait(self, &machine, &condition, description.as_deref(), args, ceiling)
+                .await
+                .map(|value| Event::Value { value }),
+            Request::Expect {
+                machine,
+                value,
+                op,
+                expected,
+                args,
+                ceiling,
+            } => control::expect(self, &machine, &value, &op, expected, args, ceiling)
+                .await
+                .map(|value| Event::Value { value }),
+            Request::Inspect { machine, near, radius } => control::inspect(self, &machine, near.as_deref(), radius)
+                .await
+                .map(|value| Event::Value { value }),
+            Request::Errors { machine, run, check } => {
+                control::errors(self, machine.as_deref(), run.as_deref(), check.as_deref())
+                    .map(|value| Event::Value { value })
+            }
             Request::Reset => self.reset().await.map(|value| Event::Value { value }),
             Request::Logs {
                 project,
@@ -268,7 +348,11 @@ impl Runner {
             )
             .map(|value| Event::Value { value }),
             Request::SessionStop => match self.session() {
-                None => Err(CliError::not_now("No session runs. Nothing to stop.")),
+                // A kept failed start is cleared; nothing of it runs (INS-02).
+                None => match self.failed.lock().unwrap().take() {
+                    Some(view) => Ok(Event::Session { session: Some(view) }),
+                    None => Err(CliError::not_now("No session runs. Nothing to stop.").tag("no-session")),
+                },
                 Some(s) => {
                     s.stop(self).await;
                     Ok(Event::Session {
@@ -282,11 +366,15 @@ impl Runner {
                 checks,
                 ids,
                 tags,
+                run_id,
             } => {
                 let emit = |line: serde_json::Value, text: String| {
                     let _ = tx.send(Event::Check { line, text });
                 };
-                run::run(self, project, setups, checks, ids, tags, &emit)
+                let started = |run_id: String, total: usize| {
+                    let _ = tx.send(Event::RunStarted { run_id, total });
+                };
+                run::run(self, project, setups, checks, ids, tags, run_id, &started, &emit)
                     .await
                     .map(|result| Event::RunDone { result })
             }
@@ -302,7 +390,8 @@ impl Runner {
         let Some(session) = self.session() else {
             return Err(CliError::not_now(
                 "No session runs, so there is nothing to reset. Start one with `shakedown session start --setup <name>`.",
-            ));
+            )
+            .tag("no-session"));
         };
         match session.state() {
             session::SessionState::Ready => {}
@@ -311,7 +400,8 @@ impl Runner {
                     "Session {} is broken: {}. It cannot be reset. Bring every machine back with a game-restart reload, or stop it with `shakedown session stop`.",
                     session.id,
                     session.broken_reason()
-                )));
+                ))
+                .tag("session-broken"));
             }
             session::SessionState::Running => {
                 let progress = self.progress.lock().unwrap().clone().unwrap_or(Value::Null);
