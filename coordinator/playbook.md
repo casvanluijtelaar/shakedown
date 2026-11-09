@@ -155,6 +155,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-09: M6 exit criterion 5, the demo, is the owner's. When M6 is ready, the coordinator gives the commands to start the dedicated session with two clients on arma-grappling-hook, which function to change and how to rebuild it, the reload command, and what the report and the rerun of the M2 check should show.
 - 2026-11-09: As in M3 to M5, in M6 no subagent writes the Steam ID or the Steam name anywhere; a report that holds either is not passed on, and the owner is told.
 - 2026-11-09: The owner dropped M5's tester candidate that the contract gives no shape for a client request after the hello: no finding, nothing deferred. `US-053`'s proof by the closed connection, the marker and `audit.jsonl` stands.
+- 2026-11-09: `SPK-08` failed in the M6 build round: Arma 3 holds every loose mod file it has read until its process ends, and a running process keeps the old content across a mission restart. The owner chose a bounded research round, before any spec change, to look for a way around the hold. The owner decides the fallback after that round reports.
 
 ## Knowledge about the tooling
 
