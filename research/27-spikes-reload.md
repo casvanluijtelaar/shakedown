@@ -1,7 +1,7 @@
 ---
 type: Research
 title: "Spikes SPK-08 and SPK-01 across a mission restart: reloading by restart"
-description: "What a changed mod file does in a running game on the test machine in M6 - the game holds every loose file it read until its process ends, so no running process takes a change and SPK-08 fails - with what ACE3, HEMTT and Neefay's harness actually do to reload, CBA's cache shown off, the time of a mission restart in singleplayer and on a dedicated session, and orders sent across mission restarts, none lost and none run twice."
+description: "What a changed mod file does in a running game on the test machine in M6 - the game holds every loose file it read until some time later that no wait or flush tried here controls, a released file reaches even a kept process through a mission restart, and SPK-08 holds once in singleplayer and once on a dedicated session but not as a promise - with what ACE3, HEMTT and Neefay's harness actually do to reload, CBA's cache shown off, the time of a mission restart in singleplayer and on a dedicated session, and orders sent across mission restarts, none lost and none run twice."
 status: draft
 generated: { by: "claude-code/developer", at: 2026-11-09T15:20:00+01:00 }
 sources:
@@ -10,37 +10,76 @@ sources:
   - { id: hemtt, resource: "https://github.com/BrettMayson/HEMTT at tag v1.23.1 (the latest release, 2026-10-25), bin/src/modules/file_patching.rs; issues 669 and 1256 on the link hemtt dev makes", read: 2026-11-09 }
   - { id: neefay, resource: "https://github.com/Neefay/arma3-llm-harness at 21aac67e (no license: read for ideas only), README.md and host/src/arma_harness/harness.py, the reload method and the server config it writes", read: 2026-11-09 }
   - { id: web, resource: "web search of 2026-11-09 for reports of Arma 3 holding files read through file patching, and gh issue searches for file patching in acemod/ACE3, CBATeam/CBA_A3 and BrettMayson/HEMTT: no report of the hold, and none of editing a held file while the game runs", read: 2026-11-09 }
+  - { id: round, resource: "the research round of 2026-11-09 on the Windows test machine, Arma 3 2.22.154089, CBA_A3 3.19.0, through the installed shakedown: share modes of the held fixture files probed with CreateFileW, loadFile of new, missing and re-pointed loose files and of other spellings of a path, the release watched while idle and after reading other files, the fixture files changed once released and a mission restart run in sp-cba and in ded-cba (two clients and a headless client), and BIS_fnc_recompile in singleplayer", read: 2026-11-09 }
+  - { id: cba, resource: "https://github.com/CBATeam/CBA_A3 at tag v3.19.0, addons/xeh/fnc_compileFunction.sqf", read: 2026-11-09 }
   - { id: tests, resource: "crates/shakedown/tests/m06.rs, spk_08_the_game_holds_every_mod_file_it_read_until_its_process_ends, spk_01_nfr_rl_04_us_011_no_order_lost_or_run_twice_across_mission_restarts_in_singleplayer and spk_01_nfr_rl_04_us_011_mission_restarts_on_a_dedicated_session, runs of 2026-11-09 on the Windows test machine", read: 2026-11-09 }
 ---
 
 # Spikes SPK-08 and SPK-01 across a mission restart: reloading by restart
 
-M6 ran `SPK-08` and the mission-restart part of `SPK-01` (`spec/06-open-questions.md`) first, on the Windows test machine with Arma 3 2.22.154089 and CBA_A3 3.19.0. `SPK-01` passed across mission restarts. `SPK-08` failed, and not on what its fallback covers: CBA's cache is off, but the game itself never lets a running process see a changed mod file.
+M6 ran `SPK-08` and the mission-restart part of `SPK-01` (`spec/06-open-questions.md`) first, on the Windows test machine with Arma 3 2.22.154089 and CBA_A3 3.19.0, and a research round after it looked for a way for a changed mod file to reach a running session. `SPK-01` passed across mission restarts. `SPK-08` passes only when the game has let go of the changed file, which it does at a time nothing tried here controls: CBA's cache is off, and a mission restart takes a released file on every machine, but while the game holds a file nobody can change it.
 
-## The game holds every mod file it read
+## The game holds the loose files it read
 
-With a session of `sp-cba` running, the installed `fnc_version.sqf` of `@skd_fixture_cba`, which the game read through file patching when CBA compiled the `PREP` function, could not be opened for writing (Windows error 32, a sharing violation) or renamed[^probe][^tests]. The Windows Restart Manager named every game process of the session as holding it: on a dedicated session the server, both clients and the headless client[^probe]. Every loose file the game read was held the same way: `fn_version.sqf` (a `CfgFunctions` function) and `XEH_preInit.sqf` too; `config.cpp`, which the game reads from the PBO and not as a loose file, was free. The hold starts when the game reads the file at its start, lasts across mission restarts, and ends only with the process; once the session stopped, the file could be written at once[^tests].
+The game opens every loose file it reads through file patching for reading and shares it for reading only: while it holds the file, an open for reading succeeds, and an open for writing or for deleting fails with Windows error 32, a sharing violation, so the file can be neither written nor renamed[^round]. With a session of `sp-cba` running, the installed `fnc_version.sqf` of `@skd_fixture_cba` (a CBA `PREP` function), `fn_version.sqf` of `@skd_fixture` (a `CfgFunctions` function), `XEH_PREP.hpp` and `XEH_preInit.sqf` were held this way; `config.cpp`, which the game reads from the PBO, was free[^probe][^tests][^round]. The Windows Restart Manager named every game process of a dedicated session as a holder: the server, both clients and the headless client[^probe].
 
-It is the game's doing, not the framework's:
+- It is the game's doing, not the framework's. A game started directly, with no runner, held the file the same way, with `-debug` and without it; `-maxFileCacheSize=0` did not change it (the RPT shows the engine raised the value to 512 MB, `FileServer MaxCacheSize`); and a real folder in the game folder instead of the install's junction was held the same way[^probe].
+- A file first read mid-mission is held too. `loadFile` of `\skd_spk08\a\v.sqf`, a file in a folder that no PBO covers, linked into the game folder for the probe, read it through file patching and held it[^round].
+- A new file under a prefix that a PBO covers is not found: `loadFile` of the fixture's `fn_new.sqf` returned `""`[^round].
+- While the game holds a file it serves the content it read. With the probe's link pointed at a copy holding other content, `loadFile` of the same path returned the first content, and so did the path in capitals, without its leading backslash and with a doubled backslash; the path with `..` or `/` was not found[^round]. In the build round, a mission restart in singleplayer with the fixture's link pointed at a changed copy still compiled `"1"`[^probe].
 
-- A game started directly, with no runner, held the file the same way, with `-debug` and without it[^probe].
-- `-maxFileCacheSize=0` did not change it; the RPT shows the engine raised the value to 512 MB (`FileServer MaxCacheSize`)[^probe].
-- A real folder in the game folder instead of the install's junction was held the same way[^probe].
+The hold does not last for the life of the process. The game lets go of a file at some point after it read it, and then reads it afresh[^round]:
 
-A process also keeps reading the content it first read. With the fixture's link in the game folder pointed at a copy with the file changed to `"2"`, a mission restart in singleplayer still compiled `"1"`, and `loadFile` of the file's game path returned `"1"`, though CBA logged its cache off for that mission[^probe]. So a running process takes no change to a loose file by any path: not by editing it, which the hold forbids, and not by changing what its path points at.
+| Session | Held since | What the machines did | Released |
+|---|---|---|---|
+| singleplayer `p1` | the game start | read 3000 other loose files (14.6 s) | yes: both fixture files, and the probe's file, which then gave the new content |
+| singleplayer `p1` | a mission restart | about 7800 lookups of missing paths, then idle | yes, between 90 s and 140 s after the restart |
+| singleplayer `p1` | a `loadFile` | idle for over 4 minutes | no |
+| singleplayer `p1` | the same file | read 3090 other loose files (the order met its 60 s ceiling) | yes |
+| dedicated: server, `p1`, `p2`, `hc1` | the session start | idle for 150 s | no |
+| dedicated | the same | each machine read 3000 other loose files, one machine after the other (25 s to 59 s each) | yes, within 5.5 minutes of the start |
+| dedicated | a mission restart | idle for 90 s, twice | no |
+| dedicated | the same | each machine looked up 3000 missing paths (3 s to 8 s), then 150 s | no |
+| dedicated | the same | each machine read 3000 other loose files, all at once (160 s), then 60 s, twice | no, 13 minutes after the restart |
+
+The release follows reading many other files more often than not, but neither a time nor a count of other reads made it happen every time, and the round did not find what decides it.
+
+## A released file reaches a running process through a mission restart
+
+Once the game had let go of the fixture files, they could be written, and a mission restart brought the change to the processes that had read them[^round]:
+
+- **Singleplayer `sp-cba`**: `fnc_version.sqf` and `fn_version.sqf` changed to `"2"`; the mission restart of a `@reset mission` check took 4.2 s; after it, `skdfx_cba_fnc_version` returned `"2"` on `p1`, the same process. `skdfx_fnc_version` still returned `"1"`, because the Functions Library copies an addon's function compiled at the game start; `["skdfx_fnc_version"] call BIS_fnc_recompile` then returned `true` and the function `"2"`, since the session mission sets `allowFunctionsRecompile = 1` and the function in `missionNamespace` is not final. That is `SPK-09`'s pass condition in singleplayer. With the file changed back to `"1"`, `BIS_fnc_recompile` took that the same way.
+- **Dedicated `ded-cba`, two clients and a headless client**: `fnc_version.sqf` changed to `"2"`; the mission restart took 70 s from the order to the result; after it, `skdfx_cba_fnc_version` returned `"2"` on the server, which kept its process, and on `p1`, `p2` and `hc1`.
+
+So `SPK-08`'s pass condition held once in singleplayer and once on a dedicated session: an edited `PREP` function live on every machine after a level-B reload, with CBA's cache off. It does not hold as a promise, because the file can be changed only once the game has let go of it, and after each mission restart the game holds it again. Of the ten reloads `NFR-PF-02` needs on the dedicated session, the first two found the file still held 90 s after the restart, and the next two still held after a flush by reading other files; the round stopped there at its bound, so the time of ten reloads is not measured, on the dedicated session or in singleplayer. The build round's ten mission restarts on the dedicated session (46.9 to 58.2 s, 48.6 s on average) are the restart's share of it.
 
 ## CBA's cache is off through the session mission
 
-Every machine's RPT shows `[CBA] (xeh) INFO: ... CBA CACHE DISABLED? (Disable caching with cba_cache_disable.pbo): _compileType=compile` at each mission start, and `["compile"] call CBA_fnc_isRecompileEnabled` is `true`[^probe][^tests]. CBA 3.19.0's `CBA_fnc_isRecompileEnabled` reads `CfgSettings >> CBA >> caching` from the mission config as well as the game's, as research HR-4 expected, so `INT-CBA-02` holds and `cba_cache_disable.pbo` is not needed. That half of the pass condition holds; the other half, an edited `PREP` function live on every machine after a level-B reload, cannot: on a dedicated session the server keeps its process through level B, and in singleplayer `p1` does.
+Every machine's RPT shows `[CBA] (xeh) INFO: ... CBA CACHE DISABLED? (Disable caching with cba_cache_disable.pbo): _compileType=compile` at each mission start, and `["compile"] call CBA_fnc_isRecompileEnabled` is `true`[^probe][^tests]. CBA 3.19.0's `CBA_fnc_isRecompileEnabled` reads `CfgSettings >> CBA >> caching` from the mission config as well as the game's, as research HR-4 expected, so `INT-CBA-02` holds and `cba_cache_disable.pbo` is not needed. With the cache off, `CBA_fnc_compileFunction` compiles the file again at each mission start with `compileFinal preprocessFileLineNumbers`, which reads through the game's file server and so gets the held content while the game holds the file[^cba].
+
+## Approaches tried
+
+| Approach | Test | Result | What it would change |
+|---|---|---|---|
+| Write the held file another way | share modes probed with `CreateFileW` | only reading is shared; write and delete fail with error 32 | nothing: no write gets past the hold |
+| Point the path at other content | the probe's link re-pointed, the path spelled five other ways | the held content, or not found | nothing |
+| Wait for the release | idle for 90 s to over 4 minutes, 4 times | not released | nothing |
+| Lookups of missing paths | about 7800 in singleplayer, 3000 per machine on the dedicated session | released in singleplayer within 140 s, not on the dedicated session | nothing to rely on |
+| Reading other loose files | 3000 or more per machine, 5 times | released 3 times in 5 | a reload step that makes each machine read files the framework ships, with no promise that it works |
+| Mission restart on a released file | as above | the new content on every machine, kept processes included | `RLD-02` level `mission-restart` as specified |
+| `BIS_fnc_recompile` on a released file | singleplayer | the new content mid-mission | `RLD-02` level `mission` for a `CfgFunctions` function, as specified |
+| ACE3's layout: mod folder and file patching root as one folder, through two links | not run: the hour of game runs went to the release | | |
+| Sending the file's text, as Neefay's harness does, and setting a final function at a mission restart before CBA compiles it | not run, for the same reason; it needs code in the framework's addon that runs before every mod's preInit, and a preprocessor for the mod's `#include` and macros | | |
 
 ## What follows for the spec
 
-`SPK-08`'s fallback (load `cba_cache_disable.pbo`) does not help. What would:
+`SPK-08`'s fallback (load `cba_cache_disable.pbo`) does not help. A mission restart takes a changed file, but only once the game lets go of the file, and the round found no way to make it let go. What would follow:
 
-- **Every `.sqf` change of a mod is `game-restart`.** Only a new process reads a changed file, so `RLD-02`'s `mission` and `mission-restart` rows, `P-08`'s level A and level B as reloads, `US-054` and `US-055` change, and the time a mod developer waits is a game start (25 s in singleplayer, about 50 s for a dedicated session with two clients and a headless client on this machine). The file must also be changed while no game process holds it, so the change and the reload are one step: the reload stops the processes, the file is changed, the processes start. `FIX-03` and the fixture contract, which let a test change an installed file while a session runs, change with it.
-- **The framework stages the mod's files.** The game would read a copy the framework makes, so the developer's own files are never held, and a reload makes a new copy before it restarts the processes. Level B still cannot work for a process that already read the file, so this gives a free source folder, not a cheaper level.
+- **Every `.sqf` change of a mod is `game-restart`.** Only a new process is sure to read a changed file, so `RLD-02`'s `mission` and `mission-restart` rows, `P-08`'s level A and level B as reloads, `US-054` and `US-055` change, and the time a mod developer waits is a game start (25 s in singleplayer, about 50 s for a dedicated session with two clients and a headless client on this machine). The file must be changed while no game process holds it, so the change and the reload are one step: the reload stops the processes, the file is changed, the processes start. `FIX-03` and the fixture contract, which let a test change an installed file while a session runs, change with it.
+- **The levels stay, and a reload waits for the files.** A reload of level `mission` or `mission-restart` waits, with a ceiling, until no game process holds the changed files, and falls back to `game-restart` at the ceiling. A developer's editor cannot save a held file, so the framework would also stage the mod's files: the game reads a copy, and the reload copies the changed files over it once they are free. On this round's numbers the wait often reaches any useful ceiling, so most reloads would end as game restarts.
+- **The framework stages the mod's files, and every reload is a game restart.** The developer's own files are never held, and the reload makes a new copy before it restarts the processes.
 
-Both change what the spec promises beyond `m06.md`'s fallback, which the owner decides. `SPK-09` (`BIS_fnc_recompile` mid-mission) reads files through the same file server and would meet the same hold.
+All three change what the spec promises beyond `m06.md`'s fallback, which the owner decides.
 
 ## Why the cited setups reload and the spike did not
 
@@ -50,18 +89,7 @@ Research `13-hot-reload.md` built the reload levels on three sources. Read again
 - **HEMTT** `hemtt dev` links each addon folder of `.hemttout/dev/addons` back to the project's addon folder, and links `<Arma 3>\<mainprefix>\<prefix>` to the build folder (to the project root since 1.19, issue 1256)[^hemtt]. The game therefore reads the developer's own files through two links; the fixtures' install reads a copy through one junction. Both are links the game follows to the same kind of loose file.
 - **`Neefay/arma3-llm-harness`** does not reload through the game's files at all. Its server config sets `allowedFilePatching = 0`. Its `reload` reads the changed file of the mission's source folder on the host, preprocesses it there, sends the text to the game and runs `compile` on it, assigning the result to the function's variable; the staged copy of the mission sets `allowFunctionsRecompile` so mission functions can be assigned[^neefay]. It reloads mission functions, never an addon's, and never a final one.
 
-So the only source that reloads in a running game is Neefay's, and it works because the game's file server never reads the changed file. Its way does not reach a final function: a `CfgFunctions` function or a CBA `PREP` function is final from the moment the game compiles it, so an assignment fails until the next mission start, when the game and CBA read the file again through the file server, which serves the held content. ACE3's claim and the spike's measurement disagree, and the sources give no reason.
-
-The differences between ACE3's setup and the spike that remain to be run in the game, each on singleplayer first, are:
-
-| Difference | ACE3 and HEMTT | The spike |
-|---|---|---|
-| Mod folder and file patching root | One folder: `-mod=z\ace`, the junction itself | The PBO from the install's `@skd_fixture_cba`, the loose tree through `<game>\skdfx_cba` |
-| Links | Junction to the build, then a link per addon folder to the source | One junction to a copy |
-| How the file is written | An editor's save, which may write a new file and swap it in | Opened for writing in place, and renamed |
-| When the file was first read | ACE3's `PREP` at preInit with the cache off by `cba_cache_disable.pbo` or `DISABLE_COMPILE_CACHE` | CBA's preStart and each preInit, cache off through the session mission |
-
-Two ways round the hold follow from the sources and need the game to test: Neefay's way, the framework reading the changed file itself and sending its text, with a final function replaced at a mission restart before the game or CBA compiles it again; and a file read for the first time, at a path the game has not opened, to see whether a file the game opens mid-mission is held as well.
+Neefay's reload works because the game's file server never reads the changed file, and it does not reach a final function. ACE3's claim agrees with what this round found once a file is released: a mission restart takes the change. Whether an ACE3 developer's editor can save while the game holds the file, or whether the hold is new to a recent version of the game, the sources do not say.
 
 ## A mission restart, and orders across it
 
