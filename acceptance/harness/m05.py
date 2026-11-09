@@ -809,3 +809,41 @@ def us007_claude(ctx):
     assert st2["session"] and st2["session"]["id"] == sid, f"after the second session status gave {st2.get('session')}"
     assert not left2, f"{len(left2)} `shakedown mcp` process(es) outlived the second Claude Code session"
     assert re.search(r"started the runner by (breakaway|wmi)", log), "runner.log names no way the runner was started"
+
+
+# ================================================================ SEC-02 INT-WIN-03: who can read runner.json
+
+ACL_PS = r'''
+$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$a = Get-Acl -LiteralPath '{path}'
+@($a.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]) | ForEach-Object {
+  [pscustomobject]@{ me = ($_.IdentityReference.Value -eq $me); sid = $(if ($_.IdentityReference.Value -eq $me) { "the current user" } else { $_.IdentityReference.Value });
+                     allow = ($_.AccessControlType -eq "Allow"); read = ((([int]$_.FileSystemRights) -band 1) -ne 0); rights = "$($_.FileSystemRights)" }
+}) | ConvertTo-Json -Compress
+'''
+SYSTEM_SID = "S-1-5-18"
+
+
+def runner_json_acl(ctx):
+    pid = driver.runner_pid()
+    if not (pid and driver.alive(pid)):
+        # Any command but status, list, guide, version and mcp starts a runner (P-01); with no session it then refuses.
+        ctx.sh("exec", "--machine", "p1", "--code", "1")
+        pid = driver.runner_pid()
+        ctx.runner_pid = pid  # the suite waits for it to exit by itself
+    assert pid and driver.alive(pid), "no runner runs and runner.json names none after a command that starts one"
+    out = subprocess.run(["powershell", "-NoProfile", "-Command", ACL_PS.replace("{path}", str(driver.RUNNER_JSON).replace("'", "''"))],
+                         capture_output=True, text=True, timeout=60).stdout.strip()
+    rules = json.loads(out) if out else []
+    return rules if isinstance(rules, list) else [rules]
+
+
+@check("US-052 SEC-02 INT-WIN-03 while a runner runs, runner.json grants read to the current user and to no other account or group", "start")
+def us052_runner_json_acl(ctx):
+    rules = runner_json_acl(ctx)
+    ctx.log("runner.json ACL: " + "; ".join(f"{r['sid']} {'allow' if r['allow'] else 'deny'} {r['rights']}" for r in rules))
+    assert any(r["me"] and r["allow"] and r["read"] for r in rules), "runner.json grants the current user no read"
+    # SYSTEM is the operating system itself, not an account a person or program logs on as.
+    others = [r for r in rules if r["allow"] and r["read"] and not r["me"] and r["sid"] != SYSTEM_SID]
+    assert not others, "runner.json is readable by " + ", ".join(f"{r['sid']} ({r['rights']})" for r in others) + \
+                       " besides the current user"
