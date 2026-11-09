@@ -8,7 +8,7 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 
 # Command line
 
-One binary, `shakedown`, does everything. Every command except `list`, `guide`, `version` and `mcp` talks to the runner and starts it when needed (`P-01`). The words used here are defined in [../00-overview.md](../00-overview.md).
+One binary, `shakedown`, does everything. Every command except `list`, `guide`, `version` and `mcp` talks to the runner. `status` asks a runner that runs and starts none; every other command starts it when needed (`P-01`). The words used here are defined in [../00-overview.md](../00-overview.md).
 
 ## The project file: `shakedown.toml`
 

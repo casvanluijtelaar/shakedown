@@ -13,9 +13,19 @@ status: draft
 - The Steam client running and logged in to an account that owns Arma 3. Without it the game exits at once and the session start fails.
 - To build from source: the Rust toolchain (1.99 or later), HEMTT 1.23 and Python 3, each on `PATH`.
 
-`list` and `version` work on any system with no game. Starting a session needs Windows.
+`list`, `status`, `guide`, `version` and `shakedown mcp` work on macOS and Linux with no game, so an AI agent on a Mac can read checks and the contract (`NFR-PT-02`); the MCP server answers `status`, `list_checks` and `guide` there. Starting a session needs Windows.
 
-## Build and install
+## Build on macOS or Linux
+
+A Mac or Linux machine needs only the `shakedown` binary: the addon and the fixtures load in a game it cannot start. It needs the Rust toolchain (1.99 or later) and neither HEMTT nor the game. From the repository root:
+
+```
+cargo build --release -p shakedown
+```
+
+The binary is `target/release/shakedown`. Put `target/release/` on `PATH` so the project's `.mcp.json` finds it ([Agent tools](agent-tools.md)), or copy the binary into a folder on `PATH`. `tools/install.py` is for Windows: it builds the addon and the fixtures with HEMTT and stops where HEMTT is missing.
+
+## Build and install on Windows
 
 From the repository root:
 
@@ -52,7 +62,7 @@ Install again while no runner runs: Windows keeps the binary of a running runner
 
 ## The runner and its files
 
-Every command except `list` and `version` talks to the runner, a background process the first such command starts and that outlives it. The runner owns the session's game processes: when it ends, however it ends, they end with it. It keeps its own files in `%LOCALAPPDATA%\Shakedown\`:
+Every command except `list`, `guide`, `version` and `mcp` talks to the runner, a background process the first such command starts and that outlives it. `status` asks a runner that runs and starts none: with no runner it answers `not-running`. The runner owns the session's game processes: when it ends, however it ends, they end with it. It keeps its own files in `%LOCALAPPDATA%\Shakedown\`:
 
 | File | Holds |
 |---|---|

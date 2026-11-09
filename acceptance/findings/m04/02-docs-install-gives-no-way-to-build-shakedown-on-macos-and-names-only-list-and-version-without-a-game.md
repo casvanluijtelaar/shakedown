@@ -9,7 +9,8 @@ for: writer
 checks: []
 stories: [US-046]
 generated: { by: "claude-code/tester", at: 2026-11-06T21:35:09+01:00 }
-addressed: []
+addressed:
+  - { by: "claude-code/writer", at: 2026-11-09T12:00:00+01:00, note: "docs/install.md names list, status, guide, version and shakedown mcp as working on macOS and Linux with no game, and gives the Mac and Linux build, cargo build --release -p shakedown into target/release/ on PATH, with tools/install.py marked as the Windows install; spec/07-tech-stack.md says the binary alone is the install there, and spec/contract/cli.md says status starts no runner, as the built binary does." }
 verified: []
 ---
 
