@@ -139,6 +139,13 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-06: The owner told the coordinator to run M4 from Build through Close, and to commit and push `main` and the tag `0.0.5` itself once nothing needs a decision. That covers that one push only. The shakedown MCP server is registered only through the project's `.mcp.json`; no subagent adds it to a user or global Claude Code configuration or starts a Claude Code session of its own; the tester drives the server over its protocol. `US-046`'s third criterion runs in a test developer session on the Mac that the owner starts from the coordinator's prompt. Exit criteria 2 and 5 are the owner's together, in a fresh Claude Code session.
 - 2026-11-06: For `US-003`'s second criterion (no `steam` process), the owner let a test developer stop the `steam` process by its id for that one check; the owner starts Steam and logs in again afterwards. The tester stops Steam only as the last step of its round, after every other game run.
 - 2026-11-04: The owner pushes. The coordinator never pushes unless told to push for that one push.
+- 2026-11-09: The owner told the coordinator to run M5 from Build through Close, and to commit and push `main` and the tag `0.0.6` itself once nothing needs a decision. That covers that one push only.
+- 2026-11-09: `SPK-06` runs first in the M5 build round, before any work that depends on it. If it fails and its fallback (a per-user scheduled task, `INT-WIN-02` edited) changes what the spec promises beyond that, the coordinator stops and asks the owner.
+- 2026-11-09: For M5 the shakedown MCP server is registered only through the project's `.mcp.json`; no subagent adds it to a user or global Claude Code configuration.
+- 2026-11-09: For M5 only, for `SPK-06` and for `US-007`'s checks, a subagent may start a headless Claude Code session (`claude -p`) in `e2e/grappling-hook` whose only job is to be the MCP client that starts the session or finds it. It must end before the subagent reports. This overrides, for M5, the M4 rule against subagents starting Claude Code sessions.
+- 2026-11-09: In M5, kills for `STP-03`, `US-035` and `NFR-RL-03` (`taskkill /F` of the runner) go by the process id of a runner the subagent started, never by name.
+- 2026-11-09: M5 exit criterion 5, the demo, is the owner's, in a fresh interactive Claude Code session. The coordinator gives the commands, what to look for and the `PATH` step.
+- 2026-11-09: As in M3 and M4, in M5 no subagent writes the Steam ID or the Steam name anywhere; a report that holds either is not passed on, and the owner is told. The identity search covers `SEC-04`'s `audit.jsonl` and `runner.log` as well.
 
 ## Knowledge about the tooling
 
