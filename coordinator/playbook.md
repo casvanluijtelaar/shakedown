@@ -146,6 +146,15 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-09: In M5, kills for `STP-03`, `US-035` and `NFR-RL-03` (`taskkill /F` of the runner) go by the process id of a runner the subagent started, never by name.
 - 2026-11-09: M5 exit criterion 5, the demo, is the owner's, in a fresh interactive Claude Code session. The coordinator gives the commands, what to look for and the `PATH` step.
 - 2026-11-09: As in M3 and M4, in M5 no subagent writes the Steam ID or the Steam name anywhere; a report that holds either is not passed on, and the owner is told. The identity search covers `SEC-04`'s `audit.jsonl` and `runner.log` as well.
+- 2026-11-09: The owner told the coordinator to run M6 from Build through Close, and to commit and push `main` and the tag `0.0.7` itself once nothing needs a decision. That covers that one push only.
+- 2026-11-09: `SPK-08`, and `SPK-01`'s part across a mission restart, run first in the M6 build round, before any work that depends on them. If either fails and its fallback changes what the spec promises beyond what `m06.md` names, the coordinator stops and asks the owner.
+- 2026-11-09: `NFR-PF-02`'s target is set from `SPK-08`'s measured time over 10 reloads. The developer writes the number and how it was measured into the spec. The coordinator does not ask the owner for the number.
+- 2026-11-09: M1 took `SPK-05`'s first fallback, not its second, so M6 exit criterion 3 does not apply. The close round says so in `docs/milestones/m06.md`.
+- 2026-11-09: In M6 no subagent edits, builds or commits in `..\arma-grappling-hook`. Every check and test of a changed file works on the fixtures' installed copy, as `FIX-03` allows. The grappling-hook part of the demo is the owner's.
+- 2026-11-09: The M5 leave to start headless Claude Code sessions does not carry over to M6. Testers drive the reload tool over the MCP protocol, as in M4. The shakedown MCP server is registered only through the project's `.mcp.json`.
+- 2026-11-09: M6 exit criterion 5, the demo, is the owner's. When M6 is ready, the coordinator gives the commands to start the dedicated session with two clients on arma-grappling-hook, which function to change and how to rebuild it, the reload command, and what the report and the rerun of the M2 check should show.
+- 2026-11-09: As in M3 to M5, in M6 no subagent writes the Steam ID or the Steam name anywhere; a report that holds either is not passed on, and the owner is told.
+- 2026-11-09: The owner dropped M5's tester candidate that the contract gives no shape for a client request after the hello: no finding, nothing deferred. `US-053`'s proof by the closed connection, the marker and `audit.jsonl` stands.
 
 ## Knowledge about the tooling
 
@@ -166,6 +175,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-09: Agent shells on this machine run in a job that forbids breakaway, so a runner they start goes through WMI (`SES-08`); `runner.log` names the way each start went. A runner started with a console got killed by a stray console event until the M5 build round gave the WMI start no console.
 - 2026-11-09: Commands handed to the owner must run as pasted. A `<placeholder>` in a PowerShell line is a parse error; read the value in the command instead, as `(shakedown status --json | ConvertFrom-Json).runner_pid`.
 - 2026-11-09: A round that ends with no finding has no verify round, so the coordinator asks the test round itself for the one full acceptance run before close. A fix that lands after that run needs the full run again at its verify.
+- 2026-11-09: Baseline before M6: Steam running, no `arma3_x64` or `arma3server_x64` process, 10.8 GB of 16 GB free, 20.3 GB commit free, 172.5 GB free on `C:`, about 851 entries under `%TEMP%`, twice the M2 count.
 - 2026-11-05: The Windows test machine has no global git identity. The repository's local config sets `user.name casvanluijtelaar` and `user.email cas.luijtelaar@umain.com`, as on the Mac; worktrees share it.
 
 ## State at the end of the last session
