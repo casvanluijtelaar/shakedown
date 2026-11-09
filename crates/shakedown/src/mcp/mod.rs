@@ -352,6 +352,7 @@ impl Server {
                         code: a.code,
                         args: a.args,
                         ceiling,
+                        source: "mcp".into(),
                     },
                     ctx,
                 )

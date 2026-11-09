@@ -62,12 +62,13 @@ Install again while no runner runs: Windows keeps the binary of a running runner
 
 ## The runner and its files
 
-Every command except `list`, `guide`, `version` and `mcp` talks to the runner, a background process the first such command starts and that outlives it. `status` asks a runner that runs and starts none: with no runner it answers `not-running`. The runner owns the session's game processes: when it ends, however it ends, they end with it. It keeps its own files in `%LOCALAPPDATA%\Shakedown\`:
+Every command except `list`, `guide`, `version` and `mcp` talks to the runner, a background process the first such command starts and that outlives it. `status` asks a runner that runs and starts none: with no runner it answers `not-running`. The runner owns the session's game processes: when it ends, however it ends, they end with it. [When a client or the runner ends](sessions-and-the-runner.md) says what that means for a session. It keeps its own files in `%LOCALAPPDATA%\Shakedown\`:
 
 | File | Holds |
 |---|---|
 | `runner.json` | The running runner's port, token, process id and start time. Deleted when the runner exits. |
-| `runner.log` | One line per thing the runner did: started, a process started or stopped, a connection refused, a run written. |
+| `record.json` | The run record: every session the runner started, with its game processes and its mission copy, so that the next runner clears what a runner that died left ([When a client or the runner ends](sessions-and-the-runner.md)). |
+| `runner.log` | One line per thing the runner did: how a client started it, started, what its start-up recovery cleared, a process started or stopped, a connection refused, a run written. |
 
 When a command says the framework failed (exit code 5), `runner.log` says what happened.
 

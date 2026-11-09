@@ -21,6 +21,8 @@ struct RunnerFile {
     port: u16,
     token: String,
     pid: u32,
+    #[serde(default)]
+    started_at: String,
 }
 
 pub struct Conn {
@@ -74,6 +76,19 @@ fn try_existing() -> Result<Option<Conn>, CliError> {
     let Ok(file) = serde_json::from_str::<RunnerFile>(&text) else {
         return Ok(None);
     };
+    // The runner the file names is live when a process with its id runs and started in the
+    // second the file gives (P-01); a file left by a runner that died names none.
+    if let Some(started) =
+        crate::win::process_started(file.pid).or_else(|| (!cfg!(windows)).then(|| file.started_at.clone()))
+    {
+        if !same_second(&started, &file.started_at) {
+            let _ = std::fs::remove_file(paths::runner_file());
+            return Ok(None);
+        }
+    } else {
+        let _ = std::fs::remove_file(paths::runner_file());
+        return Ok(None);
+    }
     let addr = SocketAddr::from(([127, 0, 0, 1], file.port));
     let Ok(stream) = TcpStream::connect_timeout(&addr, Duration::from_secs(2)) else {
         // Nothing listens: the runner that wrote the file is gone.
@@ -123,15 +138,34 @@ fn try_existing() -> Result<Option<Conn>, CliError> {
     Ok(Some(Conn { reader, writer }))
 }
 
-/// Starts `shakedown runner` detached, outside this process's job and console (`SES-08`,
-/// `INT-WIN-02`), and waits for its `runner.json`.
+/// Two times of the form `YYYY-MM-DDTHH:MM:SS...` that fall in the same second.
+fn same_second(a: &str, b: &str) -> bool {
+    a.len() >= 19 && b.len() >= 19 && a[..19] == b[..19]
+}
+
+/// Starts `shakedown runner` detached, outside this process's job, process tree and console
+/// (`SES-08`, `INT-WIN-02`), and waits for its `runner.json`.
 fn start_runner() -> Result<(), CliError> {
     let exe =
         std::env::current_exe().map_err(|e| CliError::framework(format!("Cannot find the shakedown binary: {e}.")))?;
     std::fs::create_dir_all(paths::runner_dir())
         .map_err(|e| CliError::framework(format!("Cannot create {}: {e}.", paths::runner_dir().display())))?;
     #[cfg(windows)]
-    let spawned = crate::win::spawn_detached(&exe, &["runner".to_string()]).map(|_| ());
+    let spawned = crate::win::start_runner(&exe).map(|way| {
+        use std::io::Write as _;
+        if let Ok(mut log) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(paths::runner_log())
+        {
+            let _ = writeln!(
+                log,
+                "{} client {} started the runner by {way}",
+                shakedown_protocol::time::now(),
+                std::process::id()
+            );
+        }
+    });
     #[cfg(not(windows))]
     let spawned = std::process::Command::new(&exe)
         .arg("runner")

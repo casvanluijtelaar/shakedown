@@ -419,7 +419,12 @@ async fn prepare_and_execute(
     });
     let ceiling = Duration::from_secs(header.timeout_s) + GRACE;
     let executing_at = Some(time::now());
-    match session.order(lead, order, ceiling).await {
+    // The check's code, and every order its code routes, go into the audit under its id (SEC-04).
+    session.audit(&check.id, lead, order["source"].as_str().unwrap_or_default());
+    *session.check.lock().unwrap() = Some(check.id.clone());
+    let answer = session.order(lead, order, ceiling).await;
+    *session.check.lock().unwrap() = None;
+    match answer {
         Ok(report) => {
             let e = from_report(check, &header, started, clock, &report, lead);
             (e, report, executing_at)

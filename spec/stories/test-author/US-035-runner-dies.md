@@ -17,7 +17,7 @@ As a test author, I want to have a crash or kill of the framework itself take th
 ## Acceptance criteria
 
 1. After the runner is killed with `taskkill /F` during a run on a dedicated session, no `arma3_x64` or `arma3server_x64` process of that session runs within 10 s, in 5 of 5 tries.
-2. The next `shakedown status` starts a new runner and shows no session; the next `session start` of the same setup succeeds, and no mission copy of the dead session is left in the game's `MPMissions` folder.
+2. The next `shakedown status` shows the runner `not-running` and no session, and starts none; the next `session start` of the same setup starts a new runner and succeeds, no mission copy of the dead session is left in the game's `MPMissions` folder, and the dead session's `session.json` says `stopped` with reason `runner-died`.
 
 ## Next to
 

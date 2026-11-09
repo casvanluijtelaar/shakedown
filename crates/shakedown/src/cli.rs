@@ -340,6 +340,7 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
                 code,
                 args: json_arg("args", args.as_deref())?,
                 ceiling: *ceiling,
+                source: "cli".into(),
             })?;
             if cli.json {
                 out.json(&value);

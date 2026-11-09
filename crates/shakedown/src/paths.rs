@@ -17,6 +17,11 @@ pub fn runner_file() -> PathBuf {
     runner_dir().join("runner.json")
 }
 
+/// The run record of `STP-03`.
+pub fn record_file() -> PathBuf {
+    runner_dir().join("record.json")
+}
+
 pub fn runner_log() -> PathBuf {
     runner_dir().join("runner.log")
 }

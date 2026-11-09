@@ -128,6 +128,11 @@ impl Mcp {
         mcp
     }
 
+    /// The process id of `shakedown mcp`.
+    pub fn pid(&self) -> u32 {
+        self.child.id()
+    }
+
     pub fn tools(&mut self) -> Value {
         self.request("tools/list", json!({})).0["result"]["tools"].clone()
     }

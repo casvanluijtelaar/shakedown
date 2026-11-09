@@ -64,6 +64,9 @@ pub enum Request {
         code: String,
         args: Value,
         ceiling: f64,
+        /// Who sent it, for the audit (`SEC-04`): `cli` or `mcp`.
+        #[serde(default)]
+        source: String,
     },
     /// A wait for a condition on a machine (`OBS-01`).
     Wait {

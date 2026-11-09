@@ -140,6 +140,12 @@ pub struct Session {
     inner: Mutex<Inner>,
     changed: Notify,
     orders: AtomicU64,
+    /// `audit.jsonl` in the session folder (`SEC-04`).
+    audit: Mutex<Option<std::fs::File>>,
+    /// What replaces the Steam identity in the audit, as in everything else the runner stores.
+    redactor: crate::logs::Redactor,
+    /// The id of the check executing now, the source of the orders its code routes.
+    pub(crate) check: Mutex<Option<String>>,
 }
 
 /// Tells a machine to stop an order's code when the request that sent it is dropped before the
@@ -199,6 +205,32 @@ pub fn machine_plan(spec: &SetupSpec) -> Vec<(String, &'static str)> {
 }
 
 impl Session {
+    /// Appends one `exec` order to `audit.jsonl`: its time, source (`cli`, `mcp` or a check id),
+    /// target machine and code (`SEC-04`).
+    pub fn audit(&self, source: &str, target: &str, code: &str) {
+        use std::io::Write as _;
+        let line = json!({
+            "time": shakedown_protocol::time::now(),
+            "source": source,
+            "target": target,
+            "code": self.redactor.redact(code),
+        });
+        if let Some(file) = self.audit.lock().unwrap().as_mut() {
+            let _ = writeln!(file, "{line}");
+        }
+    }
+
+    /// The process id the runner started for a machine, while it runs (`SEC-03`).
+    pub fn machine_pid(&self, name: &str) -> Option<u32> {
+        self.inner
+            .lock()
+            .unwrap()
+            .machines
+            .iter()
+            .find(|m| m.name == name)
+            .and_then(|m| m.pid)
+    }
+
     pub fn has_machine(&self, name: &str) -> bool {
         self.inner.lock().unwrap().machines.iter().any(|m| m.name == name)
     }
@@ -534,6 +566,10 @@ impl Session {
         let target = message["target"].as_str().unwrap_or_default().to_string();
         let reference = message["ref"].as_str().unwrap_or_default().to_string();
         let mut order = message["order"].clone();
+        if matches!(order["kind"].as_str(), Some("exec" | "poll")) {
+            let check = self.check.lock().unwrap().clone().unwrap_or_else(|| "check".into());
+            self.audit(&check, &target, order["source"].as_str().unwrap_or_default());
+        }
         let ceiling = order["ceiling"].as_f64().unwrap_or(ORDER_CEILING_S).max(0.0);
         let id = format!("o{}", self.orders.fetch_add(1, Ordering::SeqCst) + 1);
         order["id"] = Value::String(id.clone());
@@ -699,6 +735,9 @@ impl Session {
         if let Some(copy) = &self.mission_copy {
             let _ = std::fs::remove_dir_all(copy);
         }
+        let end = self.state();
+        super::record::write_end(&self.folder, &self.id, end.as_str(), None);
+        super::record::remove_session(&self.id);
         // Every RPT of the session's machines, redacted once nothing writes it any more (LOG-02).
         let redactor = runner.redactor();
         let profiles: Vec<PathBuf> = self
@@ -855,6 +894,7 @@ impl Session {
                 .map_err(|e| format!("{name} could not be started: {e}"))?;
             progress(format!("session {}: started {name} (process {})", self.id, child.pid));
             runner.log(&format!("{} {name}: started process {}", self.id, child.pid));
+            super::record::add_process(&self.id, child.pid, &child.started_at);
             let m = inner.machines.iter_mut().find(|m| &m.name == name).unwrap();
             m.pid = Some(child.pid);
             m.process_started_at = Some(child.started_at.clone());
@@ -906,6 +946,8 @@ pub async fn start(
     let sqm = mission::mission_sqm(spec.setup.clients, spec.setup.headless, spec.setup.spawn);
     let ext = mission::description_ext(spec.setup.clients + spec.setup.headless);
     let token = paths::token("skd_s_");
+    std::fs::create_dir_all(&folder).map_err(io)?;
+    super::record::add_session(&id, &folder);
     let mut mission_copy = None;
     if dedicated {
         let dir = folder.join("mission").join(&mission_name);
@@ -913,6 +955,7 @@ pub async fn start(
         std::fs::write(dir.join("mission.sqm"), &sqm).map_err(io)?;
         std::fs::write(dir.join("description.ext"), &ext).map_err(io)?;
         let copy = spec.game.join("MPMissions").join(&mission_name);
+        super::record::add_path(&id, &copy);
         std::fs::create_dir_all(&copy)
             .and_then(|_| std::fs::write(copy.join("mission.sqm"), &sqm))
             .and_then(|_| std::fs::write(copy.join("description.ext"), &ext))
@@ -950,6 +993,15 @@ pub async fn start(
         }),
         changed: Notify::new(),
         orders: AtomicU64::new(0),
+        audit: Mutex::new(
+            std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(folder.join("audit.jsonl"))
+                .ok(),
+        ),
+        redactor: runner.redactor(),
+        check: Mutex::new(None),
     });
     if dedicated {
         std::fs::write(

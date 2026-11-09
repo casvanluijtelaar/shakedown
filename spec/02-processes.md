@@ -23,9 +23,9 @@ Every process below uses one channel, so it is described once:
 
 ## **P-01** Start the runner
 
-1. **client**: reads `%LOCALAPPDATA%\Shakedown\runner.json` (port, token, process id and start time of the runner). If it names a live runner whose process start time matches, the client connects with that token, sends its hello and waits up to 5 s for the runner's answer, which carries the runner's version. An answer of the client's own version ends the process here. With no answer, or an answer of another version, the client starts no other runner: it refuses the request, naming the runner's process id and, when it answered, its version, and saying that ending that process ends its session's game processes with it (`STP-01`) and that the next command then starts a fresh runner. `status` answers instead with the runner `unreachable` (`INS-02`).
-2. **client**: otherwise starts `shakedown runner` as a detached process outside the client's own job object and process tree (`SES-08`), and waits for `runner.json` to appear, polling every 100 ms with a ceiling of 10 s.
-3. **runner**: at start, before it writes `runner.json`, runs the recovery of `P-12`, picks a free port on `127.0.0.1`, makes a random 256-bit token in the form of `SEC-06`, and writes `runner.json` readable by the current user only.
+1. **client**: reads `%LOCALAPPDATA%\Shakedown\runner.json` (port, token, process id and start time of the runner). If it names a live runner, a running process with that id whose start time falls in the same second as the file's, the client connects with that token, sends its hello and waits up to 5 s for the runner's answer, which carries the runner's version. An answer of the client's own version ends the process here. With no answer, or an answer of another version, the client starts no other runner: it refuses the request, naming the runner's process id and, when it answered, its version, and saying that ending that process ends its session's game processes with it (`STP-01`) and that the next command then starts a fresh runner. `status` answers instead with the runner `unreachable` (`INS-02`).
+2. **client**: otherwise deletes a `runner.json` that names no live runner, starts `shakedown runner` as a detached process outside the client's own job object and process tree (`SES-08`, `INT-WIN-02`), and waits for `runner.json` to appear, polling every 100 ms with a ceiling of 10 s.
+3. **runner**: at start, before it writes `runner.json`, runs the recovery of `P-12`, picks a free port on `127.0.0.1`, makes a random 256-bit token in the form of `SEC-06`, and writes `runner.json`, with its own process's start time, readable by the current user only.
 4. **runner**: exits by itself 60 s after its last session stopped with no client connected; it then deletes `runner.json`.
 
 ## **P-02** Start a session
@@ -117,7 +117,7 @@ Triggered by `session stop`, by the end of a run that started its own session (`
 
 1. **runner**: marks the session `stopping` and, if a run is active, stops it (its executing check ends `invalid` / `run-stopped`).
 2. **runner**: stops the game clients and headless clients first, then the server, so no machine logs the errors of a mission ending under it: each by its process handle, with `TerminateProcess` after asking nothing, since no clean shutdown is needed for a test session. It waits on each handle with a ceiling of 10 s.
-3. **runner**: deletes the mission copy from `<game>\MPMissions`, redacts each machine's RPT in the session folder (`LOG-02`), removes the session from the run record, and marks the session `stopped`.
+3. **runner**: deletes the mission copy from `<game>\MPMissions`, redacts each machine's RPT in the session folder (`LOG-02`), removes the session from the run record, and marks the session `stopped`, also in the `session.json` of its session folder.
 4. **runner**: if a process outlives step 2's ceiling, it closes the job object, which ends every process left in it, and reports the process id.
 
 ## **P-11** Ask a running game what is going on
@@ -134,7 +134,7 @@ Triggered at every runner start, before it accepts a client.
 
 1. **runner**: reads the run record `%LOCALAPPDATA%\Shakedown\record.json`.
 2. **runner**: for each process id it lists, if a process with that id runs and its start time matches the recorded one, terminates it and logs it.
-3. **runner**: deletes every mission copy and temporary file the record lists, and marks each listed session `stopped` in its session folder with reason `runner-died`.
+3. **runner**: deletes every mission copy and temporary file the record lists, and marks each listed session `stopped` with reason `runner-died` in the `session.json` of its session folder.
 4. **runner**: empties the record.
 
 Processes the runner started end with it anyway, because the job object closes when the runner dies (`STP-01`). This process covers what a job object cannot: processes that escaped it, files and the record of sessions.

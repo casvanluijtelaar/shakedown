@@ -132,49 +132,170 @@ mod imp {
         }
     }
 
-    /// Starts a process detached: no console, its own process group, out of the caller's job
-    /// when the job allows it (`INT-WIN-02`), and inheriting no handle, so it holds none of the
-    /// caller's pipes open.
-    pub fn spawn_detached(exe: &Path, args: &[String]) -> std::io::Result<u32> {
+    /// The variable that tells `shakedown runner` it is the relay of [`start_runner`].
+    pub const RELAY_VAR: &str = "SHAKEDOWN_RUNNER_RELAY";
+
+    /// Starts a process with no console, in its own process group, out of the caller's job
+    /// (`CREATE_BREAKAWAY_FROM_JOB`), inheriting no handle, so it holds none of the caller's pipes
+    /// open. `env` is added to the caller's environment. With `breakaway` it leaves the caller's
+    /// job, and fails when that job forbids it.
+    pub fn spawn_breakaway(
+        exe: &Path,
+        args: &[String],
+        env: &[(String, String)],
+        breakaway: bool,
+    ) -> std::io::Result<u32> {
         use windows::Win32::System::Threading::{
-            CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS, PROCESS_CREATION_FLAGS,
+            CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS,
         };
-        let start = |flags: PROCESS_CREATION_FLAGS| -> std::io::Result<u32> {
-            let mut command_line: Vec<u16> = std::iter::once(quote(&exe.to_string_lossy()))
-                .chain(args.iter().map(|a| quote(a)))
-                .collect::<Vec<_>>()
-                .join(" ")
-                .encode_utf16()
-                .chain(std::iter::once(0))
-                .collect();
-            let exe_w: Vec<u16> = exe.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
-            let startup = STARTUPINFOW {
-                cb: std::mem::size_of::<STARTUPINFOW>() as u32,
-                ..Default::default()
-            };
-            let mut info = PROCESS_INFORMATION::default();
-            unsafe {
-                CreateProcessW(
-                    PCWSTR(exe_w.as_ptr()),
-                    Some(PWSTR(command_line.as_mut_ptr())),
-                    None,
-                    None,
-                    false,
-                    flags,
-                    None,
-                    PCWSTR::null(),
-                    &startup,
-                    &mut info,
-                )
-                .map_err(std::io::Error::other)?;
-                let _process = Handle(info.hProcess);
-                let _thread = Handle(info.hThread);
+        let mut command_line: Vec<u16> = std::iter::once(quote(&exe.to_string_lossy()))
+            .chain(args.iter().map(|a| quote(a)))
+            .collect::<Vec<_>>()
+            .join(" ")
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        let exe_w: Vec<u16> = exe.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        let block = environment_block(env);
+        let startup = STARTUPINFOW {
+            cb: std::mem::size_of::<STARTUPINFOW>() as u32,
+            ..Default::default()
+        };
+        let mut info = PROCESS_INFORMATION::default();
+        unsafe {
+            CreateProcessW(
+                PCWSTR(exe_w.as_ptr()),
+                Some(PWSTR(command_line.as_mut_ptr())),
+                None,
+                None,
+                false,
+                DETACHED_PROCESS
+                    | CREATE_NEW_PROCESS_GROUP
+                    | CREATE_UNICODE_ENVIRONMENT
+                    | if breakaway {
+                        CREATE_BREAKAWAY_FROM_JOB
+                    } else {
+                        Default::default()
+                    },
+                Some(block.as_ptr() as *const _),
+                PCWSTR::null(),
+                &startup,
+                &mut info,
+            )
+            .map_err(std::io::Error::other)?;
+            let _process = Handle(info.hProcess);
+            let _thread = Handle(info.hThread);
+        }
+        Ok(info.dwProcessId)
+    }
+
+    /// Starts `shakedown runner` outside the caller's job object and process tree (`SES-08`,
+    /// `INT-WIN-02`). It breaks away from the job into a relay, `shakedown runner` with
+    /// [`RELAY_VAR`] set, which starts the runner itself and exits at once, so the runner's parent
+    /// is a process that has ended and no walk of the caller's tree reaches it. When the job
+    /// forbids breakaway, [`start_by_wmi`] starts the runner, outside both. The relay does the
+    /// same when a job around the caller's job still holds it. Returns the way it went:
+    /// `breakaway` or `wmi`.
+    pub fn start_runner(exe: &Path) -> std::io::Result<&'static str> {
+        let args = ["runner".to_string()];
+        if spawn_breakaway(exe, &args, &[(RELAY_VAR.into(), "1".into())], true).is_ok() {
+            return Ok("breakaway");
+        }
+        start_by_wmi(exe).map(|_| "wmi")
+    }
+
+    /// Starts `shakedown runner` through WMI's `Win32_Process.Create`, as a child of the WMI
+    /// service: outside every job and process tree of the caller.
+    pub fn start_by_wmi(exe: &Path) -> std::io::Result<()> {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let command_line = format!("\"{}\" runner", exe.display()).replace('\'', "''");
+        let script = format!(
+            "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{{CommandLine='{command_line}'}}; exit $r.ReturnValue"
+        );
+        let status = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .creation_flags(CREATE_NO_WINDOW)
+            .status()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(std::io::Error::other(format!(
+                "WMI's Win32_Process.Create returned {}",
+                status.code().unwrap_or(-1)
+            )))
+        }
+    }
+
+    /// The start time of the running process `pid`, in the form of [`Child::started_at`]; `None`
+    /// when no such process runs or it cannot be read.
+    pub fn process_started(pid: u32) -> Option<String> {
+        use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+        unsafe {
+            let process = Handle(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?);
+            let mut code = 0u32;
+            GetExitCodeProcess(process.0, &mut code).ok()?;
+            // 259 is STILL_ACTIVE: an ended process whose handle someone still holds does not run.
+            if code != 259 {
+                return None;
             }
-            Ok(info.dwProcessId)
+            process_start(process.0)
+        }
+    }
+
+    /// Ends the process `pid` if it runs and started at `started_at`; true when it was ended.
+    pub fn terminate_pid(pid: u32, started_at: &str) -> bool {
+        use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE};
+        unsafe {
+            let Ok(process) = OpenProcess(PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else {
+                return false;
+            };
+            let process = Handle(process);
+            if process_start(process.0).as_deref() != Some(started_at) {
+                return false;
+            }
+            TerminateProcess(process.0, 1).is_ok()
+        }
+    }
+
+    /// The process id at the other end of a loopback TCP connection to `local_port` from
+    /// `peer_port`, read from the system's TCP table (`SEC-03`).
+    pub fn tcp_peer_pid(peer_port: u16, local_port: u16) -> Option<u32> {
+        use windows::Win32::NetworkManagement::IpHelper::{
+            GetExtendedTcpTable, MIB_TCPROW_OWNER_PID, MIB_TCPTABLE_OWNER_PID, TCP_TABLE_OWNER_PID_ALL,
         };
-        let flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP;
-        // A job that forbids breakaway refuses the first form; the process then starts inside it.
-        start(flags | CREATE_BREAKAWAY_FROM_JOB).or_else(|_| start(flags))
+        const AF_INET: u32 = 2;
+        let mut size = 0u32;
+        unsafe {
+            GetExtendedTcpTable(None, &mut size, false, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0);
+        }
+        // The table can grow between the two calls; some room covers that.
+        let mut buf: Vec<u64> = vec![0; (size as usize + 4096) / 8 + 1];
+        let mut size = (buf.len() * 8) as u32;
+        let rc = unsafe {
+            GetExtendedTcpTable(
+                Some(buf.as_mut_ptr() as *mut _),
+                &mut size,
+                false,
+                AF_INET,
+                TCP_TABLE_OWNER_PID_ALL,
+                0,
+            )
+        };
+        if rc != 0 {
+            return None;
+        }
+        let table = buf.as_ptr() as *const MIB_TCPTABLE_OWNER_PID;
+        let rows: &[MIB_TCPROW_OWNER_PID] =
+            unsafe { std::slice::from_raw_parts((*table).table.as_ptr(), (*table).dwNumEntries as usize) };
+        // A port is in network byte order in the low 16 bits.
+        let port = |p: u32| u16::from_be(p as u16);
+        rows.iter()
+            .find(|r| port(r.dwLocalPort) == peer_port && port(r.dwRemotePort) == local_port)
+            .map(|r| r.dwOwningPid)
     }
 
     impl Child {
@@ -373,8 +494,36 @@ mod imp {
         }
     }
 
-    pub fn spawn_detached(_exe: &Path, _args: &[String]) -> std::io::Result<u32> {
+    pub const RELAY_VAR: &str = "SHAKEDOWN_RUNNER_RELAY";
+
+    pub fn start_runner(_exe: &Path) -> std::io::Result<&'static str> {
         Err(std::io::Error::other("needs Windows"))
+    }
+
+    pub fn start_by_wmi(_exe: &Path) -> std::io::Result<()> {
+        Err(std::io::Error::other("needs Windows"))
+    }
+
+    pub fn spawn_breakaway(
+        _exe: &Path,
+        _args: &[String],
+        _env: &[(String, String)],
+        _breakaway: bool,
+    ) -> std::io::Result<u32> {
+        Err(std::io::Error::other("needs Windows"))
+    }
+
+    /// Unknown on other systems: a client then goes by the runner's port alone.
+    pub fn process_started(_pid: u32) -> Option<String> {
+        None
+    }
+
+    pub fn terminate_pid(_pid: u32, _started_at: &str) -> bool {
+        false
+    }
+
+    pub fn tcp_peer_pid(_peer_port: u16, _local_port: u16) -> Option<u32> {
+        None
     }
 
     impl Child {

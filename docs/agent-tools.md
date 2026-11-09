@@ -77,7 +77,7 @@ unknown-machine: Session s-20261106-180721 has no machine `p9`; its machines are
 | `session-busy` | The session is starting or stopping, or busy with a run or a reset. |
 | `session-broken` | The session is `broken`; the reason follows. |
 | `precondition-failed` | Steam, the game, a mod folder or the framework's addon is missing; the message names it. |
-| `runner-unreachable` | The runner does not answer or runs another version; its process id follows. |
+| `runner-unreachable` | The runner does not answer or runs another version; its process id follows. Ending that process ends its session ([When a client or the runner ends](sessions-and-the-runner.md)). |
 
 A failure of the framework itself is a JSON-RPC error, not a tool result.
 

@@ -174,11 +174,21 @@ async fn send(
 
 /// `exec` (`CTL-01`, `CTL-05`): the code on a machine or a group; each machine's state, value and
 /// duration, and the script errors the code raised, which do not make the call fail.
-pub async fn exec(runner: &Runner, machine: &str, code: &str, args: Value, ceiling: f64) -> Result<Value, CliError> {
+pub async fn exec(
+    runner: &Runner,
+    machine: &str,
+    code: &str,
+    args: Value,
+    ceiling: f64,
+    source: &str,
+) -> Result<Value, CliError> {
     check_ceiling(ceiling)?;
     let args = check_args(args)?;
     let session = session(runner)?;
     let names = targets(&session, machine, true)?;
+    for name in &names {
+        session.audit(if source.is_empty() { "cli" } else { source }, name, code);
+    }
     let answers = send(&session, &names, code, &args, ceiling).await;
     let history = session.history();
     let mut results = serde_json::Map::new();

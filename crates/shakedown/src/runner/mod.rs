@@ -4,6 +4,7 @@
 
 pub mod control;
 pub mod errors;
+pub mod record;
 pub mod run;
 pub mod session;
 
@@ -133,16 +134,32 @@ impl Runner {
         false
     }
 
+    /// The process id at the other end of a connection, from the system's TCP table (`SEC-03`).
+    fn peer_pid(&self, stream: &TcpStream) -> Option<u32> {
+        let peer = stream.peer_addr().ok()?.port();
+        crate::win::tcp_peer_pid(peer, self.port)
+    }
+
+    /// Logs a refused connection in the form of `contract/cli.md` and closes it.
+    fn refuse(&self, who: &str, pid: Option<u32>, why: &str) {
+        let pid = pid.map_or_else(|| "unknown".to_string(), |p| p.to_string());
+        self.log(&format!("refused {who} connection from pid {pid}: {why}"));
+    }
+
     async fn connection(self: Arc<Self>, stream: TcpStream) {
         let _ = stream.set_nodelay(true);
+        let pid = self.peer_pid(&stream);
         let (read, write) = stream.into_split();
         let mut lines = BufReader::new(read).lines();
         let first = tokio::time::timeout(HELLO_CEILING, lines.next_line()).await;
-        let Ok(Ok(Some(first))) = first else { return };
+        let Ok(Ok(Some(first))) = first else {
+            self.refuse("client", pid, "not-hello");
+            return;
+        };
         match serde_json::from_str::<Hello>(&first) {
             Ok(Hello::Client { version, token }) => {
                 if token != self.token {
-                    self.log("refused client connection: bad-token");
+                    self.refuse("client", pid, "bad-token");
                     return;
                 }
                 self.client(version, lines, write).await;
@@ -154,14 +171,17 @@ impl Runner {
             }) => {
                 let current = self.session();
                 let Some(s) = current.filter(|s| s.id == session && s.token == token && s.has_machine(&machine)) else {
-                    self.log(&format!(
-                        "refused extension connection for {machine} of {session}: bad-token"
-                    ));
+                    self.refuse("extension", pid, "bad-token");
                     return;
                 };
+                // Only the process the runner started for that machine may speak for it (SEC-03).
+                if pid.is_none() || pid != s.machine_pid(&machine) {
+                    self.refuse("extension", pid, "unknown-process");
+                    return;
+                }
                 s.extension(&self, machine, lines, write).await;
             }
-            _ => self.log("refused connection: not-hello"),
+            _ => self.refuse("client", pid, "not-hello"),
         }
     }
 
@@ -300,7 +320,8 @@ impl Runner {
                 code,
                 args,
                 ceiling,
-            } => control::exec(self, &machine, &code, args, ceiling)
+                source,
+            } => control::exec(self, &machine, &code, args, ceiling, &source)
                 .await
                 .map(|value| Event::Value { value }),
             Request::Wait {
@@ -449,10 +470,56 @@ impl Runner {
 
 /// `shakedown runner`: runs until it has had no session and no client for `IDLE_EXIT`.
 pub fn main() -> u8 {
+    // The relay of win::start_runner: starts the runner itself, out of the client's process tree,
+    // and ends (SES-08, INT-WIN-02).
+    if std::env::var(crate::win::RELAY_VAR).is_ok_and(|v| v == "1") {
+        let Ok(exe) = std::env::current_exe() else { return 5 };
+        let args = ["runner".to_string()];
+        let env = [(crate::win::RELAY_VAR.into(), String::new())];
+        // The relay has left the client's job; a job around that one, which forbids breakaway,
+        // may still hold it, and then WMI starts the runner outside it.
+        let started = crate::win::spawn_breakaway(&exe, &args, &env, true)
+            .map(|_| "breakaway")
+            .or_else(|_| crate::win::start_by_wmi(&exe).map(|_| "wmi"));
+        use std::io::Write as _;
+        if let Ok(mut log) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(paths::runner_log())
+        {
+            let what = match &started {
+                Ok(way) => format!("started the runner by {way}"),
+                Err(e) => format!("cannot start the runner: {e}"),
+            };
+            let _ = writeln!(
+                log,
+                "{} relay {}: {what}",
+                shakedown_protocol::time::now(),
+                std::process::id()
+            );
+        }
+        return if started.is_ok() { 0 } else { 5 };
+    }
     let dir = paths::runner_dir();
     if std::fs::create_dir_all(&dir).is_err() {
         return 5;
     }
+    // A runner has no console: a panic goes to runner.log, or nobody would see why it ended.
+    std::panic::set_hook(Box::new(|info| {
+        use std::io::Write as _;
+        if let Ok(mut log) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(paths::runner_log())
+        {
+            let _ = writeln!(
+                log,
+                "{} runner {} panicked: {info}",
+                shakedown_protocol::time::now(),
+                std::process::id()
+            );
+        }
+    }));
     let log = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -467,22 +534,25 @@ pub fn main() -> u8 {
         let Ok(runner) = Runner::bind(addon, log).await else {
             return 5;
         };
+        // What a runner that died left behind is cleared before any client is served (P-12).
+        for line in record::recover() {
+            runner.log(&line);
+        }
+        let pid = std::process::id();
+        // The process's own start time, which names it together with its id (P-01).
+        let started_at = crate::win::process_started(pid).unwrap_or_else(shakedown_protocol::time::now);
         let file = json!({
             "port": runner.port,
             "token": runner.token,
-            "pid": std::process::id(),
-            "started_at": shakedown_protocol::time::now(),
+            "pid": pid,
+            "started_at": started_at,
         });
         // runner.json lives in the user's own local application data folder, which only that
         // user can read (SEC-02).
         if std::fs::write(paths::runner_file(), file.to_string()).is_err() {
             return 5;
         }
-        runner.log(&format!(
-            "runner {} started on port {}",
-            std::process::id(),
-            runner.port
-        ));
+        runner.log(&format!("runner {pid} started on port {}", runner.port));
         loop {
             tokio::time::sleep(Duration::from_secs(1)).await;
             if runner.close_if_idle() {
