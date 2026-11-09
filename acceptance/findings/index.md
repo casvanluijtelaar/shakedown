@@ -13,3 +13,4 @@ description: One Finding concept per defect or document gap, in a folder per mil
 * [M2 findings](m02/) - The findings of M2 Dedicated sessions.
 * [M3 findings](m03/) - The findings of M3 Script errors and logs.
 * [M4 findings](m04/) - The findings of M4 Agent tools.
+* [M5 findings](m05/) - The findings of M5 A session that outlives its client.

@@ -16,9 +16,10 @@ PROTOCOL = "2025-06-18"
 
 
 class Mcp:
-    def __init__(self, project, install, log):
+    def __init__(self, project, install, log, creationflags=0):
         """Starts the server named `shakedown` in the project's .mcp.json, with the install folder on PATH
-        (docs/agent-tools.md: `shakedown` must be on PATH), in the project folder."""
+        (docs/agent-tools.md: `shakedown` must be on PATH), in the project folder. creationflags go to
+        the process start, so a check can start it suspended and put it in a job object first (SES-08)."""
         self.log = log
         server = json.loads((Path(project) / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["shakedown"]
         env = dict(os.environ)
@@ -27,7 +28,8 @@ class Mcp:
         assert command, f".mcp.json names the command {server['command']!r}, which is not on PATH with the install folder"
         self.timeout_s = server.get("timeout", 60000) / 1000
         self.proc = subprocess.Popen([command, *server.get("args", [])], cwd=project, env=env,
-                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     creationflags=creationflags)
         self.pid = self.proc.pid
         self.lock = threading.Condition()
         self.responses = {}      # id -> (monotonic time, message)

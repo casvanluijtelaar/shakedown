@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02, m03, m04  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02, m03, m04, m05  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
@@ -91,9 +91,10 @@ def main():
     args = ap.parse_args()
     sys.stdout.reconfigure(errors="replace")  # an RPT line in a message may hold a character the console cannot show
 
-    # A "nosteam" check needs Steam stopped, so it runs only when a --check value selects it.
+    # A "nosteam" check needs Steam stopped and a "claude" check starts Claude Code, so each runs only
+    # when a --check value selects it.
     selected = [c for c in CHECKS if any(f in c.name for f in args.check)
-                or not args.check and c.phase != "nosteam"]
+                or not args.check and c.phase not in ("nosteam", "claude")]
     if args.list:
         for c in selected:
             where = f" {c.setup}" if c.phase == "session" else ""
@@ -140,14 +141,14 @@ def main():
     for c in [c for c in selected if c.phase == "offline"]:
         run_check(c, 1)
 
-    in_session = [c for c in selected if c.phase in ("nosteam", "start", "session", "end")]
+    in_session = [c for c in selected if c.phase in ("nosteam", "claude", "start", "session", "end")]
     if in_session:
         busy = driver.game_pids()
         if busy or driver.runner_pid() and driver.alive(driver.runner_pid()):
             log(f"Another game ({sorted(busy)}) or runner ({driver.runner_pid()}) is running; stop it first. "
                 "No in-session check ran.")
             return 4
-        for c in [c for c in selected if c.phase == "nosteam"] + [c for c in selected if c.phase == "start"]:
+        for c in [c for c in selected if c.phase in ("nosteam", "claude")] + [c for c in selected if c.phase == "start"]:
             run_check(c, 1)
         setups = [s for s in SETUPS if any(c.phase == "session" and c.setup == s for c in selected)]
         if any(c.phase == "end" for c in selected) and "sp" not in setups:

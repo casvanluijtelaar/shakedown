@@ -24,6 +24,8 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 | `harness/mcp.py` | An MCP client over stdio, as Claude Code is one: it starts the server the project's `.mcp.json` declares, with the install folder on `PATH`, speaks newline-delimited JSON-RPC to it, keeps every progress notification with its time, cancels a call, and judges a tool result (`structured`, `tool_error`). Written here instead of taking an MCP SDK as a dependency. |
 | `run_mac.py` | The Mac half of M4: `US-046`'s third criterion with no game, through `harness/mcp.py`, which stops the server by its id with `taskkill` on Windows and by its process on macOS. |
 | `harness/m04.py` | The checks of M4 and their batches: the tools offline, the refused and slow starts, and the CLI and tool answers of the `ded` and `sp` sessions. |
+| `harness/m05.py` | The checks of M5: the four ways a host ends `shakedown mcp`, the five runner kills on a dedicated session, a stand-in runner of another version, the `ded` batch (a run from another console, `netstat`, `audit.jsonl`, connections without the right token, a suspended runner), the token search after the sessions, and the headless Claude Code check. |
+| `harness/win.py` | The Windows calls M5 needs, through `ctypes`: suspend and resume a process by id, its creation time and environment block, the process tree with command lines from `Win32_Process`, and a job object with kill-on-close, with or without breakaway. |
 | `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `agh/` for the M1, M2 and M3 demos against arma-grappling-hook. |
 | `templates/` | SQF checks written into the project in numbered copies. |
 
@@ -35,6 +37,7 @@ A check is a Python function with a name that starts with the story or requireme
 - `start`: once, before the first session. It starts what it needs itself, such as a session start that must fail, and stops every game process it left by its id.
 - `session`: once per repeat, inside the session of its setup (`sp` or `cba`). The setups are `ded`, `cba` and `sp`, in that order. Each check names the SQF checks it reads (`needs`). Per repeat each module's batch for that setup makes its runs: the union of what the selected checks need, in a fixed order that puts every broken check before the check that must pass after them, plus the runs a check needs on its own (the 20 checks of `NFR-RL-02`, the four selections of `RUN-01`, the four selections with a repeated id and one text run of `m01-3`, the demo run). Then every selected check is judged against those result files.
 - `end`: once, after the last session stopped.
+- `claude`: starts headless Claude Code sessions (`claude -p`), so a run leaves it out unless a `--check` value selects it; then it runs before the `start` checks. It is the first criterion of `US-007` under Claude Code itself.
 - `nosteam`: needs no `steam` process running, so a run leaves it out unless a `--check` value selects it; then it runs before the `start` checks. It is the second criterion of `US-003`.
 
 A failed assertion fails only its own check; the others are still judged. A harness error is reported as a failure of the check it happened in.
@@ -92,3 +95,12 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - On a Mac the `shakedown` binary alone serves `run_mac.py`: `cargo build --release -p shakedown`, as `docs/install.md` gives it, with Rust 1.99 or later and no HEMTT. `tools/install.py` stops at `hemtt build` there, before it assembles an install folder (`m04-2`). The same cargo build on the Windows test machine gives `target/release/shakedown.exe`, which answers `list`, `guide`, `version`, `status` and the MCP server's `status`, `list_checks` and `guide` with no runner; `run_mac.py` itself refuses to run off a Mac, since it asserts macOS and no Steam.
 - The guide is 4,837 characters on the Mac and 4,885 on Windows, the same text with other line endings; the checks compare it with the documented text with whitespace folded.
 - With no runner, `status`, `list_checks` and `guide` each answer in under 0.01 s, and the server exits 0 as soon as its stdin closes.
+
+## What the M5 round learned
+
+- A host that ends `shakedown mcp` by closing its stdin, by closing a kill-on-close job around it (breakaway allowed or not) or by ending each process of its tree leaves the runner and the game running. The harness makes the job itself: it starts the server suspended, assigns it, then resumes it. With breakaway forbidden, `runner.log` names the start `wmi`; otherwise the client and its relay name `breakaway`, also with the harness itself running under Claude Code.
+- `taskkill /F` of the runner by its id, without `/T`, during a run on the `ded` session left no game process 0.6 to 0.9 s later, five times. The `run` command waiting on that run exits by itself. A start of `ded` after it takes 47 to 53 s, recovery included.
+- `status` shows the run about 2 s after `shakedown run` starts, which is when the kill comes.
+- The session token is read from `p1`'s environment block (its PEB), where `SEC-02` puts it, to pose as `p1` from the harness's own process; it is held only in memory. Every message names a token only as a token, never its value.
+- The `exec` the harness sends to check that no intruder's code ran holds the marker's name itself, so the audit check looks for the intruder's assignment, not the name.
+- A suspended runner makes each client call wait its 5 s; resumed, the session answers `ready` with the same start numbers at the next `status`.
