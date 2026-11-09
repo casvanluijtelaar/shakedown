@@ -66,7 +66,7 @@ Every command except `list`, `guide`, `version` and `mcp` talks to the runner, a
 
 | File | Holds |
 |---|---|
-| `runner.json` | The running runner's port, token, process id and start time. Deleted when the runner exits. |
+| `runner.json` | The running runner's port, token, process id and start time, readable by the current user alone. Deleted when the runner exits. |
 | `record.json` | The run record: every session the runner started, with its game processes and its mission copy, so that the next runner clears what a runner that died left ([When a client or the runner ends](sessions-and-the-runner.md)). |
 | `runner.log` | One line per thing the runner did: how a client started it, started, what its start-up recovery cleared, a process started or stopped, a connection refused, a run written, and a panic or console event that ended it. |
 

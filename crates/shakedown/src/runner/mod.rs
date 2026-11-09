@@ -540,9 +540,8 @@ pub fn main() -> u8 {
             "pid": pid,
             "started_at": started_at,
         });
-        // runner.json lives in the user's own local application data folder, which only that
-        // user can read (SEC-02).
-        if std::fs::write(paths::runner_file(), file.to_string()).is_err() {
+        // runner.json holds the runner token, so only the current user can read it (SEC-02).
+        if crate::win::write_private(&paths::runner_file(), file.to_string().as_bytes()).is_err() {
             return 5;
         }
         runner.log(&format!(

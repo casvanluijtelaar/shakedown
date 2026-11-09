@@ -379,6 +379,91 @@ mod imp {
     }
 
     /// Whether a process `steam.exe` runs in the current user's Windows session (`SES-03`).
+    /// Writes `bytes` to `path` as a file only the current user can open: its access list is
+    /// protected, so it takes nothing from its folder, and grants full control to the current user
+    /// and to no other account or group (`SEC-02`, `INT-WIN-03`). The file is made under a
+    /// temporary name and renamed into place, so a reader never sees it part written and it never
+    /// exists with another access list.
+    pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+        use std::io::Write;
+        use std::os::windows::io::FromRawHandle;
+        use windows::Win32::Foundation::{HLOCAL, LocalFree};
+        use windows::Win32::Security::Authorization::{
+            ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+        };
+        use windows::Win32::Security::{PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES};
+        use windows::Win32::Storage::FileSystem::{
+            CREATE_NEW, CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_GENERIC_WRITE, FILE_SHARE_NONE,
+        };
+
+        let sddl = format!("D:P(A;;FA;;;{})", current_user_sid()?);
+        let sddl: Vec<u16> = sddl.encode_utf16().chain(std::iter::once(0)).collect();
+        let mut sd = PSECURITY_DESCRIPTOR::default();
+        unsafe {
+            ConvertStringSecurityDescriptorToSecurityDescriptorW(PCWSTR(sddl.as_ptr()), SDDL_REVISION_1, &mut sd, None)
+        }
+        .map_err(std::io::Error::other)?;
+        let attrs = SECURITY_ATTRIBUTES {
+            nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: sd.0,
+            bInheritHandle: false.into(),
+        };
+        let mut tmp = path.as_os_str().to_owned();
+        tmp.push(".tmp");
+        let tmp = std::path::PathBuf::from(tmp);
+        let _ = std::fs::remove_file(&tmp);
+        let wide: Vec<u16> = tmp.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        let created = unsafe {
+            CreateFileW(
+                PCWSTR(wide.as_ptr()),
+                FILE_GENERIC_WRITE.0,
+                FILE_SHARE_NONE,
+                Some(&attrs),
+                CREATE_NEW,
+                FILE_ATTRIBUTE_NORMAL,
+                None,
+            )
+        };
+        unsafe {
+            LocalFree(Some(HLOCAL(sd.0)));
+        }
+        let handle = created.map_err(std::io::Error::other)?;
+        let mut file = unsafe { std::fs::File::from_raw_handle(handle.0) };
+        let written = file.write_all(bytes);
+        drop(file);
+        if let Err(e) = written {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(e);
+        }
+        std::fs::rename(&tmp, path)
+    }
+
+    /// The current user's security identifier, in its string form.
+    pub fn current_user_sid() -> std::io::Result<String> {
+        use windows::Win32::Foundation::{HLOCAL, LocalFree};
+        use windows::Win32::Security::Authorization::ConvertSidToStringSidW;
+        use windows::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TOKEN_USER, TokenUser};
+        use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+
+        let mut token = HANDLE::default();
+        unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) }.map_err(std::io::Error::other)?;
+        let token = Handle(token);
+        let mut len = 0u32;
+        let _ = unsafe { GetTokenInformation(token.0, TokenUser, None, 0, &mut len) };
+        // u64 words keep the buffer aligned for TOKEN_USER.
+        let mut buf = vec![0u64; (len as usize).div_ceil(8)];
+        unsafe { GetTokenInformation(token.0, TokenUser, Some(buf.as_mut_ptr().cast()), len, &mut len) }
+            .map_err(std::io::Error::other)?;
+        let user = unsafe { &*(buf.as_ptr() as *const TOKEN_USER) };
+        let mut text = PWSTR::null();
+        unsafe { ConvertSidToStringSidW(user.User.Sid, &mut text) }.map_err(std::io::Error::other)?;
+        let sid = unsafe { text.to_string() }.map_err(std::io::Error::other);
+        unsafe {
+            LocalFree(Some(HLOCAL(text.0.cast())));
+        }
+        sid
+    }
+
     pub fn steam_running() -> bool {
         unsafe {
             let mut own_session = 0u32;
@@ -471,6 +556,59 @@ mod imp {
         }
 
         #[test]
+        fn sec_02_a_private_file_grants_the_current_user_only() {
+            use windows::Win32::Foundation::{HLOCAL, LocalFree};
+            use windows::Win32::Security::Authorization::{
+                ConvertSecurityDescriptorToStringSecurityDescriptorW, SDDL_REVISION_1,
+            };
+            use windows::Win32::Security::{DACL_SECURITY_INFORMATION, GetFileSecurityW, PSECURITY_DESCRIPTOR};
+
+            let dir = std::env::temp_dir().join(format!("skd-sec02-{}", std::process::id()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let file = dir.join("runner.json");
+            // A file already there, as a runner that died leaves it, is replaced.
+            std::fs::write(&file, "old").unwrap();
+            write_private(&file, b"{\"port\":1}").unwrap();
+            assert_eq!(std::fs::read_to_string(&file).unwrap(), "{\"port\":1}");
+
+            let wide: Vec<u16> = file.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+            let mut len = 0u32;
+            let _ = unsafe { GetFileSecurityW(PCWSTR(wide.as_ptr()), DACL_SECURITY_INFORMATION.0, None, 0, &mut len) };
+            let mut buf = vec![0u64; (len as usize).div_ceil(8)];
+            let sd = PSECURITY_DESCRIPTOR(buf.as_mut_ptr().cast());
+            assert!(
+                unsafe {
+                    GetFileSecurityW(
+                        PCWSTR(wide.as_ptr()),
+                        DACL_SECURITY_INFORMATION.0,
+                        Some(sd),
+                        len,
+                        &mut len,
+                    )
+                }
+                .as_bool()
+            );
+            let mut text = PWSTR::null();
+            unsafe {
+                ConvertSecurityDescriptorToStringSecurityDescriptorW(
+                    sd,
+                    SDDL_REVISION_1,
+                    DACL_SECURITY_INFORMATION,
+                    &mut text,
+                    None,
+                )
+            }
+            .unwrap();
+            let sddl = unsafe { text.to_string() }.unwrap();
+            unsafe {
+                LocalFree(Some(HLOCAL(text.0.cast())));
+            }
+            std::fs::remove_dir_all(&dir).unwrap();
+            // Protected (P), one rule: full control (FA) for the current user, nothing inherited.
+            assert_eq!(sddl, format!("D:P(A;;FA;;;{})", current_user_sid().unwrap()));
+        }
+
+        #[test]
         fn sec_02_the_environment_reaches_the_process() {
             let job = Job::new().unwrap();
             let cmd = std::path::PathBuf::from(
@@ -554,6 +692,24 @@ mod imp {
             Some(0)
         }
         pub fn terminate(&self) {}
+    }
+
+    /// Writes `bytes` to `path` as a file only the current user can read (`SEC-02`).
+    pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut tmp = path.as_os_str().to_owned();
+        tmp.push(".tmp");
+        let tmp = std::path::PathBuf::from(tmp);
+        let _ = std::fs::remove_file(&tmp);
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&tmp)?;
+        file.write_all(bytes)?;
+        drop(file);
+        std::fs::rename(&tmp, path)
     }
 
     pub fn steam_running() -> bool {
