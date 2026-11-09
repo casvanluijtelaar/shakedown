@@ -1,7 +1,7 @@
 ---
 type: Research
 title: "Spikes SPK-08 and SPK-01 across a mission restart: reloading by restart"
-description: "What a changed mod file does in a running game on the test machine in M6 - the game holds every loose file it read until some time later that no wait or flush tried here controls, a released file reaches even a kept process through a mission restart, and SPK-08 holds once in singleplayer and once on a dedicated session but not as a promise - with what ACE3, HEMTT and Neefay's harness actually do to reload, CBA's cache shown off, the time of a mission restart in singleplayer and on a dedicated session, and orders sent across mission restarts, none lost and none run twice."
+description: "What a changed mod file does in a running game on the test machine in M6 - the game holds every loose file it read until some time later that no wait or flush tried here controls, a released file reaches even a kept process through a mission restart, and SPK-08 holds once in singleplayer and once on a dedicated session but not as a promise - with what ACE3, HEMTT and Neefay's harness actually do to reload, CBA's cache shown off, the time of a mission restart in singleplayer and on a dedicated session, orders sent across mission restarts, none lost and none run twice, and the time of the game-restart reload chosen after it."
 status: draft
 generated: { by: "claude-code/developer", at: 2026-11-09T15:20:00+01:00 }
 sources:
@@ -12,7 +12,8 @@ sources:
   - { id: web, resource: "web search of 2026-11-09 for reports of Arma 3 holding files read through file patching, and gh issue searches for file patching in acemod/ACE3, CBATeam/CBA_A3 and BrettMayson/HEMTT: no report of the hold, and none of editing a held file while the game runs", read: 2026-11-09 }
   - { id: round, resource: "the research round of 2026-11-09 on the Windows test machine, Arma 3 2.22.154089, CBA_A3 3.19.0, through the installed shakedown: share modes of the held fixture files probed with CreateFileW, loadFile of new, missing and re-pointed loose files and of other spellings of a path, the release watched while idle and after reading other files, the fixture files changed once released and a mission restart run in sp-cba and in ded-cba (two clients and a headless client), and BIS_fnc_recompile in singleplayer", read: 2026-11-09 }
   - { id: cba, resource: "https://github.com/CBATeam/CBA_A3 at tag v3.19.0, addons/xeh/fnc_compileFunction.sqf", read: 2026-11-09 }
-  - { id: tests, resource: "crates/shakedown/tests/m06.rs, spk_08_the_game_holds_every_mod_file_it_read_until_its_process_ends, spk_01_nfr_rl_04_us_011_no_order_lost_or_run_twice_across_mission_restarts_in_singleplayer and spk_01_nfr_rl_04_us_011_mission_restarts_on_a_dedicated_session, runs of 2026-11-09 on the Windows test machine", read: 2026-11-09 }
+  - { id: restart, resource: "crates/shakedown/tests/m06.rs, us_055_nfr_pf_02_ten_reloads_of_a_changed_function_on_a_dedicated_session and us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer, runs of 2026-11-09 on the Windows test machine after the owner chose the game restart", read: 2026-11-09 }
+  - { id: tests, resource: "crates/shakedown/tests/m06.rs, spk_08_the_game_holds_a_mod_file_it_read_and_a_stopped_session_frees_it, spk_01_nfr_rl_04_us_011_no_order_lost_or_run_twice_across_mission_restarts_in_singleplayer and spk_01_nfr_rl_04_us_011_mission_restarts_on_a_dedicated_session, runs of 2026-11-09 on the Windows test machine", read: 2026-11-09 }
 ---
 
 # Spikes SPK-08 and SPK-01 across a mission restart: reloading by restart
@@ -109,3 +110,13 @@ The mission restart itself works and is built for `@reset mission` (`RST-06`):
 A first run with the hold bounded by each order's own ceiling (30 s plus the 10 s grace) lost the round trips to `p1` that waited longer than that for the new `p1`; the hold is therefore bounded by the setup's start ceiling, and the order then has its whole ceiling.
 
 None was lost and none ran twice: every round trip answered `2`, and the count each kept process held equalled the round trips sent to it. That holds because the runner holds every new order to a machine whose mission restarts or whose process is replaced until it is `ready` again, and waits for the orders already sent there to be answered before it ends a mission or a process (`P-08`, `NFR-RL-04`). The slowest round trips are those held through a restart.
+
+## The game-restart reload, measured
+
+After the owner chose a game restart for every `.sqf` change, made in one step with the mod's `rebuild` while no game process runs (`RLD-02`, `RLD-06`), the reload of a changed `PREP` function was timed on the setup of the M6 demo, a dedicated server with two clients and no headless client, loading CBA and both fixtures[^restart]:
+
+- Ten reloads, each of a new value staged in a copy of `@skd_fixture_cba`'s sources and copied into the installed copy by the mod's `rebuild` (about 0.2 s), took 80.3 to 82.7 s by the reload result's `duration_s`, 81.8 s on average. After each, `skdfx_cba_fnc_version` returned the new value on the server, `p1` and `p2`, each a new start. The session's own start in that run took 82.4 s.
+- Each reload is a session start: the processes ended within about 0.8 s, the server reached `ready` about 32 s after its launch, and the clients, launched after it, about 47 s after theirs.
+- In singleplayer (`sp-cba`) the reload took 44.6 s, as long as that run's session start (45.2 s).
+
+These starts are slower than the build round's (46 s for a dedicated session with two clients and a headless client, 25 s in singleplayer) on the same machine and the same game version; nothing in the reload adds to a start, so the difference is the machine's on that day.

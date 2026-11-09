@@ -75,7 +75,7 @@ unknown-machine: Session s-20261106-180721 has no machine `p9`; its machines are
 | `compile-error` | The SQF does not compile on the machine; the engine's message follows. |
 | `no-session` | The tool needs a session and none runs; the message names the start command and the setups of the project. |
 | `session-exists` | A session runs already, or one of another setup than the `setup` given to `run_start`. |
-| `session-busy` | The session is starting or stopping, or busy with a run, a reload or a reset; or a reload needs a level this build does not apply. |
+| `session-busy` | The session is starting or stopping, or busy with a run, a reload or a reset. |
 | `session-broken` | The session is `broken`; the reason follows. |
 | `precondition-failed` | Steam, the game, a mod folder or the framework's addon is missing; the message names it. |
 | `runner-unreachable` | The runner does not answer or runs another version; its process id follows. Ending that process ends its session ([When a client or the runner ends](sessions-and-the-runner.md)). |

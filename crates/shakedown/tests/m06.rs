@@ -1,14 +1,16 @@
 //! M6's tests: the mission restart of a check with `@reset mission` (`US-011`, `US-012`,
 //! `RST-06`), orders across a mission restart (spike `SPK-01`, `NFR-RL-04`), the game's hold on
-//! the files it read (spike `SPK-08`), and `reload` (`US-040`, `US-056`, `US-057`, `RLD-01` to
-//! `RLD-06`). They drive the installed `shakedown` and the game, so they run only on the test
+//! the files it read (spike `SPK-08`), and `reload` (`US-040`, `US-055`, `US-056`, `US-057`,
+//! `RLD-01` to `RLD-06`, and the time of `NFR-PF-02`). They drive the installed `shakedown` and the game, so they run only on the test
 //! machine, by hand, one at a time, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m06 -- --ignored --nocapture --test-threads=1
 //!
 //! Every file a test changes is in the fixtures' installed copy, as `FIX-03` allows, and is put
-//! back after. Every process a test starts is ended by its id.
+//! back after: a reload target is changed by the `rebuild` of `@skd_fixture_cba`, which copies the
+//! project's staged copy of its sources over the installed one while no game process runs. Every
+//! process a test starts is ended by its id.
 
 #![cfg(windows)]
 
@@ -41,13 +43,18 @@ fn cmd(dir: &Path, args: &[&str]) -> (i32, Value, String) {
 }
 
 /// A project in a temporary folder whose fixtures are watched by `reload`, with the setups `sp`
-/// (the fixture), `sp-cba` and `ded-cba` (CBA and both fixtures, two clients and a headless
-/// client), and the given checks.
+/// (the fixture), `sp-cba`, `ded-cba` (CBA and both fixtures, two clients and a headless client)
+/// and `ded2-cba` (the same with two clients and no headless client, the demo's shape), and the
+/// given checks. `@skd_fixture_cba` is watched in `stage\skdfx_cba\addons`, a copy of its
+/// installed sources, and its `rebuild` copies the reload target from there into the installed
+/// copy (`FIX-03`, `RLD-06`).
 fn project(name: &str, checks: &[(&str, String)]) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m06-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("checks")).unwrap();
     let fx = install().join("fixtures");
+    let stage = dir.join(STAGE);
+    copy_tree(&fx.join(r"skdfx_cba\addons"), &stage);
     let toml = format!(
         r#"game = '{GAME}'
 
@@ -64,8 +71,9 @@ prefix = 'skdfx\addons'
 [mods.fixture-cba]
 path = '{fx}\@skd_fixture_cba'
 patch = "skdfx_cba"
-source = '{fx}\skdfx_cba\addons'
+source = '{stage}'
 prefix = 'skdfx_cba\addons'
+rebuild = 'copy /y "{stage}\{target}" "{fx}\skdfx_cba\addons\{target}"'
 
 [setups.sp]
 mode = "singleplayer"
@@ -80,14 +88,54 @@ mode = "dedicated"
 clients = 2
 headless = 1
 mods = ["cba", "fixture", "fixture-cba"]
+
+[setups.ded2-cba]
+mode = "dedicated"
+clients = 2
+mods = ["cba", "fixture", "fixture-cba"]
 "#,
-        fx = fx.display()
+        fx = fx.display(),
+        stage = stage.display(),
+        target = TARGET,
     );
     std::fs::write(dir.join("shakedown.toml"), toml).unwrap();
     for (id, text) in checks {
         std::fs::write(dir.join("checks").join(format!("{id}.sqf")), text).unwrap();
     }
     dir
+}
+
+/// The CBA fixture's reload target, under its `addons` folder (`FIX-03`).
+const TARGET: &str = r"main\functions\fnc_version.sqf";
+
+/// The project's staged copy of the CBA fixture's sources, which `reload` watches.
+const STAGE: &str = r"stage\skdfx_cba\addons";
+
+fn copy_tree(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).unwrap();
+    for e in std::fs::read_dir(from).unwrap().flatten() {
+        let (src, dst) = (e.path(), to.join(e.file_name()));
+        if src.is_dir() {
+            copy_tree(&src, &dst);
+        } else {
+            std::fs::copy(&src, &dst).unwrap();
+        }
+    }
+}
+
+/// Writes `value` as the whole of the staged reload target, a quoted string (`FIX-03`).
+fn stage(dir: &Path, value: &str) {
+    std::fs::write(dir.join(STAGE).join(TARGET), format!("\"{value}\"\n")).unwrap();
+}
+
+/// `skdfx_cba_fnc_version` on every machine of the session.
+fn versions(dir: &Path) -> Value {
+    let (code, v, err) = cmd(
+        dir,
+        &["exec", "--machine", "all", "--code", "call skdfx_cba_fnc_version"],
+    );
+    assert_eq!(code, 0, "{v} {err}");
+    v["results"].clone()
 }
 
 fn validate(file: &Path) -> Value {
@@ -261,11 +309,12 @@ const IS_NIL: &str = r#"["every machine starts with no such variable", {
     ["all", { isNil "skd_m06_left" }, "==", true, "skd_m06_left is nil"] call skd_fnc_expectEach;
 }] call skd_fnc_step;"#;
 
-/// `SPK-08`: with a session running, the game holds every mod file it read open for reading
-/// only, so the file cannot be changed, and it reads the old content from that hold.
+/// `SPK-08`: with a session just started, the game holds a mod file it read open for reading
+/// only, so the file cannot be changed, and it reads the content it holds; once its process has
+/// ended the file is free.
 #[test]
 #[ignore = "starts Arma 3; run on the test machine"]
-fn spk_08_the_game_holds_every_mod_file_it_read_until_its_process_ends() {
+fn spk_08_the_game_holds_a_mod_file_it_read_and_a_stopped_session_frees_it() {
     let dir = project("spk08", &[]);
     let file = install().join(r"fixtures\skdfx_cba\addons\main\functions\fnc_version.sqf");
     {
@@ -536,6 +585,8 @@ fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
         r#"["the answer", { [1, "==", 1, "one"] call skd_fnc_expect }] call skd_fnc_step;"#,
     );
     let dir = project("us040", &[("edit", one.clone())]);
+    // Put back after the session has stopped, when no process holds it.
+    let _target = Changed::new(&format!(r"skdfx_cba\addons\{TARGET}"));
     let s = Session::start(&dir, "sp-cba");
     let (code, first) = s.run(&["edit"]);
     assert_eq!(code, 0, "{first:#}");
@@ -569,21 +620,39 @@ fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
     println!("US-040 3: from the saved edit to the outcome {took:.1} s");
     assert!(took < 30.0);
 
-    // RLD-02: the CBA PREP function is level mission-restart, which this build does not apply
-    // (SPK-08); the session stays ready.
-    let prep = install().join(r"fixtures\skdfx_cba\addons\main\functions\fnc_version.sqf");
-    let (code, _, err) = cmd(&dir, &["reload", prep.to_str().unwrap()]);
-    assert_eq!(code, 4, "{err}");
-    assert!(err.contains("mission-restart") && err.contains("session stop"), "{err}");
-    let (_, st, _) = cmd(&dir, &["status"]);
-    assert_eq!(st["session"]["state"], "ready");
-
     // The reload tool over MCP: the check file, by its path relative to the project.
     let mut mcp = Mcp::start(&exe(), &dir, &[]);
     let a = mcp.call("reload", json!({"files": ["checks/edit.sqf"]}));
     let d = a.data();
     assert_eq!((&d["state"], &d["level"]), (&json!("done"), &json!("none")), "{d}");
+
+    // US-055 1 and 2 in singleplayer, through the reload tool: the staged CBA PREP function
+    // changed, a reload with no files is a game restart that runs the mod's rebuild, and p1, a
+    // new start, compiles the new file (RLD-02, RLD-06).
+    stage(&dir, "2");
+    let a = mcp.call("reload", json!({}));
+    let d = a.data();
+    println!("US-055 reload in singleplayer: {d}");
+    assert_eq!(
+        (&d["state"], &d["level"]),
+        (&json!("done"), &json!("game-restart")),
+        "{d}"
+    );
+    assert_eq!(d["files"].as_array().unwrap().len(), 1, "{d}");
+    assert!(d["files"][0]["path"].as_str().unwrap().ends_with("fnc_version.sqf"));
+    let reason = d["files"][0]["reason"].as_str().unwrap();
+    assert!(
+        reason.contains("only in a new process") && reason.contains("rebuild"),
+        "{reason}"
+    );
+    assert!(d["duration_s"].as_f64().unwrap() > 0.0);
     drop(mcp);
+    assert_eq!(versions(&dir)["p1"]["value"], "2");
+    let start = start + 1;
+    assert_eq!(machines(&dir)[0].1, start);
+    let (code, after) = s.run(&["edit"]);
+    assert_eq!(code, 1, "the edited check still fails as edited: {after:#}");
+    assert_eq!(after["session"]["machines"][0]["start"], json!(start));
 
     // US-056 1: a new .sqf under the watched source needs a rebuild and a game restart.
     let new = Changed::new(r"skdfx\addons\main\functions\fn_new.sqf");
@@ -615,4 +684,145 @@ fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
     assert_eq!((after[0].1, after[0].3.as_str()), (start + 2, "ready"));
     let (code, third) = s.run(&["edit"]);
     assert_eq!(code, 1, "{third:#}");
+}
+
+/// `US-055` 1 and 2 and `NFR-PF-02` on a dedicated session with two clients, the demo's setup:
+/// ten reloads of a changed CBA `PREP` function, each a game restart that runs the mod's rebuild
+/// while no game process runs, each timed; every machine returns the new value, and the check
+/// after the first passes from the start state with every start one higher.
+#[test]
+#[ignore = "starts Arma 3; run on the test machine"]
+fn us_055_nfr_pf_02_ten_reloads_of_a_changed_function_on_a_dedicated_session() {
+    let dir = project(
+        "us055",
+        &[("fresh", check("US-055 the next check starts fresh", "", IS_NIL))],
+    );
+    // Put back after the session has stopped, when no process holds it.
+    let _target = Changed::new(&format!(r"skdfx_cba\addons\{TARGET}"));
+    let s = Session::start(&dir, "ded2-cba");
+    let names = ["server", "p1", "p2"];
+    let mut durations = Vec::new();
+    let mut walls = Vec::new();
+    for n in 2..=11 {
+        let before = machines(&dir);
+        let value = n.to_string();
+        stage(&dir, &value);
+        let t = Instant::now();
+        let (code, r, err) = cmd(&dir, &["reload"]);
+        let wall = t.elapsed().as_secs_f64();
+        println!("reload {n}: exit {code} in {wall:.1} s: {r}");
+        assert_eq!(code, 0, "{r} {err}");
+        assert_eq!(
+            (&r["state"], &r["level"]),
+            (&json!("done"), &json!("game-restart")),
+            "{r}"
+        );
+        assert_eq!(r["files"].as_array().unwrap().len(), 1, "{r}");
+        assert!(r["files"][0]["path"].as_str().unwrap().ends_with("fnc_version.sqf"));
+        let reason = r["files"][0]["reason"].as_str().unwrap();
+        assert!(
+            reason.contains("only in a new process") && reason.contains("rebuild"),
+            "{reason}"
+        );
+        assert_eq!(r["machines"], json!(names));
+        let v = versions(&dir);
+        for name in names {
+            assert_eq!(v[name]["value"], json!(value), "{name}: {v}");
+        }
+        for (name, start, _, state) in machines(&dir) {
+            let old = before.iter().find(|m| m.0 == name).map_or(0, |m| m.1);
+            assert_eq!((start, state.as_str()), (old + 1, "ready"), "{name}");
+        }
+        durations.push(r["duration_s"].as_f64().unwrap());
+        walls.push(wall);
+        if n == 2 {
+            // US-055 2: the next check passes from the start state, every start one higher.
+            let (code, result) = s.run(&["fresh"]);
+            assert_eq!(code, 0, "{result:#}");
+            for m in result["session"]["machines"].as_array().unwrap() {
+                assert_eq!(m["start"], 2, "{m}");
+            }
+        }
+    }
+    let mean = durations.iter().sum::<f64>() / durations.len() as f64;
+    let max = durations.iter().cloned().fold(0.0, f64::max);
+    let min = durations.iter().cloned().fold(f64::MAX, f64::min);
+    println!(
+        "NFR-PF-02 on ded2-cba (2 clients): 10 reloads, duration_s {durations:?}, min {min:.1} s, mean {mean:.1} s, max {max:.1} s; command wall times {walls:?}"
+    );
+}
+
+/// `US-057` 1 and 2 on a dedicated session with two clients: `p2`'s new process ended during a
+/// reload of a changed function fails it naming the step and `p2`, the session is broken, a run
+/// asked after it is refused naming `shakedown reload`, and a reload brings every machine back
+/// with a new start number on the new code.
+#[test]
+#[ignore = "starts Arma 3; run on the test machine"]
+fn us_057_a_reload_that_loses_p2_breaks_the_session_and_a_reload_mends_it() {
+    let dir = project(
+        "us057",
+        &[("fresh", check("US-057 a check after the failed reload", "", IS_NIL))],
+    );
+    // Put back after the session has stopped, when no process holds it.
+    let _target = Changed::new(&format!(r"skdfx_cba\addons\{TARGET}"));
+    let _s = Session::start(&dir, "ded2-cba");
+    let names = ["server", "p1", "p2"];
+
+    // US-057 1: p2's next process ended as soon as it is launched, during a reload.
+    let before = machines(&dir);
+    let p2_next = before.iter().find(|m| m.0 == "p2").unwrap().1 + 1;
+    stage(&dir, "99");
+    let killer = {
+        let dir = dir.clone();
+        std::thread::spawn(move || {
+            for _ in 0..1200 {
+                if let Some((_, _, pid, _)) = machines(&dir)
+                    .into_iter()
+                    .find(|(n, st, p, _)| n == "p2" && *st == p2_next && *p > 0)
+                {
+                    kill(pid);
+                    return pid;
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+            0
+        })
+    };
+    let (code, r, err) = cmd(&dir, &["reload"]);
+    assert!(killer.join().unwrap() > 0, "p2's new process was never seen");
+    println!("US-057 reload with p2 ended: exit {code}: {r} {err}");
+    assert_eq!(code, 4, "{r} {err}");
+    assert_eq!(r["state"], "failed", "{r}");
+    assert_eq!(
+        (&r["reason"]["step"], &r["reason"]["machine"]),
+        (&json!("game-restart"), &json!("p2"))
+    );
+    let (_, st, _) = cmd(&dir, &["status"]);
+    assert_eq!(st["session"]["state"], "broken");
+    assert!(
+        st["session"]["reason"]["message"].as_str().unwrap().contains("p2"),
+        "{st}"
+    );
+
+    // US-057 2: a run asked after it is refused naming the reload; a reload brings every machine
+    // back.
+    let (code, _, err) = cmd(&dir, &["run", "fresh"]);
+    assert_eq!(code, 4, "{err}");
+    assert!(err.contains("broken") && err.contains("shakedown reload"), "{err}");
+    let broken = machines(&dir);
+    let (code, r, err) = cmd(&dir, &["reload"]);
+    assert_eq!(code, 0, "{r} {err}");
+    assert_eq!(
+        (&r["state"], &r["level"]),
+        (&json!("done"), &json!("game-restart")),
+        "{r}"
+    );
+    for (name, start, _, state) in machines(&dir) {
+        let old = broken.iter().find(|m| m.0 == name).map_or(0, |m| m.1);
+        assert_eq!((start, state.as_str()), (old + 1, "ready"), "{name}");
+    }
+    let v = versions(&dir);
+    for name in names {
+        assert_eq!(v[name]["value"], "99", "{name}: {v}");
+    }
 }

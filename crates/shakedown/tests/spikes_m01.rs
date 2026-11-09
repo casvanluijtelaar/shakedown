@@ -274,6 +274,7 @@ async fn int_cba_01_keybind_registry_probe() {
             patch: Some("cba_main".into()),
             source: None,
             prefix: None,
+            rebuild: None,
         },
         config::Mod {
             name: "agh".into(),
@@ -281,6 +282,7 @@ async fn int_cba_01_keybind_registry_probe() {
             patch: Some("agh_main".into()),
             source: None,
             prefix: None,
+            rebuild: None,
         },
     ];
     let spec = SetupSpec {

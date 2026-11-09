@@ -62,7 +62,7 @@ prefix = 'skdfx_cba\addons'
 
 - `skdfx_fnc_throw`: `[] call skdfx_fnc_throw` raises one script error on the machine it runs on, whose text contains `_skdfx_undefined` (an undefined local variable used in an expression), from the file `\skdfx\addons\main\functions\fn_throw.sqf`. It then returns `nil`. Called with `spawn` the error is raised in spawned code; called through `remoteExec`, on the target. Called in unscheduled code, such as `isNil`, an event handler or `remoteExecCall`, it raises nothing, because the engine reports no undefined variable there (`SPK-07`).
 
-### A reload target inside the mission (`RLD-01`, `RLD-02`, level `mission`)
+### A reload target, a `CfgFunctions` function (`RLD-01`, `RLD-02`)
 
 - `skdfx_fnc_version` is a `CfgFunctions` function from the file `skdfx\addons\main\functions\fn_version.sqf` (game path `\skdfx\addons\main\functions\fn_version.sqf`). It returns a string. As installed, the whole file is:
 
@@ -70,7 +70,7 @@ prefix = 'skdfx_cba\addons'
   "1"
   ```
 
-- To test a reload, the installed copy of this file may be replaced as [Files a test may change](#files-a-test-may-change-fix-03) says.
+- To test a reload, the installed copy of this file may be replaced as [Files a test may change](#files-a-test-may-change-fix-03) says. A change reaches the game through a `game-restart` reload, which starts every machine afresh on it.
 
 ## `@skd_fixture_cba`
 
@@ -80,9 +80,9 @@ prefix = 'skdfx_cba\addons'
 - Its down code adds 1 to `skdfx_signalDown` on the player's unit; its up code adds 1 to `skdfx_signalUp` on the player's unit. Both are set public, start at `0` on a unit that has never signalled, and are read with `unit getVariable ["skdfx_signalDown", 0]`.
 - Its down code also raises the CBA global event `skdfx_signalled` with `[unit]`, for event recording (`EVT-01`, after the MVP).
 
-### A reload target behind a mission restart (`RLD-02`, level `mission-restart`)
+### A reload target, a final CBA function (`RLD-02`)
 
-- `skdfx_cba_fnc_version` is defined with CBA's `PREP` from the file `skdfx_cba\addons\main\functions\fnc_version.sqf` (game path `\skdfx_cba\addons\main\functions\fnc_version.sqf`). It is final, as CBA compiles it, so a change reaches it only at a mission restart with CBA's cache off. As installed, the whole file is:
+- `skdfx_cba_fnc_version` is defined with CBA's `PREP` from the file `skdfx_cba\addons\main\functions\fnc_version.sqf` (game path `\skdfx_cba\addons\main\functions\fnc_version.sqf`). It is final, as CBA compiles it; with CBA's cache off in the session mission (`INT-CBA-02`) CBA compiles it from its file at every mission start, and a change reaches it through a `game-restart` reload. As installed, the whole file is:
 
   ```sqf
   "1"
@@ -106,16 +106,27 @@ A stall and an end from outside need no fixture. `status` gives each machine's p
 
 ## Files a test may change (`FIX-03`)
 
-Only in the installed copy, never in `fixtures/`, and each put back as it was after the test:
+Only in the installed copy, never in `fixtures/`, and each put back as it was after the test. While a game process holds a fixture file it has read, the file can be neither written nor replaced (`SPK-08`), so a reload target is changed only while no game process of the session runs: by the mod's `rebuild` during a `game-restart` reload (`RLD-06`), or with no session running, and put back once the session has stopped:
 
 | File (in the installed copy) | A test may |
 |---|---|
-| `skdfx\addons\main\functions\fn_version.sqf` | Replace its whole content with another quoted string, such as `"2"`. |
+| `skdfx\addons\main\functions\fn_version.sqf` | Replace its whole content with another quoted string, such as `"2"`, while no game process runs. |
 | `skdfx_cba\addons\main\functions\fnc_version.sqf` | The same. |
 | `skdfx\addons\main\functions\fn_new.sqf` | Create it, with any SQF, and delete it after. It is in no built PBO, so file patching does not find it and a reload of it needs a rebuild and a game restart (`RLD-02`). |
 | Any other installed fixture file, such as `skdfx\addons\main\config.cpp` | Name it to `reload` without changing it. |
 
 No other fixture file is changed by a test.
+
+A test that reloads a target the way a mod developer does watches a staged copy of the fixture's sources, edits the target there, and gives the mod a `rebuild` that copies it into the installed copy; the reload finds the change in the staged copy and makes it while the processes are stopped:
+
+```toml
+[mods.fixture-cba]
+path = '<install>\fixtures\@skd_fixture_cba'
+patch = "skdfx_cba"
+source = '<project>\stage\skdfx_cba\addons'   # a copy of <install>\fixtures\skdfx_cba\addons
+prefix = 'skdfx_cba\addons'
+rebuild = 'copy /y "<project>\stage\skdfx_cba\addons\main\functions\fnc_version.sqf" "<install>\fixtures\skdfx_cba\addons\main\functions\fnc_version.sqf"'
+```
 
 ## What the fixtures do not do
 

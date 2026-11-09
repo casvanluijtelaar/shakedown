@@ -1450,9 +1450,14 @@ impl Session {
 
     /// A game restart, level C of `P-08`: every process of the session is replaced by a new start
     /// of its role, in the session's folder, as a start brings them up (`P-02` steps 5 to 8).
+    /// Between the end of the old processes and the start of the new ones, while no game process
+    /// holds a mod file, each `rebuild` runs in `folder`, in the order given (`RLD-06`). A rebuild
+    /// that fails still brings every machine back, on the files as they are, and fails the restart.
     pub async fn game_restart(
         &self,
         runner: &Runner,
+        rebuilds: &[(String, String)],
+        folder: &Path,
         progress: &(dyn Fn(String) + Sync),
     ) -> Result<(), (String, String)> {
         let lead = self.lead().to_string();
@@ -1461,13 +1466,36 @@ impl Session {
         self.replace(runner, &others).await;
         self.hold(std::slice::from_ref(&lead)).await;
         self.replace(runner, std::slice::from_ref(&lead)).await;
+        let mut failed = None;
+        for (name, command) in rebuilds {
+            progress(format!("session {}: rebuild of {name}", self.id));
+            let log = self.folder.join(format!("rebuild-{name}.log"));
+            if let Err(why) = rebuild(command, folder, &log).await {
+                runner.log(&format!("{} rebuild of {name} failed: {why}", self.id));
+                failed = Some(format!(
+                    "the rebuild of mod {name} failed: {why} (its output is in {}); every machine came back on the files as they are",
+                    log.display()
+                ));
+                break;
+            }
+            runner.log(&format!("{} rebuild of {name} done", self.id));
+        }
         progress(format!("session {}: game restart", self.id));
         let result = self.bring_up(runner, true, progress).await;
         if result.is_ok() {
             self.versions().await;
             self.take_snapshot();
         }
-        result
+        match (result, failed) {
+            (Err(e), _) => Err(e),
+            (Ok(()), Some(why)) => Err((lead, why)),
+            (Ok(()), None) => Ok(()),
+        }
+    }
+
+    /// The names of the setup's mods, in the setup's order.
+    pub fn mod_names(&self) -> Vec<String> {
+        self.spec.mods.iter().map(|m| m.name.clone()).collect()
     }
 
     /// The watched `source` folders: those of the setup's mods that have one (`CFG-01`).
@@ -1668,4 +1696,64 @@ pub fn rpt_tail(profile: &std::path::Path, n: usize) -> Vec<String> {
         .unwrap_or_default();
     let lines: Vec<String> = text.lines().map(String::from).collect();
     lines[lines.len().saturating_sub(n)..].to_vec()
+}
+
+/// The ceiling of one mod's `rebuild` (`RLD-06`).
+const REBUILD_CEILING: Duration = Duration::from_secs(120);
+
+/// Runs a mod's `rebuild` through the command interpreter in `folder`, with no window, its output
+/// in `log`; an error says why it failed: its exit code, or the ceiling.
+async fn rebuild(command: &str, folder: &Path, log: &Path) -> Result<(), String> {
+    let out = std::fs::File::create(log).map_err(|e| format!("cannot write {}: {e}", log.display()))?;
+    let err = out.try_clone().map_err(|e| e.to_string())?;
+    let mut cmd = shell(command);
+    cmd.current_dir(folder)
+        .stdin(std::process::Stdio::null())
+        .stdout(out)
+        .stderr(err);
+    let mut child = cmd.spawn().map_err(|e| format!("it did not start ({e})"))?;
+    for _ in 0..(REBUILD_CEILING.as_millis() / POLL.as_millis()) {
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => return Ok(()),
+            Ok(Some(status)) => return Err(format!("it exited with {status}")),
+            Ok(None) => tokio::time::sleep(POLL).await,
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+    Err(format!("it did not end within {} s", REBUILD_CEILING.as_secs()))
+}
+
+#[cfg(windows)]
+fn shell(command: &str) -> std::process::Command {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let mut cmd = std::process::Command::new("cmd");
+    cmd.arg("/C").raw_arg(command).creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
+#[cfg(not(windows))]
+fn shell(command: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new("sh");
+    cmd.arg("-c").arg(command);
+    cmd
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn rld_06_a_rebuild_runs_in_the_project_folder_and_a_failing_one_names_its_exit() {
+        let dir = std::env::temp_dir().join(format!("skd-rebuild-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let log = dir.join("rebuild.log");
+        rebuild("echo built> out.txt", &dir, &log).await.unwrap();
+        assert!(std::fs::read_to_string(dir.join("out.txt")).unwrap().contains("built"));
+        let why = rebuild("exit 3", &dir, &log).await.unwrap_err();
+        assert!(why.contains('3'), "{why}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

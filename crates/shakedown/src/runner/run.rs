@@ -42,17 +42,21 @@ pub async fn run(
         )
         .tag("no-session"));
     };
+    if session.state() == SessionState::Broken {
+        return Err(CliError::not_now(format!(
+            "Session {} is broken ({}), so it cannot run checks. Bring every machine back with `shakedown reload`, which restarts its game, or stop it with `shakedown session stop`.",
+            session.id,
+            session.broken_reason()
+        ))
+        .tag("session-broken"));
+    }
     if session.state() != SessionState::Ready {
         return Err(CliError::not_now(format!(
             "Session {} is {}, not ready, so it cannot run checks now. Wait for it, or stop it with `shakedown session stop`.",
             session.id,
             session_state_word(session.state())
         ))
-        .tag(if session.state() == SessionState::Broken {
-            "session-broken"
-        } else {
-            "session-busy"
-        }));
+        .tag("session-busy"));
     }
     session.set_state(SessionState::Running);
     let run_id = run_id.unwrap_or_else(|| new_run_id(runner));

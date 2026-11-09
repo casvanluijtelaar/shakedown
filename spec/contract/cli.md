@@ -24,10 +24,11 @@ path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997
 patch = "cba_main"     # optional: the CfgPatches class whose version the result records
 
 [mods.agh]
-path = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3\z\agh'   # the linked dev build
+path = '.hemttout\build'   # the build the game loads, made from the developer's files
 patch = "agh_main"
 source = "addons"      # optional: makes the mod watched by reload; the folder holding its addon folders
 prefix = 'z\agh\addons'  # required with source: the game path of that folder
+rebuild = "hemtt build"  # optional: run by a game-restart reload while no game process runs
 
 [setups.sp]
 mode = "singleplayer"
@@ -51,7 +52,8 @@ start_timeout = 180    # default 180 seconds (SES-04)
 | `mods.<name>.path` | path | yes | The mod's folder, as `-mod` takes it. |
 | `mods.<name>.patch` | string | no | The `CfgPatches` class whose `versionStr` each machine reports. |
 | `mods.<name>.source` | path | no | The folder of the mod's addon sources that `reload` watches. |
-| `mods.<name>.prefix` | string | with `source` | The game path of `source`, for matching files to functions. |
+| `mods.<name>.prefix` | string | with `source` | The game path of `source`. |
+| `mods.<name>.rebuild` | string | no | A command line, run by `cmd /C` in the project folder by every `game-restart` reload after every game process has ended and before any starts, that makes the build the game loads from the developer's files, such as `hemtt build` (`RLD-06`). Read fresh at each reload. Ceiling 120 s; a nonzero exit fails the reload. |
 | `setups.<name>.mode` | `"singleplayer"` or `"dedicated"` | yes | |
 | `setups.<name>.clients` | integer 1-8 | no | |
 | `setups.<name>.headless` | integer 0-8 | no | |
@@ -82,7 +84,7 @@ Without `--json`, output is short lines of text for a person; its wording is not
 | `shakedown run [<id>...] [--tag <tag>]... [--setup <name>]` | Runs the selection against the session and returns when the run ends, printing one line per check execution as it ends. An id given more than once runs that check once per time it is given, in the order given (`RUN-03`); the line of its second and later executions carries `#<repeat>` right after the check id, before the duration. With `--setup` and no session, starts one and stops it after (`RUN-04`). With `--setup` naming another setup than the running session's, refuses. | `run_start`, then `run_status` and `run_result` |
 | `shakedown run stop` | Stops the active run (`RUN-05`). | `run_stop` |
 | `shakedown reset` | Resets the session (`RST-03`). | `reset` |
-| `shakedown reload [<file>...]` | Reloads changed mod code (`RLD-01`). Files are paths under a watched `source` or the checks folder, relative to the current folder; with none, the changed files are found. Prints the level applied, each file with its level and reason, the machines reached and the time. On a `broken` session it restarts the game. A reload that ended `failed` exits 4 naming the level, the machine and why. | `reload` |
+| `shakedown reload [<file>...]` | Reloads changed mod code (`RLD-01`). Files are paths under a watched `source` or the checks folder, relative to the current folder; with none, the changed files are found. A changed check is level `none`; any other file is level `game-restart`, which stops every game process, runs each setup mod's `rebuild` and starts them again. Prints the level applied, each file with its level and reason, the machines reached and the time. On a `broken` session it restarts the game. A reload that ended `failed` exits 4 naming the level, the machine and why. | `reload` |
 | `shakedown exec --machine <m> (--code <sqf> \| --file <path>) [--args <json>] [--ceiling <s>]` | Runs SQF on a machine or a group and prints the value and any script errors it raised (`CTL-01`, `CTL-05`). `--ceiling` default 10, above 0, at most 600. | `exec` |
 | `shakedown wait --machine <m> --condition <sqf> [--description <text>] [--args <json>] [--ceiling <s>]` | Waits for a condition on a machine (`OBS-01`). | `wait_until` |
 | `shakedown expect --machine <m> --value <sqf> --op <op> --expected <json> [--args <json>] [--ceiling <s>]` | Tries an assertion live, as `skd_fnc_expectOn` would, without a check (`OBS-06`). | `expect` |

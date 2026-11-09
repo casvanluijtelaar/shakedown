@@ -316,7 +316,12 @@ impl Runner {
                     "last_reload": self.last_reload.lock().unwrap().clone(),
                 }),
             }),
-            Request::Reload { files, checks, wait_s } => reload::reload(self, files, checks, wait_s)
+            Request::Reload {
+                files,
+                checks,
+                rebuild,
+                wait_s,
+            } => reload::reload(self, files, checks, rebuild, wait_s)
                 .await
                 .map(|value| Event::Value { value }),
             Request::ReserveRun => Ok(Event::Value {

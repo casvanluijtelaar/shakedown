@@ -276,7 +276,7 @@
       "properties": {
         "id": { "type": "string" },
         "state": { "enum": ["done", "failed"] },
-        "level": { "enum": ["none", "mission", "mission-restart", "game-restart"] },
+        "level": { "enum": ["none", "game-restart"] },
         "files": {
           "type": "array",
           "items": {
@@ -285,7 +285,7 @@
             "required": ["path", "level", "reason"],
             "properties": {
               "path": { "type": "string" },
-              "level": { "enum": ["none", "mission", "mission-restart", "game-restart"] },
+              "level": { "enum": ["none", "game-restart"] },
               "reason": { "type": "string" }
             }
           }

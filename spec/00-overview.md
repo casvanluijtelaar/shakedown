@@ -22,7 +22,7 @@ The product requirements are in [client-requirements.md](client-requirements.md)
 
 ## Goals
 
-The PRD's goals G1 to G4 hold as written, with the owner's answers in `research/02-gaps.md`: G2's 30 seconds applies to a change that reloads inside the mission, in singleplayer and on a dedicated server; the target for a change that needs a mission restart is set once spike `SPK-08` has measured it.
+The PRD's goals G1 to G4 hold as written, with the owner's answers in `research/02-gaps.md`: G2's 30 seconds applies to a changed check, which reloads inside the mission, in singleplayer and on a dedicated server. No change of mod code reloads inside the mission or by a mission restart, because the game holds every mod file it has read (spike `SPK-08`), so a change of mod code reloads by a game restart, whose target `NFR-PF-02` sets from `SPK-08`'s measurement.
 
 ## Scope
 
@@ -78,7 +78,7 @@ Each word below means this and only this in the spec, the contract, the docs and
 | **Ceiling** | The longest a wait, a check or a call may take. Each has two: the in-game ceiling on real time (`diag_tickTime`) inside the game, and the runner ceiling on the wall clock in the runner. |
 | **Reset** | What the framework does between two checks in one session so the second sees the session's start state: deletes what the first created and restores players, time and weather. |
 | **Reload** | Bringing changed mod code or checks into a running session. |
-| **Reload level** | How deep a reload goes: `mission` (A: inside the running mission), `mission-restart` (B: the session mission restarts in the running session) or `game-restart` (C: every game process of the session restarts). The lowest level a change allows is used. |
+| **Reload level** | How deep a reload goes: `none` (a changed check, which needs nothing) or `game-restart` (C: every game process of the session restarts, which every change of mod code needs). The mission restart (B: the session mission restarts in the running session) is not a reload level; a check with `@reset mission` gets it. |
 | **Evidence** | What a result carries to explain an outcome: the failed step, the last observed values, the script errors, the attached values and the paths to each machine's log excerpt. |
 | **Run folder** | `.shakedown/runs/<run id>/` in the project: the result file and the log excerpts of one run. |
 | **Session folder** | `.shakedown/sessions/<session id>/` in the project: the generated mission and configuration and one profile folder per machine start. |

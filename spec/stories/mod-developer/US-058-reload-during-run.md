@@ -21,4 +21,4 @@ As a mod developer, I want to be told that a run is in progress when I ask for a
 
 ## Next to
 
-- [US-054](US-054-reload-inside-mission.md) (feature): reload inside the mission.
+- [US-054](US-054-reload-changed-function.md) (feature): reload a changed function.

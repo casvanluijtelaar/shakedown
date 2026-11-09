@@ -30,8 +30,8 @@ Phases 2 and 3 have no stories yet. They are planned once the MVP works end to e
 | M3 | [Script errors and logs](milestones/m03.md) | A grappling-hook check made to fail shows its step, each machine's last value, log excerpt and script errors, and its run folder holds no Steam ID or name. |
 | M4 | [Agent tools](milestones/m04.md) | An AI agent in Claude Code starts a session, runs the grappling-hook check, reads its result and inspects `p1`, all through MCP tools. |
 | M5 | [A session that outlives its client](milestones/m05.md) | A dedicated session started from one Claude Code session is used by the next, and a killed runner leaves no game process within 10 s. |
-| M6 | [Reload by restart](milestones/m06.md) | A changed grappling-hook function is reloaded by a mission restart into a running dedicated session, and the rerun check sees it. |
-| M7 | [Reload inside the mission](milestones/m07.md) | A changed fixture function is recompiled in the running mission, and a check tagged with a finding sees it on every machine under 30 s later. |
+| M6 | [Reload by restart](milestones/m06.md) | A changed grappling-hook function is reloaded by a game restart in one step into a running dedicated session, and the rerun check sees it. |
+| M7 | [Reload inside the mission](milestones/m07.md) | A reload asked during a run is refused, and a check tagged with a finding sees a reloaded fixture function on every machine; a reload inside the mission waits for `DEF-21`. |
 | M8 | [Walk away](milestones/m08.md) | One command runs the whole grappling-hook suite in its own dedicated session, and a run stopped with Ctrl+C still leaves a result and nothing running. |
 | M9 | [Invalid, not failed](milestones/m09.md) | A client suspended or ended during a check makes it `invalid` naming the client, and `inspect` and the result still say what happened. |
 | M10 | [The grappling-hook suite](milestones/m10.md) | arma-grappling-hook's rewritten M00 checks run in singleplayer and on a dedicated server with two clients, one command and one session per setup. |
@@ -45,7 +45,7 @@ Phases 2 and 3 have no stories yet. They are planned once the MVP works end to e
 5. **Multiplayer first among the three that follow.** arma-grappling-hook's promises are about server authority, and its existing checks run on a dedicated server with clients, so dedicated sessions (M2) come before the MCP server and the restart reloads.
 6. **A verdict explains itself before more ways to get one.** A pass means no script error on any machine (`DM-02`), so script errors and logs (M3) come before anything that runs more checks or runs them faster.
 7. **Tools before reload.** arma-grappling-hook's checks are written and run by AI agents in its repository. From M4 they drive the framework as tools, and every later command lands with its tool, so no milestone waits on a tool layer. Without a reload the loop still works by stopping and starting the session; the reloads only shorten it. M5 follows M4 at once, because agents end their sessions and the game session has to survive that.
-8. **A mission restart before a reload inside the mission.** arma-grappling-hook's functions are CBA `PREP` functions, final once compiled, so a change to them reloads only by a mission restart. Levels B and C (M6) therefore come before level A (M7), which serves functions that are not final.
+8. **A restart before a reload inside the mission.** arma-grappling-hook's functions are CBA `PREP` functions, final once compiled, and the game holds every mod file it has read (`SPK-08`), so a change to them reloads by a game restart. The restarts (M6) therefore come before level A (M7), which needs a changed file to reach a running game (`DEF-21`).
 9. **Walking away, then trust, then the proof.** A suite run unattended needs a run that ends whatever happens (M8). The environment's failures must be `invalid`, not `fail` (M9), before the port (M10), whose runs `NFR-RL-01` judges.
 10. **A story lands where its last criterion can be met.** A story whose criteria name an MCP tool lands in M4 or later, one that names a dedicated session in M2 or later, one that names a reload in M6 or later. A failure story lands with its feature story where both can; the pairs that split are listed below.
 11. **Infrastructure in the first milestone that needs it, never ahead.** `skd_fnc_useAction` is built in M1 for its demo, while its stories land in M2; `status` comes in M2 for `US-004`; the `logs` command in M3 and its tool in M4; the session state `broken` in M6; each fixture behaviour with the first story or demo that uses it.
@@ -63,8 +63,8 @@ Phases 2 and 3 have no stories yet. They are planned once the MVP works end to e
 | `SPK-05` | M1 | Its second fallback, yes: a level-B reload in singleplayer becomes a game restart (`RLD-02`, `P-08`, `US-055`). |
 | `SPK-06` | M5 | No. |
 | `SPK-07` | M3 | Yes: on a machine kind where the handler is silent, errors come from the RPT, attributed by time. |
-| `SPK-08` | M6 | No. Its measurement sets `NFR-PF-02`. |
-| `SPK-09` | M7 | Yes: mod code gets no level A; `RLD-02`, `US-054` and `NFR-PF-01` are edited, with the owner's confirmation. |
+| `SPK-08` | M6 | Yes, if a changed file does not reach a running machine: every `.sqf` change is level `game-restart` (`RLD-02`, `P-08`, `US-054`, `US-055`, `US-057`, `FIX-03`). Its measurement sets `NFR-PF-02`. |
+| `SPK-09` | M7, once `DEF-21` lets a changed file reach a running game | No: mod code keeps no level A, as `SPK-08` left it. |
 | `SPK-10` | M1 | No. |
 | `SPK-11` | Phase 2, with `ACT-05` | `ACT-05`, a `should`, is dropped. |
 | `SPK-12` | M1 | Yes: in singleplayer a net id in a result is the agent's own id (`DM-13`). |
@@ -82,7 +82,7 @@ A requirement of the PRD is complete in the milestone that delivers the last sto
 |---|---|---|---|
 | `CR-01` | Start a session once, run many checks | M5 | Singleplayer in M0 and M1, dedicated in M2; surviving its client in M5. |
 | `CR-02` | Reset between checks | M9 | In place in M1 and M2, by mission restart in M6; a reset that cannot complete in M9. |
-| `CR-03` | Reload at the lowest level | M7 | Mission and game restart in M6, inside the mission in M7. |
+| `CR-03` | Reload at the lowest level | M7 | Game restart in M6; inside the mission and by a mission restart only once `DEF-21` finds a way round the game's hold on the files it read. |
 | `CR-05` | Stop every process a run started | M8 | Job object in M0, recovery after the runner dies in M5. |
 | `CR-10` | Run code on a chosen machine | M4 | Inside a check from M1, across machines in M2, `exec` in M4. |
 | `CR-11` | Build a scene | M2 | Singleplayer in M1. |

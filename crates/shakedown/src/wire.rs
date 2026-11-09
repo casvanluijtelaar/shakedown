@@ -22,6 +22,15 @@ pub struct SetupSpec {
     pub base_port: u16,
 }
 
+/// The `rebuild` commands of the project's mods, read fresh from the project file, and the folder
+/// they run in, the project's (`RLD-06`).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct Rebuild {
+    pub folder: PathBuf,
+    /// Each mod with a `rebuild`, by name, and its command.
+    pub commands: Vec<(String, String)>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "request", rename_all = "snake_case")]
 pub enum Request {
@@ -41,6 +50,8 @@ pub enum Request {
     Reload {
         files: Vec<PathBuf>,
         checks: PathBuf,
+        #[serde(default)]
+        rebuild: Rebuild,
         wait_s: Option<f64>,
     },
     /// A machine's log lines, redacted (`LOG-03`).

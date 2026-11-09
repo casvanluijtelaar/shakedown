@@ -1,7 +1,7 @@
 ---
 type: Documentation
 title: The project file
-description: The keys of shakedown.toml for singleplayer and dedicated setups, with an example, how relative paths and defaults work, and what a mistake in the file looks like.
+description: The keys of shakedown.toml for singleplayer and dedicated setups and for a mod that reload watches, with an example, how relative paths and defaults work, and what a mistake in the file looks like.
 status: draft
 ---
 
@@ -41,6 +41,9 @@ A project with no mod declares `mods = []` in its setup and no `[mods.*]` table;
 | `base_port` | no, default 2402 | A dedicated server's game port, 1024 to 65530; it and the next four ports must be free. |
 | `mods.<name>.path` | yes, for each mod | The mod's folder, such as a Workshop folder or a `@mod` folder. |
 | `mods.<name>.patch` | no | A `CfgPatches` class of the mod; the result file records its `versionStr` as the game loaded it. |
+| `mods.<name>.source` | no | The folder of your own files of the mod, the one holding its addon folders, which `reload` watches ([Reloading](reloading.md)). |
+| `mods.<name>.prefix` | with `source` | The game path of `source`, such as `'z\agh\addons'`. |
+| `mods.<name>.rebuild` | no | A command line that makes the build the game loads from your files, such as `hemtt build`. A `game-restart` reload runs it with `cmd /C` in the project folder, after every game process has ended and before any starts again; it must end within 120 s with exit code 0. It is read fresh at each reload. |
 | `setups.<name>.mode` | yes | `"singleplayer"` or `"dedicated"`. |
 | `setups.<name>.clients` | no, default 1 | A dedicated setup's game clients, `p1` to `pN`, 1 to 8. |
 | `setups.<name>.headless` | no, default 0 | A dedicated setup's headless clients, `hc1` to `hcN`, 0 to 8. |

@@ -21,4 +21,4 @@ As a mod developer, I want to be told when my change needs a rebuild and a game 
 
 ## Next to
 
-- [US-054](US-054-reload-inside-mission.md) (feature): reload a changed function inside the mission.
+- [US-054](US-054-reload-changed-function.md) (feature): reload a changed function.

@@ -40,7 +40,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
   - `mission.sqm`: for each `pN` a playable rifleman (`B_Soldier_F`, side WEST) in a group of its own, at `[spawn x + 10 × (N - 1), spawn y]` on the ground, direction 0; for each `hcN` a playable `HeadlessClient_F`; a marker `respawn_west` at the spawn point. `spawn` is a setup key, default `[100, 100]`.
   - `description.ext`: `skipLobby = 1`; `respawn = 3`; `respawnDelay = 0`; `respawnOnStart = -1`; `disabledAI = 1`; `allowFunctionsRecompile = 1`; `briefing = 0`; `debriefing = 0`; a `Header` with `gameType = "Coop"`, `minPlayers = 1`, `maxPlayers` = clients plus headless clients; and `class CfgSettings { class CBA { class Caching { compile = 0; xeh = 0; functions = 0; }; }; };`, so CBA functions recompile at every mission start without an extra addon.
   - The mission holds no scripts: the in-game agent comes from the framework's addon (`postInit`).
-  - Singleplayer: the mission goes under `p1`'s profile folder in `missions\`, and `autotest.cfg` lists it 100 times (`class TestMissions` with entries `m001` to `m100`), so ending the mission loads it again (a level-B reload in about 1 s). When the list runs out the game exits and the session goes `broken`.
+  - Singleplayer: the mission goes under `p1`'s profile folder in `missions\`, and `autotest.cfg` lists it 100 times (`class TestMissions` with entries `m001` to `m100`), so ending the mission loads it again (a level-B mission restart in about 2 s). When the list runs out the game exits and the session goes `broken`.
   - Dedicated: the mission is copied to `<game>\MPMissions\` and named in `server.cfg`.
 
 - **INT-AR-05** For a dedicated setup the runner writes `server.cfg` with (`CR-01`, `CR-61`; research `14-sessions.md`):
@@ -57,7 +57,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 ## CBA
 
 - **INT-CBA-01** Shakedown is specified against CBA_A3 3.19.0. The framework does not depend on CBA (`API-05`). When CBA is loaded it uses `CBA_fnc_getKeybind`, which is public, to press a keybind (`ACT-02`). In CBA 3.19 it returns `[mod, action, display name, down code, up code, [DIK, [shift, ctrl, alt]], hold, hold delay, bound keys]`, where the last element lists every key bound to it; the framework presses the first. To name the keybinds that exist when one is not found (`ACT-03`), it reads the variable names of CBA's namespace `cba_keybinding_actions`, one per keybind as `<mod>$<action>` in lower case, the only use of a CBA internal; a CBA version that changes it changes only that message (`CR-12`).
-- **INT-CBA-02** The session mission turns CBA's function cache off through `CfgSettings` (`INT-AR-04`), so a CBA mod's `PREP` functions take a changed file at the next mission start. A level-A reload never assumes a CBA function can be recompiled in place; it asks whether the function is final (`RLD-02`) (`CR-03`; conflict C1).
+- **INT-CBA-02** The session mission turns CBA's function cache off through `CfgSettings` (`INT-AR-04`), so a CBA mod's `PREP` functions compile their files afresh at every mission start rather than from CBA's cache, and a new process after a game restart compiles the changed file (`RLD-02`) (`CR-03`; conflict C1).
 
 ## ACE3
 
@@ -67,7 +67,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 
 ## HEMTT
 
-- **INT-HEM-01** Shakedown is specified against HEMTT 1.23.1. The framework does not run HEMTT for a mod under test: a watched mod is loaded from a development build file patching can read, such as `hemtt dev` output linked into the game folder under the mod's main prefix, as `hemtt launch` makes it. The project file names the mod's folder and its `source` and `prefix` (`CR-03`; `RLD-06`).
+- **INT-HEM-01** Shakedown is specified against HEMTT 1.23.1. The framework has no HEMTT step of its own: a watched mod is loaded from a build of the developer's files, such as `hemtt build` output, and the project file names the mod's folder, its `source` and `prefix`, and the `rebuild` a reload runs while no game process runs, such as `hemtt build` (`CR-03`; `RLD-06`). `hemtt dev` and `hemtt launch` link the game folder back to the developer's own files, which the game then holds, so the developer's editor cannot save them while a session runs (research `27-spikes-reload.md`).
 - **INT-HEM-02** The framework's own addon is built with HEMTT, as a development tool of this repository (`07-tech-stack.md`).
 
 ## Steam

@@ -105,9 +105,18 @@ pub fn reload_request(project: &config::Project, files: &[PathBuf], wait_s: Opti
         .iter()
         .map(|f| if f.is_absolute() { f.clone() } else { base.join(f) })
         .collect();
+    let rebuild = crate::wire::Rebuild {
+        folder: project.root.clone(),
+        commands: project
+            .mods
+            .values()
+            .filter_map(|m| Some((m.name.clone(), m.rebuild.clone()?)))
+            .collect(),
+    };
     Ok(Request::Reload {
         files,
         checks: project.checks.clone(),
+        rebuild,
         wait_s,
     })
 }

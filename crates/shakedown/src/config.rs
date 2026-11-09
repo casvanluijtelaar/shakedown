@@ -29,6 +29,10 @@ pub struct Mod {
     pub patch: Option<String>,
     pub source: Option<PathBuf>,
     pub prefix: Option<String>,
+    /// The command a game-restart reload runs while no game process runs, which makes the
+    /// build the game loads from the developer's files (`RLD-06`).
+    #[serde(default)]
+    pub rebuild: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -78,6 +82,7 @@ struct RawMod {
     patch: Option<String>,
     source: Option<Spanned<String>>,
     prefix: Option<String>,
+    rebuild: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -202,6 +207,7 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
                 patch: m.patch,
                 source: m.source.map(|s| resolve(s.get_ref())),
                 prefix: m.prefix,
+                rebuild: m.rebuild,
             },
         );
     }

@@ -16,10 +16,10 @@ As a mod developer, I want to be told which machine did not take my change when 
 
 ## Acceptance criteria
 
-1. When `p2`'s process is ended during a `mission-restart` reload, `reload` exits 4 with state `failed`, naming the step and `p2`; `status` shows the session `broken` with that reason.
-2. A check run after it ends `invalid` / `session-broken`, and a `game-restart` reload brings every machine back `ready` with a new start number.
+1. When `p2`'s process is ended during a `game-restart` reload of a changed `.sqf`, `reload` exits 4 with state `failed`, naming the step and `p2`; `status` shows the session `broken` with that reason.
+2. A run asked after it is refused with exit code 4, saying the session is broken and naming `shakedown reload`, so no check reaches a verdict on mixed code; then a `game-restart` reload brings every machine back `ready` with a new start number.
 
 ## Next to
 
-- [US-054](US-054-reload-inside-mission.md) (feature): reload inside the mission.
-- [US-055](US-055-reload-mission-restart.md) (feature): reload by a mission restart.
+- [US-054](US-054-reload-changed-function.md) (feature): reload a changed function.
+- [US-055](US-055-reload-final-function.md) (feature): reload a change to a final function.
