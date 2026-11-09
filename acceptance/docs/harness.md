@@ -89,6 +89,6 @@ A failed assertion fails only its own check; the others are still judged. A harn
 
 ## What the Mac round learned
 
-- `python3 tools/install.py` on a Mac needs Rust 1.99 or later, as `docs/install.md` says; with it the cargo step builds `shakedown` into `target/release/`, and the install stops at `hemtt build` without HEMTT, before it assembles an install folder (`m04-2`). The binary alone serves `run_mac.py`.
+- On a Mac the `shakedown` binary alone serves `run_mac.py`: `cargo build --release -p shakedown`, as `docs/install.md` gives it, with Rust 1.99 or later and no HEMTT. `tools/install.py` stops at `hemtt build` there, before it assembles an install folder (`m04-2`). The same cargo build on the Windows test machine gives `target/release/shakedown.exe`, which answers `list`, `guide`, `version`, `status` and the MCP server's `status`, `list_checks` and `guide` with no runner; `run_mac.py` itself refuses to run off a Mac, since it asserts macOS and no Steam.
 - The guide is 4,837 characters on the Mac and 4,885 on Windows, the same text with other line endings; the checks compare it with the documented text with whitespace folded.
 - With no runner, `status`, `list_checks` and `guide` each answer in under 0.01 s, and the server exits 0 as soon as its stdin closes.
