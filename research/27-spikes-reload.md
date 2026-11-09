@@ -1,11 +1,15 @@
 ---
 type: Research
 title: "Spikes SPK-08 and SPK-01 across a mission restart: reloading by restart"
-description: "What a changed mod file does in a running game on the test machine in M6 - the game holds every loose file it read until its process ends, so no running process takes a change and SPK-08 fails - with CBA's cache shown off, the time of a mission restart in singleplayer and on a dedicated session, and orders sent across mission restarts, none lost and none run twice."
+description: "What a changed mod file does in a running game on the test machine in M6 - the game holds every loose file it read until its process ends, so no running process takes a change and SPK-08 fails - with what ACE3, HEMTT and Neefay's harness actually do to reload, CBA's cache shown off, the time of a mission restart in singleplayer and on a dedicated session, and orders sent across mission restarts, none lost and none run twice."
 status: draft
 generated: { by: "claude-code/developer", at: 2026-11-09T15:20:00+01:00 }
 sources:
   - { id: probe, resource: "probes run by hand on the Windows test machine, 2026-11-09, Arma 3 2.22.154089 stable, CBA_A3 3.19.0 (workshop 450814997): the installed fixture file opened for writing and renamed while a session ran, the processes holding it listed through the Windows Restart Manager, the game started directly with and without -debug and with -maxFileCacheSize, and the fixtures' link in the game folder pointed at a changed copy before a mission restart", read: 2026-11-09 }
+  - { id: ace, resource: "https://github.com/acemod/ACE3 at master, docs/wiki/development/setting-up-the-development-environment.md, sections 4.1.1, 4.2 and 7 (read with gh)", read: 2026-11-09 }
+  - { id: hemtt, resource: "https://github.com/BrettMayson/HEMTT at tag v1.23.1 (the latest release, 2026-10-25), bin/src/modules/file_patching.rs; issues 669 and 1256 on the link hemtt dev makes", read: 2026-11-09 }
+  - { id: neefay, resource: "https://github.com/Neefay/arma3-llm-harness at 21aac67e (no license: read for ideas only), README.md and host/src/arma_harness/harness.py, the reload method and the server config it writes", read: 2026-11-09 }
+  - { id: web, resource: "web search of 2026-11-09 for reports of Arma 3 holding files read through file patching, and gh issue searches for file patching in acemod/ACE3, CBATeam/CBA_A3 and BrettMayson/HEMTT: no report of the hold, and none of editing a held file while the game runs", read: 2026-11-09 }
   - { id: tests, resource: "crates/shakedown/tests/m06.rs, spk_08_the_game_holds_every_mod_file_it_read_until_its_process_ends, spk_01_nfr_rl_04_us_011_no_order_lost_or_run_twice_across_mission_restarts_in_singleplayer and spk_01_nfr_rl_04_us_011_mission_restarts_on_a_dedicated_session, runs of 2026-11-09 on the Windows test machine", read: 2026-11-09 }
 ---
 
@@ -37,6 +41,27 @@ Every machine's RPT shows `[CBA] (xeh) INFO: ... CBA CACHE DISABLED? (Disable ca
 - **The framework stages the mod's files.** The game would read a copy the framework makes, so the developer's own files are never held, and a reload makes a new copy before it restarts the processes. Level B still cannot work for a process that already read the file, so this gives a free source folder, not a cheaper level.
 
 Both change what the spec promises beyond `m06.md`'s fallback, which the owner decides. `SPK-09` (`BIS_fnc_recompile` mid-mission) reads files through the same file server and would meet the same hold.
+
+## Why the cited setups reload and the spike did not
+
+Research `13-hot-reload.md` built the reload levels on three sources. Read again for what each actually does:
+
+- **ACE3** sets up file patching as the spike did: a junction under the Arma 3 folder at the main prefix (`mklink /J "[Arma 3]\z\ace" ".hemttout/dev"`), a `hemtt dev` build, and `-filePatching` with `-debug`, `-showScriptErrors`, `-skipIntro` and `-noSplash`; its guide says file patching lets a developer "change the files in an addon while the game is running, requiring only a restart of the mission"[^ace]. The guide does not say how the file is written while the game holds it, and no ACE3, CBA_A3 or HEMTT issue reports the hold or a way round it[^web].
+- **HEMTT** `hemtt dev` links each addon folder of `.hemttout/dev/addons` back to the project's addon folder, and links `<Arma 3>\<mainprefix>\<prefix>` to the build folder (to the project root since 1.19, issue 1256)[^hemtt]. The game therefore reads the developer's own files through two links; the fixtures' install reads a copy through one junction. Both are links the game follows to the same kind of loose file.
+- **`Neefay/arma3-llm-harness`** does not reload through the game's files at all. Its server config sets `allowedFilePatching = 0`. Its `reload` reads the changed file of the mission's source folder on the host, preprocesses it there, sends the text to the game and runs `compile` on it, assigning the result to the function's variable; the staged copy of the mission sets `allowFunctionsRecompile` so mission functions can be assigned[^neefay]. It reloads mission functions, never an addon's, and never a final one.
+
+So the only source that reloads in a running game is Neefay's, and it works because the game's file server never reads the changed file. Its way does not reach a final function: a `CfgFunctions` function or a CBA `PREP` function is final from the moment the game compiles it, so an assignment fails until the next mission start, when the game and CBA read the file again through the file server, which serves the held content. ACE3's claim and the spike's measurement disagree, and the sources give no reason.
+
+The differences between ACE3's setup and the spike that remain to be run in the game, each on singleplayer first, are:
+
+| Difference | ACE3 and HEMTT | The spike |
+|---|---|---|
+| Mod folder and file patching root | One folder: `-mod=z\ace`, the junction itself | The PBO from the install's `@skd_fixture_cba`, the loose tree through `<game>\skdfx_cba` |
+| Links | Junction to the build, then a link per addon folder to the source | One junction to a copy |
+| How the file is written | An editor's save, which may write a new file and swap it in | Opened for writing in place, and renamed |
+| When the file was first read | ACE3's `PREP` at preInit with the cache off by `cba_cache_disable.pbo` or `DISABLE_COMPILE_CACHE` | CBA's preStart and each preInit, cache off through the session mission |
+
+Two ways round the hold follow from the sources and need the game to test: Neefay's way, the framework reading the changed file itself and sending its text, with a final function replaced at a mission restart before the game or CBA compiles it again; and a file read for the first time, at a path the game has not opened, to see whether a file the game opens mid-mission is held as well.
 
 ## A mission restart, and orders across it
 
