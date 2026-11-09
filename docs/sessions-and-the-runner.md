@@ -27,7 +27,7 @@ This holds however the host ends its MCP server: by closing its input, by closin
 ```
 2026-11-09T09:59:32.863Z client 3248 started the runner by breakaway
 2026-11-09T09:59:33.199Z relay 13328: started the runner by wmi
-2026-11-09T09:59:33.598Z runner 12380 started on port 59670
+2026-11-09T09:59:33.598Z runner 12380 started on port 59670; its process was created at 2026-11-09T09:59:33.212Z
 ```
 
 A session left running holds the game until it is stopped: end it with `shakedown session stop` (or the `session_stop` tool) when you are done. The runner exits by itself 60 s after its last session stopped with no client connected.

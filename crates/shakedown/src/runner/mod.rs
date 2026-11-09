@@ -468,6 +468,19 @@ impl Runner {
     }
 }
 
+/// Appends one line to `runner.log` from outside the runner's own logger: a panic, a console
+/// event, the relay.
+fn append_log(line: &str) {
+    use std::io::Write as _;
+    if let Ok(mut log) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(paths::runner_log())
+    {
+        let _ = writeln!(log, "{} {line}", shakedown_protocol::time::now());
+    }
+}
+
 /// `shakedown runner`: runs until it has had no session and no client for `IDLE_EXIT`.
 pub fn main() -> u8 {
     // The relay of win::start_runner: starts the runner itself, out of the client's process tree,
@@ -481,23 +494,11 @@ pub fn main() -> u8 {
         let started = crate::win::spawn_breakaway(&exe, &args, &env, true)
             .map(|_| "breakaway")
             .or_else(|_| crate::win::start_by_wmi(&exe).map(|_| "wmi"));
-        use std::io::Write as _;
-        if let Ok(mut log) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(paths::runner_log())
-        {
-            let what = match &started {
-                Ok(way) => format!("started the runner by {way}"),
-                Err(e) => format!("cannot start the runner: {e}"),
-            };
-            let _ = writeln!(
-                log,
-                "{} relay {}: {what}",
-                shakedown_protocol::time::now(),
-                std::process::id()
-            );
-        }
+        let what = match &started {
+            Ok(way) => format!("started the runner by {way}"),
+            Err(e) => format!("cannot start the runner: {e}"),
+        };
+        append_log(&format!("relay {}: {what}", std::process::id()));
         return if started.is_ok() { 0 } else { 5 };
     }
     let dir = paths::runner_dir();
@@ -506,20 +507,12 @@ pub fn main() -> u8 {
     }
     // A runner has no console: a panic goes to runner.log, or nobody would see why it ended.
     std::panic::set_hook(Box::new(|info| {
-        use std::io::Write as _;
-        if let Ok(mut log) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(paths::runner_log())
-        {
-            let _ = writeln!(
-                log,
-                "{} runner {} panicked: {info}",
-                shakedown_protocol::time::now(),
-                std::process::id()
-            );
-        }
+        append_log(&format!("runner {} panicked: {info}", std::process::id()))
     }));
+    // So does a console control event, which ends a process that has a console.
+    crate::win::on_console_event(|event| {
+        append_log(&format!("runner {} received console event {event}", std::process::id()))
+    });
     let log = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -552,7 +545,10 @@ pub fn main() -> u8 {
         if std::fs::write(paths::runner_file(), file.to_string()).is_err() {
             return 5;
         }
-        runner.log(&format!("runner {pid} started on port {}", runner.port));
+        runner.log(&format!(
+            "runner {pid} started on port {}; its process was created at {started_at}",
+            runner.port
+        ));
         loop {
             tokio::time::sleep(Duration::from_secs(1)).await;
             if runner.close_if_idle() {

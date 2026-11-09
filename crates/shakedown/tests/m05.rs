@@ -336,6 +336,36 @@ mod w {
         }
     }
 
+    /// A handle on a process that keeps its exit code readable after it ends.
+    pub struct Watch(HANDLE);
+
+    impl Watch {
+        pub fn new(pid: u32) -> Option<Watch> {
+            use windows::Win32::System::Threading::{PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE};
+            unsafe {
+                OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE, false, pid)
+                    .ok()
+                    .map(Watch)
+            }
+        }
+
+        /// The exit code once the process ended; `None` while it runs.
+        pub fn exit_code(&self) -> Option<u32> {
+            use windows::Win32::System::Threading::GetExitCodeProcess;
+            let mut code = 0u32;
+            unsafe { GetExitCodeProcess(self.0, &mut code).ok()? };
+            (code != 259).then_some(code)
+        }
+    }
+
+    impl Drop for Watch {
+        fn drop(&mut self) {
+            unsafe {
+                let _ = CloseHandle(self.0);
+            }
+        }
+    }
+
     /// Suspends, or resumes, every thread of a process.
     pub fn suspend(pid: u32, on: bool) {
         unsafe {
@@ -677,6 +707,108 @@ fn us_035_nfr_rl_03_the_runner_killed_during_a_run_leaves_no_game_5_of_5() {
     assert_eq!(code, 0, "{err}");
     assert!(!mission_copy(&session).exists());
     println!("NFR-RL-03: 5 of 5, times {times:?}");
+}
+
+/// A runner started the way this machine starts it when breakaway is refused, through WMI
+/// (`INT-WIN-02`), lives through its session's start, a run and the next runner's recovery,
+/// round after round (`US-007`, `US-035`, `NFR-RL-03`). Each round starts the runner by WMI,
+/// holds a handle on it, starts a dedicated session, runs a check that is still running when the
+/// test kills the runner, and checks that the runner ended only by that kill: a runner that ends
+/// before it fails the test with its exit code. `SKD_ROUNDS` sets the rounds, 10 by default.
+#[test]
+#[ignore = "starts the game; run by hand on the test machine"]
+fn us_035_nfr_rl_03_a_runner_started_by_wmi_ends_only_when_killed() {
+    let rounds: u32 = std::env::var("SKD_ROUNDS")
+        .ok()
+        .and_then(|r| r.parse().ok())
+        .unwrap_or(10);
+    let dir = project("wmi");
+    let _guard = Guard::new(&dir);
+    for round in 1..=rounds {
+        let _ = std::fs::remove_file(runner_dir().join("runner.json"));
+        let asked_at = shakedown_protocol::time::now();
+        let clock = Instant::now();
+        shakedown::win::start_by_wmi(&exe()).expect("WMI starts the runner");
+        let wmi_s = clock.elapsed().as_secs_f64();
+        // A client waits 10 s for runner.json (P-01); this waits longer to see how long it took.
+        let found = within(Duration::from_secs(60), || runner_file()["pid"].as_u64().is_some());
+        let file_s = clock.elapsed().as_secs_f64();
+        let created = runner_file()["started_at"].as_str().unwrap_or("?").to_string();
+        println!(
+            "round {round}: asked WMI at {asked_at}, WMI answered after {wmi_s:.2} s, the runner process was created at {created}, runner.json after {file_s:.2} s"
+        );
+        assert!(found, "round {round}: no runner.json within 60 s");
+        assert!(
+            file_s <= 10.0,
+            "round {round}: runner.json came after {file_s:.2} s, past a client's 10 s; runner.log:
+{}",
+            runner_log().lines().rev().take(8).collect::<Vec<_>>().join(
+                "
+"
+            )
+        );
+        let runner = runner_file()["pid"].as_u64().unwrap() as u32;
+        let watch = w::Watch::new(runner).expect("a handle on the runner");
+        let (code, out, err) = cli_json(&dir, &["session", "start", "--setup", "ded"]);
+        let died = |what: &str| -> String {
+            format!(
+                "round {round}: runner {runner} ended by itself {what}, exit code {:#x}; runner.log:
+{}",
+                watch.exit_code().unwrap_or(0),
+                runner_log().lines().rev().take(15).collect::<Vec<_>>().join(
+                    "
+"
+                )
+            )
+        };
+        assert!(watch.exit_code().is_none(), "{}", died("during its session start"));
+        assert_eq!(
+            (code, out["state"].clone()),
+            (0, json!("ready")),
+            "round {round}: {out} {err}"
+        );
+        let pids: Vec<u32> = out["machines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|m| m["pid"].as_u64().unwrap() as u32)
+            .collect();
+        let mut run = Command::new(exe())
+            .args(["run", "US-035-long"])
+            .current_dir(&dir)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        assert!(
+            within(Duration::from_secs(60), || status(&dir)["run"]["current_check"]
+                == "US-035-long"),
+            "round {round}: the run did not begin: {}",
+            status(&dir)
+        );
+        // The check runs on for 200 s; 20 s of it with the runner holding the session.
+        let early = within(Duration::from_secs(20), || watch.exit_code().is_some());
+        assert!(!early, "{}", died("during the run"));
+        kill(runner, false);
+        assert!(within(Duration::from_secs(10), || watch.exit_code().is_some()));
+        assert_eq!(
+            watch.exit_code(),
+            Some(1),
+            "round {round}: taskkill /F ends with exit code 1"
+        );
+        assert!(
+            within(Duration::from_secs(10), || pids.iter().all(|p| !alive(*p))),
+            "round {round}: game processes left 10 s after the kill"
+        );
+        if !within(Duration::from_secs(10), || run.try_wait().ok().flatten().is_some()) {
+            kill(run.id(), false);
+        }
+        let _ = run.wait();
+        println!("round {round}: runner {runner} by WMI lived until it was killed");
+    }
+    // The next runner clears the last dead session.
+    let (code, _, _) = cli(&dir, &["session", "stop"]);
+    assert_eq!(code, 4);
 }
 
 /// `US-052`, `US-053`, `US-060` and `US-007` criterion 2, in one dedicated session.

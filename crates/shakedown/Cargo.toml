@@ -27,6 +27,7 @@ windows = { version = "0.62.2", features = [
     "Win32_System_RemoteDesktop",
     "Win32_UI_WindowsAndMessaging",
     "Win32_NetworkManagement_IpHelper",
+    "Win32_System_Console",
 ] }
 
 [dev-dependencies]

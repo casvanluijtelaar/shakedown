@@ -210,8 +210,10 @@ mod imp {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         let command_line = format!("\"{}\" runner", exe.display()).replace('\'', "''");
+        // DETACHED_PROCESS and CREATE_NEW_PROCESS_GROUP, as the breakaway start gives: without
+        // them WMI gives the runner a console of its own, hidden, whose control events end it.
         let script = format!(
-            "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{{CommandLine='{command_line}'}}; exit $r.ReturnValue"
+            "$s = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{{CreateFlags=[uint32]520}}; $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{{CommandLine='{command_line}'; ProcessStartupInformation=$s}}; exit $r.ReturnValue"
         );
         let status = std::process::Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", &script])
@@ -227,6 +229,25 @@ mod imp {
                 "WMI's Win32_Process.Create returned {}",
                 status.code().unwrap_or(-1)
             )))
+        }
+    }
+
+    /// Calls `f` with each console control event the process receives (`CTRL_C_EVENT` 0,
+    /// `CTRL_BREAK_EVENT` 1, `CTRL_CLOSE_EVENT` 2, `CTRL_LOGOFF_EVENT` 5, `CTRL_SHUTDOWN_EVENT` 6).
+    /// Ctrl+C and Ctrl+Break are then ignored; the others go on to end the process.
+    pub fn on_console_event(f: fn(u32)) {
+        use std::sync::OnceLock;
+        use windows::Win32::System::Console::SetConsoleCtrlHandler;
+        static HANDLER: OnceLock<fn(u32)> = OnceLock::new();
+        unsafe extern "system" fn each(event: u32) -> windows::core::BOOL {
+            if let Some(f) = HANDLER.get() {
+                f(event);
+            }
+            (event <= 1).into()
+        }
+        let _ = HANDLER.set(f);
+        unsafe {
+            let _ = SetConsoleCtrlHandler(Some(each), true);
         }
     }
 
@@ -503,6 +524,8 @@ mod imp {
     pub fn start_by_wmi(_exe: &Path) -> std::io::Result<()> {
         Err(std::io::Error::other("needs Windows"))
     }
+
+    pub fn on_console_event(_f: fn(u32)) {}
 
     pub fn spawn_breakaway(
         _exe: &Path,
