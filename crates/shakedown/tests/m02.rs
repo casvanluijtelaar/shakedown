@@ -575,6 +575,91 @@ private _start = ((skd_test_start get "p2") select 0) select 0;
     assert_eq!(code, 0);
 }
 
+/// `US-008` 3, `RST-01` and `RST-05`: a player killed the moment the reset puts it back, as by a
+/// shot still in flight from an enemy the check made, respawns on the respawn marker, which is
+/// its baseline position, facing a direction of the respawn's choosing. The reset turns it back
+/// to its baseline direction before it verifies, so it is `done` under 2 s and the server and p2
+/// see p2 facing its baseline (finding `m06-1`). The check leaves on p2 a script that kills p2
+/// once it stands at its start again.
+#[test]
+#[ignore = "starts Arma 3; run on the test machine"]
+fn us_008_rst_01_rst_05_a_player_killed_as_the_reset_puts_it_back_faces_its_baseline() {
+    const DIE: &str = r#"["p2 dies once it stands at its start again", {
+    ["p2", {
+        [getPosASL player] spawn {
+            params ["_start"];
+            private _t = diag_tickTime;
+            waitUntil { (getPosASL player) distance _start > 5 || { diag_tickTime - _t > 30 } };
+            _t = diag_tickTime;
+            waitUntil { (getPosASL player) distance _start < 0.1 || { diag_tickTime - _t > 30 } };
+            player setDamage 1;
+        };
+        true
+    }] call skd_fnc_on;
+    ["p2", AGLToASL [140, 180, 0], 200] call skd_fnc_place;
+}] call skd_fnc_step;"#;
+    let dir = project(
+        "die",
+        &checks_of(&[("die", "US-008 RST-01 RST-05 p2 dies as the reset puts it back", DIE)]),
+    );
+    let session = Session::start(&dir, "ded");
+    let start: Vec<f64> = ["server", "p2"]
+        .iter()
+        .map(|m| {
+            let (_, v) = cmd(
+                &dir,
+                &[
+                    "exec",
+                    "--machine",
+                    m,
+                    "--code",
+                    "getDir ([\"p2\"] call skd_fnc_unitOf)",
+                ],
+            );
+            v["results"][m]["value"].as_f64().unwrap_or_else(|| panic!("{v}"))
+        })
+        .collect();
+    let unit = |m: &str| {
+        let (_, v) = cmd(
+            &dir,
+            &["exec", "--machine", m, "--code", "netId ([\"p2\"] call skd_fnc_unitOf)"],
+        );
+        v["results"][m]["value"]
+            .as_str()
+            .unwrap_or_else(|| panic!("{v}"))
+            .to_string()
+    };
+    for n in 1..=3 {
+        let before = unit("server");
+        let (code, result) = session.run(&["die"]);
+        assert_eq!(code, 0, "{result:#}");
+        let (code, reset) = cmd(&dir, &["reset"]);
+        println!("US-008 reset {n} with p2 killed as it is put back: {reset}");
+        assert_eq!(code, 0, "{reset}");
+        assert_eq!(reset["state"], "done", "{reset}");
+        assert!(reset["duration_s"].as_f64().unwrap() < 2.0, "{reset}");
+        assert_ne!(unit("server"), before, "p2 did not die and respawn during the reset");
+        for (m, base) in ["server", "p2"].iter().zip(&start) {
+            let (_, v) = cmd(
+                &dir,
+                &[
+                    "exec",
+                    "--machine",
+                    m,
+                    "--code",
+                    "getDir ([\"p2\"] call skd_fnc_unitOf)",
+                ],
+            );
+            let dir_now = v["results"][m]["value"].as_f64().unwrap_or_else(|| panic!("{v}"));
+            let d = (dir_now - base).rem_euclid(360.0);
+            assert!(
+                d.min(360.0 - d) <= 3.0,
+                "{m} sees p2 facing {dir_now}, the baseline {base}"
+            );
+        }
+    }
+}
+
 /// `US-004` 1 and 3: a game client ended during the start makes the start `failed` with exit
 /// code 4, naming that machine, its state and its RPT lines, and leaves nothing running; then
 /// `US-004` 2: a start ceiling of 30 s, shorter than a dedicated start, ends `failed` naming each

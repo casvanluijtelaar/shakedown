@@ -15,9 +15,10 @@
       date is the baseline's to the minute, this machine's player is at its baseline and, on the
       lead machine, every player in `players` ([name, position, direction]) is within 0.1 m and 3
       degrees of its baseline as this machine sees it and the overcast is the baseline's (step 6).
-      While this machine's player is more than 2 cm from its baseline position it is set there
-      again, for up to 1.5 s, and the phase ends once it has stayed within 2 cm for 0.3 s, since
-      a unit just out of a vehicle can still slide.
+      While this machine's player is more than 2 cm from its baseline position or more than 1
+      degree from its baseline direction it is set there again, for up to 1.5 s, and the phase
+      ends once it has stayed within 2 cm and 1 degree for 0.3 s, since a unit just out of a
+      vehicle can still slide, and a unit can be turned in place after it is set.
 
     Arguments: [phase, args]
     Returns: an array of what did not match, empty when the phase is done.
@@ -147,7 +148,7 @@ switch (_phase) do {
                     _still = diag_tickTime;
                     if (diag_tickTime < _settle) then { _u switchMove (_base get "animation") };
                 };
-                if (_off > 0.02) then {
+                if (_off > 0.02 || { [getDir _u, _base get "direction"] call _angle > 1 }) then {
                     _still = diag_tickTime;
                     if (diag_tickTime < _settle) then {
                         _u setDir (_base get "direction");
