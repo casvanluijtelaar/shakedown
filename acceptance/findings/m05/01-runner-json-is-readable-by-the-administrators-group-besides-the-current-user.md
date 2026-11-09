@@ -9,7 +9,8 @@ for: developer
 checks: ["US-052 SEC-02 INT-WIN-03 while a runner runs, runner.json grants read to the current user and to no other account or group"]
 stories: [US-052]
 generated: { by: "claude-code/tester", at: 2026-11-09T03:43:44-08:00 }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-09T04:17:25-08:00, note: "The runner writes runner.json under a temporary name with a protected access list that grants full control to the current user alone, then renames it into place; the unit test sec_02_a_private_file_grants_the_current_user_only proves the list, and the named check passed 3 of 3. docs/sessions-and-the-runner.md, docs/install.md and docs/milestones/m00.md say so." }
 verified: []
 ---
 
