@@ -177,6 +177,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-09: Commands handed to the owner must run as pasted. A `<placeholder>` in a PowerShell line is a parse error; read the value in the command instead, as `(shakedown status --json | ConvertFrom-Json).runner_pid`.
 - 2026-11-09: A round that ends with no finding has no verify round, so the coordinator asks the test round itself for the one full acceptance run before close. A fix that lands after that run needs the full run again at its verify.
 - 2026-11-09: Baseline before M6: Steam running, no `arma3_x64` or `arma3server_x64` process, 10.8 GB of 16 GB free, 20.3 GB commit free, 172.5 GB free on `C:`, about 851 entries under `%TEMP%`, twice the M2 count.
+- 2026-11-09: Steam stopped by itself again between the M6 build round and the research round after it, as in M2. That round did its web part and stopped before any game run.
 - 2026-11-05: The Windows test machine has no global git identity. The repository's local config sets `user.name casvanluijtelaar` and `user.email cas.luijtelaar@umain.com`, as on the Mac; worktrees share it.
 
 ## State at the end of the last session
