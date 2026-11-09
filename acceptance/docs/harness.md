@@ -107,3 +107,11 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - A suspended runner makes each client call wait its 5 s; resumed, the session answers `ready` with the same start numbers at the next `status`.
 - A script given to PowerShell with `-Command` receives no further arguments, so the `runner.json` ACL check writes the file's path into the script. A command that needs a runner, such as `exec` with no session, starts one with no game; the check reads the ACL while it runs.
 - The full suite of every milestone with M5 takes 24 minutes.
+
+## What the M6 round learned
+
+- A `game-restart` reload of the `rld` session, a server, two clients and a headless client, took 46 to 48 s by `duration_s`; a `@reset mission` run about 50 s. One repeat of the M6 batch, with five game restarts and two mission restarts, takes about five minutes.
+- `status` lists a machine's new process with its start number one higher as soon as it is launched, during a mission restart or a game restart, so the checks that lose `p2` poll `status` twice a second and end that process by its id the moment it shows; that came 10 to 19 s into the restart.
+- A `shakedown reload` file path is relative to the current folder; the reload gives it back absolute but not normalised (`<project>\..\..\...`), so the checks compare paths after `normpath`.
+- SQF strings escape a quote by doubling it, not with a backslash: a step name holding `\"` does not compile, and the check ends `fail` / `check-error`.
+- Two session starts died on `Error 20 reading file` of a base-game PBO right after Steam had been restarted; the third started. The playbook's rule holds: start again before calling it a finding.
