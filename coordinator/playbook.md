@@ -160,6 +160,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-09: The owner told the coordinator that when M6 closes it commits and pushes `main` and the tag `0.0.7` (as already allowed) and goes straight on into M7 without asking. The M7 push still waits for the owner.
 - 2026-11-09: The owner is away for the rest of M6 and M7 and answers no questions. M6 runs through test, fix and verify; its demo (exit criterion 5) waits for the owner, so M6 stays `in-progress` and M7 starts once M6 has no open finding. M6 closes, is tagged `0.0.7` and is pushed only after the owner has run the demo. The M7 push waits for the owner.
 - 2026-11-09: The same holds for M8: if the coordinator is still running when M7 has no open finding, M8 starts and runs the same way, its demo and push waiting for the owner.
+- 2026-11-09: The owner told the coordinator to run every remaining milestone the same way while away, one after another: each runs through build, test, fix and verify and the next starts once it has no open finding; each demo, close, tag and push waits for the owner.
 - 2026-11-09: While the owner is away, where the loop would stop for the owner (a failed spike whose fallback changes the spec, a finding that questions the spec), the coordinator takes the developer's recommendation, records it here as taken in the owner's absence, and goes on. The owner may reverse it.
 - 2026-11-09: No research round runs longer than about one hour of game runs. The coordinator sets that bound in every research prompt.
 
