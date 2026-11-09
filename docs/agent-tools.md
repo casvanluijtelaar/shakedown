@@ -37,6 +37,7 @@ The demo project `e2e/grappling-hook` has such a `.mcp.json`: start Claude Code 
 | `run_status` | - | A run's progress and outcomes so far; with `wait_s` it waits for the next check to end. |
 | `run_result` | `shakedown run --json` | The result of a run that ended: the same JSON `run --json` prints. |
 | `reset` | `shakedown reset` | Resets the session in place. |
+| `reload` | `shakedown reload` | Reloads changed files, or the `files` given relative to the project, at the level they need; on a broken session restarts the game ([Reloading](reloading.md)). Returns when done, or after 50 s with state `applying`. |
 | `exec` | `shakedown exec` | SQF on a machine or a group, its value as data and the script errors it raised. |
 | `wait_until` | `shakedown wait` | Waits for a condition on a machine. |
 | `expect` | `shakedown expect` | Tries an assertion live. |
@@ -45,7 +46,7 @@ The demo project `e2e/grappling-hook` has such a `.mcp.json`: start Claude Code 
 | `errors` | `shakedown errors` | The script errors the session caught. |
 | `guide` | `shakedown guide` | The text below. |
 
-`run_stop` and `reload` come with the milestones that build their commands.
+`run_stop` comes with the milestone that builds its command.
 
 ## What every tool keeps to
 
@@ -74,7 +75,7 @@ unknown-machine: Session s-20261106-180721 has no machine `p9`; its machines are
 | `compile-error` | The SQF does not compile on the machine; the engine's message follows. |
 | `no-session` | The tool needs a session and none runs; the message names the start command and the setups of the project. |
 | `session-exists` | A session runs already, or one of another setup than the `setup` given to `run_start`. |
-| `session-busy` | The session is starting or stopping, or busy with a run or a reset. |
+| `session-busy` | The session is starting or stopping, or busy with a run, a reload or a reset; or a reload needs a level this build does not apply. |
 | `session-broken` | The session is `broken`; the reason follows. |
 | `precondition-failed` | Steam, the game, a mod folder or the framework's addon is missing; the message names it. |
 | `runner-unreachable` | The runner does not answer or runs another version; its process id follows. Ending that process ends its session ([When a client or the runner ends](sessions-and-the-runner.md)). |
@@ -123,6 +124,7 @@ ASK THE RUNNING GAME
 - logs {"machine": "p1", "check_id": "...", "grep": "Error", "last": 50}: a machine's log lines.
 - errors {"machine": "p1"}: script errors caught in the session, in checks and outside.
 - reset: puts the session back to its start state; every check starts with one anyway.
+- reload {"files": ["checks/x.sqf"]}: reloads changed files, or with none what changed under the mods' watched source folders, and says the level each needed and why. On a broken session it restarts the game, which brings every machine back.
 
 WRITE A CHECK
 A check is a file checks/<id>.sqf. Its header is comment lines:
@@ -130,6 +132,7 @@ A check is a file checks/<id>.sqf. Its header is comment lines:
   // @tags US-019 crate
   // @setups sp            (optional: only these setups)
   // @timeout 60           (optional, seconds, default 120)
+  // @reset mission        (optional: start in a restarted mission, for state a reset cannot name)
 The body is SQF run on the lead machine (server, or p1 in singleplayer), with the skd_fnc_* functions:
   ["open the crate", {
       private _crate = ["skdfx_Crate", AGLToASL [100, 105, 0]] call skd_fnc_create;

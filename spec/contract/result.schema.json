@@ -272,7 +272,7 @@
     "Reload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "state", "level", "files", "started_at", "duration_s"],
+      "required": ["id", "state", "level", "files", "machines", "reason", "started_at", "duration_s"],
       "properties": {
         "id": { "type": "string" },
         "state": { "enum": ["done", "failed"] },
@@ -289,6 +289,23 @@
               "reason": { "type": "string" }
             }
           }
+        },
+        "machines": { "description": "The machines the reload reached (RLD-03).", "type": "array", "items": { "$ref": "#/$defs/MachineName" } },
+        "reason": {
+          "description": "For a failed reload: the level it was applying, the machine that did not come back and why.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["step", "machine", "message"],
+              "properties": {
+                "step": { "type": "string" },
+                "machine": { "$ref": "#/$defs/MachineName" },
+                "message": { "type": "string" }
+              }
+            }
+          ]
         },
         "started_at": { "$ref": "#/$defs/Time" },
         "duration_s": { "$ref": "#/$defs/Duration" }

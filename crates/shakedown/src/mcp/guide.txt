@@ -26,6 +26,7 @@ ASK THE RUNNING GAME
 - logs {"machine": "p1", "check_id": "...", "grep": "Error", "last": 50}: a machine's log lines.
 - errors {"machine": "p1"}: script errors caught in the session, in checks and outside.
 - reset: puts the session back to its start state; every check starts with one anyway.
+- reload {"files": ["checks/x.sqf"]}: reloads changed files, or with none what changed under the mods' watched source folders, and says the level each needed and why. On a broken session it restarts the game, which brings every machine back.
 
 WRITE A CHECK
 A check is a file checks/<id>.sqf. Its header is comment lines:
@@ -33,6 +34,7 @@ A check is a file checks/<id>.sqf. Its header is comment lines:
   // @tags US-019 crate
   // @setups sp            (optional: only these setups)
   // @timeout 60           (optional, seconds, default 120)
+  // @reset mission        (optional: start in a restarted mission, for state a reset cannot name)
 The body is SQF run on the lead machine (server, or p1 in singleplayer), with the skd_fnc_* functions:
   ["open the crate", {
       private _crate = ["skdfx_Crate", AGLToASL [100, 105, 0]] call skd_fnc_create;

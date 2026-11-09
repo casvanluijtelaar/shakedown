@@ -69,7 +69,7 @@ fn session_state_word(state: SessionState) -> &'static str {
         SessionState::Starting => "starting",
         SessionState::Ready => "ready",
         SessionState::Running => "running a run",
-        SessionState::Reloading => "busy with a reset",
+        SessionState::Reloading => "busy with a reload or a reset",
         SessionState::Broken => "broken",
         SessionState::Failed => "failed",
         SessionState::Stopping => "stopping",
@@ -166,7 +166,7 @@ async fn execute(
                 world: session.spec.setup.world.clone(),
                 mods: session.spec.setup.mods.clone(),
             },
-            machines: session.result_machines(),
+            machines: session.result_machines(started),
         },
         summary: summary.clone(),
         checks: executions.clone(),
@@ -268,10 +268,42 @@ async fn execute_check(
         let reason = Reason {
             kind: "session-broken".into(),
             message: format!(
-                "The session was broken before this check started: {}. Stop it with `shakedown session stop` and start a new one.",
+                "The session was broken before this check started: {}. Bring every machine back with `shakedown reload`, which restarts the game of a broken session, or stop it with `shakedown session stop`.",
                 session.broken_reason()
             ),
             machine: None,
+            at: time::now(),
+        };
+        return Some(ended(
+            check,
+            Some(&header),
+            started,
+            clock,
+            "invalid",
+            Some(reason),
+            vec![],
+            Evidence::default(),
+        ));
+    }
+    // P-05 step 3 for reset mode `mission` (RST-06): the mission restart comes before the start
+    // marker and the context, which a mission restart clears.
+    if header.reset == "mission"
+        && let Err((machine, message)) = session.mission_restart(runner, &|_| {}).await
+    {
+        session.release();
+        session.set_broken(
+            &machine,
+            format!(
+                "the mission restart before check {} did not bring {machine} back: {message}",
+                check.id
+            ),
+        );
+        let reason = Reason {
+            kind: "reset-failed".into(),
+            message: format!(
+                "The mission restart before the check did not bring {machine} back: {message}. The session is broken; restart the game with `shakedown reload`, or stop it with `shakedown session stop`."
+            ),
+            machine: Some(machine),
             at: time::now(),
         };
         return Some(ended(
@@ -379,8 +411,11 @@ async fn prepare_and_execute(
 ) -> (CheckExecution, Value, Option<String>) {
     let header = header.clone();
     let lead = session.lead();
-    // P-05 step 3: the reset in place before the check (P-06, RST-01).
-    if let Err(message) = reset(runner, session).await {
+    // P-05 step 3: the reset in place before the check (P-06, RST-01); a check with reset mode
+    // `mission` had its mission restart before its start marker.
+    if header.reset != "mission"
+        && let Err(message) = reset(runner, session).await
+    {
         session.set_broken(lead, format!("the reset before check {} failed: {message}", check.id));
         let reason = Reason {
             kind: "reset-failed".into(),

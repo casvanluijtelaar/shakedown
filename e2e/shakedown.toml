@@ -11,10 +11,14 @@ patch = "cba_main"
 [mods.fixture]
 path = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3\@skd_fixture'
 patch = "skdfx_main"
+source = '..\target\shakedown\fixtures\skdfx\addons'
+prefix = 'skdfx\addons'
 
 [mods.fixture-cba]
 path = '..\target\shakedown\fixtures\@skd_fixture_cba'
 patch = "skdfx_cba"
+source = '..\target\shakedown\fixtures\skdfx_cba\addons'
+prefix = 'skdfx_cba\addons'
 
 [setups.sp]
 mode = "singleplayer"

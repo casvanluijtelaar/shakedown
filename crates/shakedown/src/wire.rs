@@ -36,6 +36,13 @@ pub enum Request {
     Status,
     /// A reset outside a run (`RST-03`).
     Reset,
+    /// A reload of the files given, or of what changed (`RLD-01`); the answer comes when it is
+    /// done, or after `wait_s` with state `applying`.
+    Reload {
+        files: Vec<PathBuf>,
+        checks: PathBuf,
+        wait_s: Option<f64>,
+    },
     /// A machine's log lines, redacted (`LOG-03`).
     Logs {
         project: PathBuf,

@@ -93,6 +93,25 @@ pub fn status() -> Result<Value, CliError> {
     }
 }
 
+/// The runner request of `reload` (`RLD-01`): each file made absolute against `base` (the current
+/// folder for the command line, the project for the MCP tool).
+pub fn reload_request(project: &config::Project, files: &[PathBuf], wait_s: Option<f64>) -> Result<Request, CliError> {
+    let base = if wait_s.is_some() {
+        project.root.clone()
+    } else {
+        std::env::current_dir().map_err(|e| CliError::framework(format!("Cannot read the current folder: {e}.")))?
+    };
+    let files = files
+        .iter()
+        .map(|f| if f.is_absolute() { f.clone() } else { base.join(f) })
+        .collect();
+    Ok(Request::Reload {
+        files,
+        checks: project.checks.clone(),
+        wait_s,
+    })
+}
+
 /// `list` (`RUN-02`): each selected check once, from the files, with no runner.
 pub fn list(project: &config::Project, ids: &[String], tags: &[String]) -> Result<Value, CliError> {
     let all = checks::discover(&project.checks)?;

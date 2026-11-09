@@ -1,5 +1,35 @@
 {
   "defs": {
+    "ReloadAnswer": {
+      "type": "object",
+      "required": ["id", "state", "level", "files", "machines", "reason", "started_at", "duration_s"],
+      "properties": {
+        "id": {"type": "string"},
+        "state": {"enum": ["applying", "done", "failed"]},
+        "level": {"enum": ["none", "mission", "mission-restart", "game-restart"]},
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["path", "level", "reason"],
+            "properties": {
+              "path": {"type": "string"},
+              "level": {"enum": ["none", "mission", "mission-restart", "game-restart"]},
+              "reason": {"type": "string"}
+            }
+          }
+        },
+        "machines": {"type": "array", "items": {"$ref": "#/$defs/MachineName"}},
+        "reason": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "object", "required": ["step", "machine", "message"],
+             "properties": {"step": {"type": "string"}, "machine": {"type": "string"}, "message": {"type": "string"}}}
+          ]
+        },
+        "started_at": {"$ref": "#/$defs/Time"},
+        "duration_s": {"type": "number", "minimum": 0}
+      }
+    },
     "Session": {
       "type": "object",
       "required": ["id", "setup", "mode", "state", "started_at", "folder", "machines", "reason"],
@@ -86,7 +116,7 @@
               "current_check": {"type": ["string", "null"]}
             }
           },
-          "last_reload": {"type": ["object", "null"]}
+          "last_reload": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/ReloadAnswer"}]}
         }
       }
     },
@@ -227,6 +257,15 @@
           "mismatches": {"type": "array", "items": {"type": "string"}}
         }
       }
+    },
+    {
+      "name": "reload",
+      "description": "Reloads changed mod code into the running session: the files given (paths relative to the project, under a mod's watched source or the checks folder), or with none what changed under the watched sources since the session was last ready. Reports the level applied, each file with its level and reason, the machines it reached and the time taken. On a broken session it restarts the game, which brings every machine back. Returns when done, or after 50 s with state applying; follow it with status.",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false,
+        "properties": {"files": {"type": "array", "items": {"type": "string"}}}
+      },
+      "outputSchema": {"$ref": "#/$defs/ReloadAnswer"}
     },
     {
       "name": "exec",

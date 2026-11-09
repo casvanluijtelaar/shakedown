@@ -49,6 +49,8 @@ enum Command {
     Status,
     /// Resets the session in place (RST-03).
     Reset,
+    /// Reloads changed mod code: the files given, or what changed under the watched sources (RLD-01).
+    Reload { files: Vec<PathBuf> },
     /// Runs SQF on a machine or a group and prints the value and any script errors (CTL-01, CTL-05).
     Exec {
         #[arg(long)]
@@ -320,6 +322,24 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
                 Ok(4)
             }
         }
+        Command::Reload { files } => {
+            let project = ops::project(given)?;
+            let value = asked(ops::reload_request(&project, files, None)?)?;
+            if cli.json {
+                out.json(&value);
+            } else {
+                print_reload(&value);
+            }
+            if value["state"] == "failed" {
+                return Err(CliError::not_now(format!(
+                    "The reload failed at its {} on {}: {}. The session is broken; `shakedown reload` restarts its game, or stop it with `shakedown session stop`.",
+                    value["reason"]["step"].as_str().unwrap_or("?"),
+                    value["reason"]["machine"].as_str().unwrap_or("?"),
+                    value["reason"]["message"].as_str().unwrap_or("?"),
+                )));
+            }
+            Ok(0)
+        }
         Command::Exec {
             machine,
             code,
@@ -557,6 +577,30 @@ pub fn other_setup(running: &Value, setup: &str) -> CliError {
         running["setup"].as_str().unwrap_or("?"),
     ))
     .tag("session-exists")
+}
+
+/// A reload for a person: its level, state and time, each file with its level and reason, and the
+/// machines it reached (`RLD-03`).
+pub fn print_reload(v: &Value) {
+    println!(
+        "reload {} {}: level {} in {} s",
+        v["id"].as_str().unwrap_or("?"),
+        v["state"].as_str().unwrap_or("?"),
+        v["level"].as_str().unwrap_or("?"),
+        v["duration_s"]
+    );
+    for f in v["files"].as_array().into_iter().flatten() {
+        println!(
+            "  {}  {}: {}",
+            f["level"].as_str().unwrap_or("?"),
+            f["path"].as_str().unwrap_or("?"),
+            f["reason"].as_str().unwrap_or("")
+        );
+    }
+    if let Some(m) = v["machines"].as_array().filter(|m| !m.is_empty()) {
+        let names: Vec<&str> = m.iter().filter_map(|x| x.as_str()).collect();
+        println!("  reached {}", names.join(", "));
+    }
 }
 
 fn print_errors(errors: &Value) {

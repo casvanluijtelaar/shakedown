@@ -10,8 +10,8 @@ class CfgPatches {
         requiredVersion = 2.18;
         requiredAddons[] = {"A3_Functions_F", "A3_Weapons_F"};
         version = 0.0;
-        versionStr = "0.0.4";
-        versionAr[] = {0, 0, 4};
+        versionStr = "0.0.5";
+        versionAr[] = {0, 0, 5};
     };
 };
 
@@ -25,6 +25,8 @@ class CfgFunctions {
             class setFlag {};
             class setFlagLater {};
             class throw {};
+            // The reload target inside the mission (contract "A reload target inside the mission").
+            class version {};
         };
     };
 };

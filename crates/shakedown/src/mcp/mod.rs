@@ -159,6 +159,13 @@ struct Selection {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct ReloadArgs {
+    #[serde(default)]
+    files: Vec<PathBuf>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RunArgs {
     run_id: String,
     #[serde(default)]
@@ -342,6 +349,14 @@ impl Server {
             "reset" => {
                 args::<Empty>(name, arguments)?;
                 self.ask(Request::Reset, ctx).await
+            }
+            "reload" => {
+                let a: ReloadArgs = args(name, arguments)?;
+                let project = self.project()?;
+                // Files are relative to the project; the reload goes on in the runner after 50 s
+                // (AGT-03), and `status` shows it as `last_reload`.
+                let request = ops::reload_request(&project, &a.files, Some(WAIT_MAX_S))?;
+                self.ask(request, ctx).await
             }
             "exec" => {
                 let a: ExecArgs = args(name, arguments)?;
@@ -824,6 +839,7 @@ mod tests {
             "run_status",
             "run_result",
             "reset",
+            "reload",
             "exec",
             "wait_until",
             "expect",

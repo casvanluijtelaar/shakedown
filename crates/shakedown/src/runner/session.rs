@@ -78,16 +78,19 @@ pub struct Machine {
     /// The agent sent `ready`; a dedicated client is `ready` once the server also sees it at
     /// client state 10 (`P-02` step 7).
     agent_ready: bool,
+    /// While its mission restarts or its process is replaced, an order to the machine waits until
+    /// it is ready again instead of being sent into the gap (`NFR-RL-04`).
+    held: bool,
     process: Option<Child>,
     tx: Option<mpsc::UnboundedSender<String>>,
 }
 
 impl Machine {
-    fn new(name: &str, kind: &'static str, profile: PathBuf) -> Machine {
+    fn new(name: &str, kind: &'static str, start: u32, profile: PathBuf) -> Machine {
         Machine {
             name: name.into(),
             kind,
-            start: 1,
+            start,
             state: "launched",
             profile,
             pid: None,
@@ -98,15 +101,27 @@ impl Machine {
             mission_start: 0,
             baseline: Value::Null,
             agent_ready: false,
+            held: false,
             process: None,
             tx: None,
         }
     }
 }
 
+/// A file of a watched `source` folder as the snapshot saw it (`RLD-01`, `P-08` step 1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stamp {
+    pub size: u64,
+    pub modified: Option<SystemTime>,
+    pub hash: u64,
+}
+
 struct Inner {
     state: SessionState,
     machines: Vec<Machine>,
+    /// The machine starts a mission restart or a game restart replaced, each with the time it
+    /// was replaced; the result file lists those that took part in a run (`RES-02`).
+    retired: Vec<(Machine, SystemTime)>,
     reason: Option<Value>,
     job: Option<Job>,
     pending: HashMap<String, (String, oneshot::Sender<Value>)>,
@@ -146,6 +161,10 @@ pub struct Session {
     redactor: crate::logs::Redactor,
     /// The id of the check executing now, the source of the orders its code routes.
     pub(crate) check: Mutex<Option<String>>,
+    /// The singleplayer `-autotest` list, which every start of `p1` loads (`INT-AR-04`).
+    autotest: Option<PathBuf>,
+    /// Every file under the watched `source` folders at the last ready state (`RLD-01`).
+    pub(crate) snapshot: Mutex<std::collections::BTreeMap<PathBuf, Stamp>>,
 }
 
 /// Tells a machine to stop an order's code when the request that sent it is dropped before the
@@ -269,6 +288,16 @@ impl Session {
             .unwrap_or_else(|| "the session broke".into())
     }
 
+    /// Marks the session `ready` and clears what broke it: a reload brought every machine back.
+    pub(crate) fn set_ready(&self) {
+        {
+            let mut inner = self.inner.lock().unwrap();
+            inner.state = SessionState::Ready;
+            inner.reason = None;
+        }
+        self.changed.notify_waiters();
+    }
+
     pub(crate) fn set_state(&self, state: SessionState) {
         self.inner.lock().unwrap().state = state;
         self.changed.notify_waiters();
@@ -335,12 +364,16 @@ impl Session {
             .map_or(Value::Null, |m| m.baseline.clone())
     }
 
-    /// The machines as the result file records them (`RES-02`).
-    pub fn result_machines(&self) -> Vec<shakedown_protocol::result::Machine> {
+    /// The machine starts that took part in a run that began at `since`, as the result file
+    /// records them (`RES-02`): the starts replaced during the run, then the current ones.
+    pub fn result_machines(&self, since: SystemTime) -> Vec<shakedown_protocol::result::Machine> {
         let inner = self.inner.lock().unwrap();
         inner
-            .machines
+            .retired
             .iter()
+            .filter(|(_, at)| *at >= since)
+            .map(|(m, _)| m)
+            .chain(inner.machines.iter())
             .map(|m| shakedown_protocol::result::Machine {
                 name: m.name.clone(),
                 kind: m.kind.to_string(),
@@ -420,11 +453,15 @@ impl Session {
         mut write: OwnedWriteHalf,
     ) {
         let (tx, mut rx) = mpsc::unbounded_channel::<String>();
+        // The start this connection belongs to: a machine replaced by a restart keeps its name,
+        // and the old start's connection must not touch the new one.
+        let start;
         {
             let mut inner = self.inner.lock().unwrap();
             let Some(m) = inner.machines.iter_mut().find(|m| m.name == machine) else {
                 return;
             };
+            start = m.start;
             m.tx = Some(tx);
             if m.state == "launched" {
                 m.state = "connected";
@@ -454,7 +491,7 @@ impl Session {
         });
         while let Ok(Some(line)) = lines.next_line().await {
             match serde_json::from_str::<Value>(&line) {
-                Ok(message) => self.message(&machine, message),
+                Ok(message) => self.message(&machine, start, message),
                 Err(e) => runner.log(&format!("{} {machine}: unreadable message: {e}", self.id)),
             }
         }
@@ -464,22 +501,32 @@ impl Session {
             inner.state,
             SessionState::Stopping | SessionState::Stopped | SessionState::Failed
         );
-        if let Some(m) = inner.machines.iter_mut().find(|m| m.name == machine) {
+        let current = inner.machines.iter().any(|m| m.name == machine && m.start == start);
+        if let Some(m) = inner
+            .machines
+            .iter_mut()
+            .find(|m| m.name == machine && m.start == start)
+        {
             m.tx = None;
             if !stopping {
                 m.state = "lost";
             }
         }
         // Every order still waiting on this machine is answered by the closed channel.
-        inner.pending.retain(|_, (target, _)| *target != machine);
+        if current {
+            inner.pending.retain(|_, (target, _)| *target != machine);
+        }
         drop(inner);
         self.changed.notify_waiters();
         runner.log(&format!("{} {machine}: extension disconnected", self.id));
     }
 
-    fn message(self: &Arc<Self>, machine: &str, message: Value) {
+    fn message(self: &Arc<Self>, machine: &str, start: u32, message: Value) {
         let kind = message["kind"].as_str().unwrap_or_default().to_string();
         let mut inner = self.inner.lock().unwrap();
+        if !inner.machines.iter().any(|m| m.name == machine && m.start == start) {
+            return;
+        }
         if let Some(m) = inner.machines.iter_mut().find(|m| m.name == machine) {
             m.last_answer_at = Some(shakedown_protocol::time::now());
             if kind == "ready" {
@@ -488,6 +535,7 @@ impl Session {
                 // the start asks the server (P-02 step 7).
                 if !(m.kind == "client" && self.spec.setup.mode == Mode::Dedicated) {
                     m.state = "ready";
+                    m.held = false;
                 }
                 m.game_version = message["game_version"].as_str().map(String::from);
                 m.mission_start = message["mission_start"].as_u64().unwrap_or(0);
@@ -637,6 +685,27 @@ impl Session {
         ceiling: Duration,
     ) -> Result<Value, OrderError> {
         order["id"] = Value::String(id.clone());
+        // An order to a machine whose mission restarts waits until the machine is ready again,
+        // within the start ceiling the restart itself has, and then has its whole ceiling, so no
+        // order is sent into the gap and lost (NFR-RL-04).
+        let deadline = Instant::now() + Duration::from_secs(self.spec.setup.start_timeout);
+        loop {
+            let notified = self.changed.notified();
+            let held = {
+                let inner = self.inner.lock().unwrap();
+                inner.machines.iter().any(|m| m.name == machine && m.held)
+            };
+            if !held {
+                break;
+            }
+            if Instant::now() >= deadline {
+                return Err(OrderError::Ceiling);
+            }
+            tokio::select! {
+                _ = notified => {}
+                _ = tokio::time::sleep(POLL) => {}
+            }
+        }
         let (reply, answer) = oneshot::channel();
         {
             let mut inner = self.inner.lock().unwrap();
@@ -832,10 +901,16 @@ impl Session {
             let (exe, args): (PathBuf, Vec<String>) = match (dedicated, kind) {
                 (false, _) => (
                     win::game_exe(&self.spec.game),
-                    std::iter::once(format!("-autotest={}", profile.join("autotest.cfg").display()))
-                        .chain(common.iter().cloned())
-                        .chain(window.iter().cloned())
-                        .collect(),
+                    std::iter::once(format!(
+                        "-autotest={}",
+                        self.autotest
+                            .clone()
+                            .unwrap_or_else(|| profile.join("autotest.cfg"))
+                            .display()
+                    ))
+                    .chain(common.iter().cloned())
+                    .chain(window.iter().cloned())
+                    .collect(),
                 ),
                 (true, "server") => (
                     win::server_exe(&self.spec.game),
@@ -982,7 +1057,8 @@ pub async fn start(
         command_password: paths::token("")[..32].to_string(),
         inner: Mutex::new(Inner {
             state: SessionState::Starting,
-            machines: plan.iter().map(|(n, k)| Machine::new(n, k, profile(n))).collect(),
+            machines: plan.iter().map(|(n, k)| Machine::new(n, k, 1, profile(n))).collect(),
+            retired: Vec::new(),
             reason: None,
             job: None,
             pending: HashMap::new(),
@@ -1002,6 +1078,8 @@ pub async fn start(
         ),
         redactor: runner.redactor(),
         check: Mutex::new(None),
+        autotest: (!dedicated).then(|| profile("p1").join("autotest.cfg")),
+        snapshot: Mutex::new(Default::default()),
     });
     if dedicated {
         std::fs::write(
@@ -1018,134 +1096,192 @@ pub async fn start(
     }
     runner.set_session(Some(Arc::clone(&session)));
 
-    // The server first; every game client and headless client at once when it is ready, so no
-    // client tries to join a server that is not up yet.
-    let first: Vec<String> = vec![plan[0].0.clone()];
-    let rest: Vec<String> = plan.iter().skip(1).map(|(n, _)| n.clone()).collect();
-    if let Err(cause) = session.launch(runner, &first, progress) {
-        session.fail(runner, &first[0], format!("The game could not be started: {cause}"));
+    if let Err((machine, cause)) = session.bring_up(runner, true, progress).await {
+        session.fail(runner, &machine, cause);
         session.stop(runner).await;
         return Ok(session);
     }
+    session.versions().await;
+    session.take_snapshot();
+    session.set_state(SessionState::Ready);
+    progress(format!("session {id}: ready"));
+    runner.log(&format!("{id}: ready"));
+    Ok(session)
+}
 
-    let deadline = Instant::now() + Duration::from_secs(spec.setup.start_timeout);
-    let mut rest_launched = rest.is_empty();
-    let mut asked = Instant::now() - Duration::from_secs(1);
-    loop {
-        struct Seen {
-            name: String,
-            state: &'static str,
-            kind: &'static str,
-            agent_ready: bool,
-            exit: Option<u32>,
+impl Session {
+    /// Brings every machine of the session to `ready` (`P-02` steps 5 to 7): with `launch_server`
+    /// the lead's process is launched first; every machine not yet launched is launched at once
+    /// when the lead is ready, so no client tries to join a server that is not up yet. A machine
+    /// whose process exits, or the start ceiling of `SES-04`, ends it with that machine and the
+    /// cause. Used by a start, and by a mission restart and a game restart (`P-08`).
+    async fn bring_up(
+        &self,
+        runner: &Runner,
+        launch_server: bool,
+        progress: &(dyn Fn(String) + Sync),
+    ) -> Result<(), (String, String)> {
+        let spec = &self.spec;
+        let dedicated = spec.setup.mode == Mode::Dedicated;
+        let plan = machine_plan(spec);
+        if launch_server {
+            let first = vec![plan[0].0.clone()];
+            if let Err(cause) = self.launch(runner, &first, progress) {
+                return Err((first[0].clone(), format!("The game could not be started: {cause}")));
+            }
         }
-        let seen: Vec<Seen> = {
-            let inner = session.inner.lock().unwrap();
+        let rest: Vec<String> = {
+            let inner = self.inner.lock().unwrap();
             inner
                 .machines
                 .iter()
-                .map(|m| Seen {
-                    name: m.name.clone(),
-                    state: m.state,
-                    kind: m.kind,
-                    agent_ready: m.agent_ready,
-                    exit: m.process.as_ref().and_then(win::exited),
-                })
+                .skip(1)
+                .filter(|m| m.pid.is_none())
+                .map(|m| m.name.clone())
                 .collect()
         };
-        if let Some(gone) = seen.iter().find(|m| m.exit.is_some()) {
-            let code = gone.exit.unwrap();
-            let cause = if code == 53 {
-                format!(
-                    "Steam is not running or not logged in ({} exited with code 53)",
-                    gone.name
-                )
-            } else {
-                format!(
-                    "{} exited with code {code} before it was ready; it was {}",
-                    gone.name, gone.state
-                )
-            };
-            session.fail(runner, &gone.name, cause);
-            session.stop(runner).await;
-            return Ok(session);
-        }
-        if seen.iter().all(|m| m.state == "ready") && rest_launched {
-            break;
-        }
-        if !rest_launched && seen[0].state == "ready" {
-            if let Err(cause) = session.launch(runner, &rest, progress) {
-                session.fail(runner, &rest[0], format!("The game could not be started: {cause}"));
-                session.stop(runner).await;
-                return Ok(session);
+        let session = self;
+        let result = self.wait_ready(runner, rest, dedicated, progress).await;
+        // Orders held while the machines came back go out now, or fail at once (NFR-RL-04).
+        {
+            let mut inner = session.inner.lock().unwrap();
+            for m in inner.machines.iter_mut() {
+                m.held = false;
             }
-            rest_launched = true;
-            continue;
         }
-        // A dedicated client whose agent is ready is ready once the server sees it at client
-        // state 10 (P-02 step 7, INT-AR-09).
-        if dedicated && asked.elapsed() >= Duration::from_millis(500) {
-            asked = Instant::now();
-            for m in seen
-                .iter()
-                .filter(|m| m.kind == "client" && m.agent_ready && m.state != "ready")
-            {
-                let answer = session
-                    .exec("server", "_this call skd_fnc_clientState", json!([m.name]), 5.0)
-                    .await;
-                let state = answer.as_ref().ok().and_then(|a| a["value"].as_i64()).unwrap_or(-1);
-                if state >= CLIENT_READY_STATE {
-                    let mut inner = session.inner.lock().unwrap();
-                    if let Some(x) = inner.machines.iter_mut().find(|x| x.name == m.name) {
-                        x.state = "ready";
+        session.changed.notify_waiters();
+        result
+    }
+
+    async fn wait_ready(
+        &self,
+        runner: &Runner,
+        rest: Vec<String>,
+        dedicated: bool,
+        progress: &(dyn Fn(String) + Sync),
+    ) -> Result<(), (String, String)> {
+        let session = self;
+        let spec = &self.spec;
+        let plan = machine_plan(spec);
+        let deadline = Instant::now() + Duration::from_secs(spec.setup.start_timeout);
+        let mut rest_launched = rest.is_empty();
+        let mut asked = Instant::now() - Duration::from_secs(1);
+        loop {
+            struct Seen {
+                name: String,
+                state: &'static str,
+                kind: &'static str,
+                agent_ready: bool,
+                exit: Option<u32>,
+            }
+            let seen: Vec<Seen> = {
+                let inner = session.inner.lock().unwrap();
+                inner
+                    .machines
+                    .iter()
+                    .map(|m| Seen {
+                        name: m.name.clone(),
+                        state: m.state,
+                        kind: m.kind,
+                        agent_ready: m.agent_ready,
+                        exit: m.process.as_ref().and_then(win::exited),
+                    })
+                    .collect()
+            };
+            if let Some(gone) = seen.iter().find(|m| m.exit.is_some()) {
+                let code = gone.exit.unwrap();
+                let cause = if code == 53 {
+                    format!(
+                        "Steam is not running or not logged in ({} exited with code 53)",
+                        gone.name
+                    )
+                } else {
+                    format!(
+                        "{} exited with code {code} before it was ready; it was {}",
+                        gone.name, gone.state
+                    )
+                };
+                return Err((gone.name.clone(), cause));
+            }
+            if seen.iter().all(|m| m.state == "ready") && rest_launched {
+                return Ok(());
+            }
+            if !rest_launched && seen[0].state == "ready" {
+                if let Err(cause) = session.launch(runner, &rest, progress) {
+                    return Err((rest[0].clone(), format!("The game could not be started: {cause}")));
+                }
+                rest_launched = true;
+                continue;
+            }
+            // A dedicated client whose agent is ready is ready once the server sees it at client
+            // state 10 (P-02 step 7, INT-AR-09).
+            if dedicated && asked.elapsed() >= Duration::from_millis(500) {
+                asked = Instant::now();
+                for m in seen
+                    .iter()
+                    .filter(|m| m.kind == "client" && m.agent_ready && m.state != "ready")
+                {
+                    let answer = session
+                        .exec("server", "_this call skd_fnc_clientState", json!([m.name]), 5.0)
+                        .await;
+                    let state = answer.as_ref().ok().and_then(|a| a["value"].as_i64()).unwrap_or(-1);
+                    if state >= CLIENT_READY_STATE {
+                        let mut inner = session.inner.lock().unwrap();
+                        if let Some(x) = inner.machines.iter_mut().find(|x| x.name == m.name) {
+                            x.state = "ready";
+                            x.held = false;
+                        }
                     }
                 }
             }
-        }
-        if Instant::now() >= deadline {
-            let waiting: Vec<String> = seen
-                .iter()
-                .filter(|m| m.state != "ready")
-                .map(|m| {
-                    if rest_launched || m.kind == "server" {
-                        format!("{} was {}", m.name, m.state)
-                    } else {
-                        format!("{} was not launched, since the server was not ready", m.name)
-                    }
-                })
-                .collect();
-            let first_waiting = seen
-                .iter()
-                .find(|m| m.state != "ready")
-                .map_or(plan[0].0.clone(), |m| m.name.clone());
-            let cause = format!(
-                "the session was not ready within the start ceiling of {} s: {}",
-                spec.setup.start_timeout,
-                waiting.join("; ")
-            );
-            session.fail(runner, &first_waiting, cause);
-            session.stop(runner).await;
-            return Ok(session);
-        }
-        tokio::select! {
-            _ = session.changed.notified() => {}
-            _ = tokio::time::sleep(POLL) => {}
+            if Instant::now() >= deadline {
+                let waiting: Vec<String> = seen
+                    .iter()
+                    .filter(|m| m.state != "ready")
+                    .map(|m| {
+                        if rest_launched || m.kind == "server" {
+                            format!("{} was {}", m.name, m.state)
+                        } else {
+                            format!("{} was not launched, since the server was not ready", m.name)
+                        }
+                    })
+                    .collect();
+                let first_waiting = seen
+                    .iter()
+                    .find(|m| m.state != "ready")
+                    .map_or(plan[0].0.clone(), |m| m.name.clone());
+                let cause = format!(
+                    "the session was not ready within the start ceiling of {} s: {}",
+                    spec.setup.start_timeout,
+                    waiting.join("; ")
+                );
+                return Err((first_waiting, cause));
+            }
+            tokio::select! {
+                _ = session.changed.notified() => {}
+                _ = tokio::time::sleep(POLL) => {}
+            }
         }
     }
 
-    // The version of each mod with a patch key, as each machine loaded it (RES-02).
-    let patched: Vec<(String, String)> = spec
-        .mods
-        .iter()
-        .filter_map(|m| m.patch.clone().map(|p| (m.name.clone(), p)))
-        .collect();
-    if !patched.is_empty() {
+    /// Asks every machine for the version of each mod with a patch key, as it loaded it (RES-02).
+    async fn versions(&self) {
+        let plan = machine_plan(&self.spec);
+        let patched: Vec<(String, String)> = self
+            .spec
+            .mods
+            .iter()
+            .filter_map(|m| m.patch.clone().map(|p| (m.name.clone(), p)))
+            .collect();
+        if patched.is_empty() {
+            return;
+        }
         let patches: Vec<&str> = patched.iter().map(|(_, p)| p.as_str()).collect();
         let source = r#"_this apply { private _c = configFile >> "CfgPatches" >> _x; if (isClass _c) then { getText (_c >> "versionStr") } else { nil } }"#;
         for (name, _) in &plan {
-            let answer = session.exec(name, source, json!(patches), ORDER_CEILING_S).await;
+            let answer = self.exec(name, source, json!(patches), ORDER_CEILING_S).await;
             let versions = answer.ok().map(|a| a["value"].clone()).unwrap_or(Value::Null);
-            let mut inner = session.inner.lock().unwrap();
+            let mut inner = self.inner.lock().unwrap();
             let m = inner.machines.iter_mut().find(|m| &m.name == name).unwrap();
             m.mods = patched
                 .iter()
@@ -1158,10 +1294,235 @@ pub async fn start(
                 .collect();
         }
     }
-    session.set_state(SessionState::Ready);
-    progress(format!("session {id}: ready"));
-    runner.log(&format!("{id}: ready"));
-    Ok(session)
+
+    /// Holds new orders to `names`, then waits up to 10 s for the orders already sent to them to
+    /// be answered, so a restart cuts no order off (NFR-RL-04).
+    async fn hold(&self, names: &[String]) {
+        {
+            let mut inner = self.inner.lock().unwrap();
+            for m in inner.machines.iter_mut().filter(|m| names.contains(&m.name)) {
+                m.held = true;
+            }
+        }
+        for _ in 0..(STOP_CEILING.as_millis() / POLL.as_millis()) {
+            let busy = {
+                let inner = self.inner.lock().unwrap();
+                inner.pending.values().any(|(target, _)| names.contains(target))
+            };
+            if !busy {
+                break;
+            }
+            tokio::time::sleep(POLL).await;
+        }
+    }
+
+    /// Ends the processes of `names` and puts a new start of each role in its place, with start
+    /// number plus one and a profile folder of its own, not yet launched (`P-08` steps 4 and 5).
+    /// The old starts end `stopped`.
+    async fn replace(&self, runner: &Runner, names: &[String]) {
+        {
+            let inner = self.inner.lock().unwrap();
+            for m in inner.machines.iter().filter(|m| names.contains(&m.name)) {
+                if let Some(p) = &m.process {
+                    p.terminate();
+                }
+            }
+        }
+        for _ in 0..(STOP_CEILING.as_millis() / POLL.as_millis()) {
+            let left = {
+                let inner = self.inner.lock().unwrap();
+                inner
+                    .machines
+                    .iter()
+                    .filter(|m| names.contains(&m.name))
+                    .filter_map(|m| m.process.as_ref())
+                    .any(|p| win::exited(p).is_none())
+            };
+            if !left {
+                break;
+            }
+            tokio::time::sleep(POLL).await;
+        }
+        let now = SystemTime::now();
+        let mut inner = self.inner.lock().unwrap();
+        for i in 0..inner.machines.len() {
+            if !names.contains(&inner.machines[i].name) {
+                continue;
+            }
+            let (name, kind, start) = {
+                let m = &inner.machines[i];
+                (m.name.clone(), m.kind, m.start + 1)
+            };
+            let profile = self.folder.join("machines").join(format!("{name}-{start}"));
+            let mut new = Machine::new(&name, kind, start, profile);
+            new.held = true;
+            let mut old = std::mem::replace(&mut inner.machines[i], new);
+            if let Some(p) = old.process.take() {
+                runner.log(&format!(
+                    "{} {name}: process {} stopped for start {start}",
+                    self.id, p.pid
+                ));
+            }
+            old.tx = None;
+            old.state = "stopped";
+            inner.retired.push((old, now));
+        }
+        inner.pending.retain(|_, (target, _)| !names.contains(target));
+    }
+
+    /// A mission restart, level B of `P-08`: in singleplayer the lead ends the mission and the
+    /// game loads the next entry of the `-autotest` list; on a dedicated session the clients and
+    /// headless clients are replaced by fresh processes around the server's `#restart`. Every
+    /// agent captures a new baseline at the mission start (`RST-02`). On failure, the machine that
+    /// did not come back and why.
+    pub async fn mission_restart(
+        &self,
+        runner: &Runner,
+        progress: &(dyn Fn(String) + Sync),
+    ) -> Result<(), (String, String)> {
+        let lead = self.lead().to_string();
+        let names = self.machine_names();
+        let others: Vec<String> = names.iter().filter(|n| **n != lead).cloned().collect();
+        if !others.is_empty() {
+            self.hold(&others).await;
+            self.replace(runner, &others).await;
+            // Users the server still lists after their processes ended are kicked, so the
+            // mission restarts with nobody on it (P-08 step 4).
+            let kick = r##"params ["_pw"];
+                private _t = diag_tickTime;
+                waitUntil {
+                    { _pw serverCommand format ["#kick %1", _x] } forEach allUsers;
+                    sleep 0.5;
+                    count allUsers == 0 || { diag_tickTime - _t > 20 }
+                };
+                count allUsers"##;
+            let left = self.exec(&lead, kick, json!([self.command_password()]), 22.0).await;
+            match left.as_ref().ok().and_then(|a| a["value"].as_u64()) {
+                Some(0) => {}
+                Some(n) => {
+                    return Err((
+                        lead,
+                        format!("the server still listed {n} users 20 s after their processes ended"),
+                    ));
+                }
+                None => {
+                    return Err((
+                        lead,
+                        format!("the server did not answer the kick of its users ({left:?})"),
+                    ));
+                }
+            }
+        }
+        let before = self.mission_start(&lead);
+        self.hold(std::slice::from_ref(&lead)).await;
+        {
+            let mut inner = self.inner.lock().unwrap();
+            if let Some(m) = inner.machines.iter_mut().find(|m| m.name == lead) {
+                m.state = "connected";
+                m.agent_ready = false;
+            }
+        }
+        let (end, args) = if others.is_empty() {
+            (r#"endMission "END1"; true"#, json!([]))
+        } else {
+            (
+                r##"params ["_pw"]; [_pw] spawn { params ["_pw"]; sleep 0.1; _pw serverCommand "#restart" }; true"##,
+                json!([self.command_password()]),
+            )
+        };
+        if !self.push(
+            &lead,
+            json!({"kind": "exec", "source": end, "args": args, "ceiling": 5.0}),
+        ) {
+            return Err((lead, "the lead has no connection to the runner".into()));
+        }
+        progress(format!("session {}: mission restart", self.id));
+        let result = self.bring_up(runner, false, progress).await;
+        if result.is_ok() && self.mission_start(&lead) <= before {
+            return Err((lead, "the lead reported ready without a new mission start".into()));
+        }
+        if result.is_ok() {
+            self.versions().await;
+            self.take_snapshot();
+        }
+        result
+    }
+
+    /// A game restart, level C of `P-08`: every process of the session is replaced by a new start
+    /// of its role, in the session's folder, as a start brings them up (`P-02` steps 5 to 8).
+    pub async fn game_restart(
+        &self,
+        runner: &Runner,
+        progress: &(dyn Fn(String) + Sync),
+    ) -> Result<(), (String, String)> {
+        let lead = self.lead().to_string();
+        let others: Vec<String> = self.machine_names().into_iter().filter(|n| *n != lead).collect();
+        self.hold(&others).await;
+        self.replace(runner, &others).await;
+        self.hold(std::slice::from_ref(&lead)).await;
+        self.replace(runner, std::slice::from_ref(&lead)).await;
+        progress(format!("session {}: game restart", self.id));
+        let result = self.bring_up(runner, true, progress).await;
+        if result.is_ok() {
+            self.versions().await;
+            self.take_snapshot();
+        }
+        result
+    }
+
+    /// The watched `source` folders: those of the setup's mods that have one (`CFG-01`).
+    pub fn sources(&self) -> Vec<(String, PathBuf, String)> {
+        self.spec
+            .mods
+            .iter()
+            .filter_map(|m| Some((m.name.clone(), m.source.clone()?, m.prefix.clone().unwrap_or_default())))
+            .collect()
+    }
+
+    /// Takes the snapshot of every file under the watched `source` folders (`RLD-01`).
+    pub fn take_snapshot(&self) {
+        let mut snap = std::collections::BTreeMap::new();
+        for (_, dir, _) in self.sources() {
+            walk(&dir, &mut snap);
+        }
+        *self.snapshot.lock().unwrap() = snap;
+    }
+
+    /// Takes the machines out of their hold; for a restart that failed, so their orders fail at
+    /// once instead of waiting.
+    pub fn release(&self) {
+        let mut inner = self.inner.lock().unwrap();
+        for m in inner.machines.iter_mut() {
+            m.held = false;
+        }
+        drop(inner);
+        self.changed.notify_waiters();
+    }
+}
+
+/// The stamp of a file: its size, modification time and a hash of its content.
+pub fn stamp(path: &Path) -> Option<Stamp> {
+    use std::hash::{Hash, Hasher};
+    let meta = std::fs::metadata(path).ok()?;
+    let bytes = std::fs::read(path).ok()?;
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    bytes.hash(&mut h);
+    Some(Stamp {
+        size: meta.len(),
+        modified: meta.modified().ok(),
+        hash: h.finish(),
+    })
+}
+
+fn walk(dir: &Path, out: &mut std::collections::BTreeMap<PathBuf, Stamp>) {
+    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            walk(&path, out);
+        } else if let Some(s) = stamp(&path) {
+            out.insert(path, s);
+        }
+    }
 }
 
 /// The preconditions of `SES-03`, and for a dedicated setup the framework's junction in the game

@@ -68,7 +68,7 @@ Triggered by `run` (command line) or `run_start` (MCP).
 
 1. **runner**: reads the check file fresh from disk, parses its header (`API-01`). A header error ends the check as `fail` / `check-error` without touching the game.
 2. **runner**: if the session is `broken`, ends the check `invalid` / `session-broken`.
-3. **runner**: tells every machine the run, the check id and the execution's key `<run id>#<n>` (an order that sets the context variables), and each machine writes the execution's start marker into its RPT (`LOG-04`); then prepares: if the check's reset mode is `mission`, a mission restart (`P-08` level B); otherwise a reset (`P-06`). A failure ends the check `invalid` / `reset-failed` and leaves the session `broken`.
+3. **runner**: if the check's reset mode is `mission`, restarts the mission first (`P-08` level B), since a mission restart clears the context variables and a replaced machine writes a new RPT. Then it tells every machine the run, the check id and the execution's key `<run id>#<n>` (an order that sets the context variables), and each machine writes the execution's start marker into its RPT (`LOG-04`); then, for reset mode `in-place`, resets (`P-06`). A failure of either ends the check `invalid` / `reset-failed`, naming the machine that did not come back or did not verify, and leaves the session `broken`.
 4. **runner**: sends the lead an order of kind `check` with the check source, its id and its timeout.
 5. **lead**: compiles the body (a compile error ends it `fail` / `check-error`), `spawn`s it, and records each step's start and end on the wall clock and the clocks of `OBS-05` as the body calls `skd_fnc_step`. Calls that target other machines go through `P-03`.
 6. **agent** (every machine): sends each caught script error at once, stamped with the context variables and a step path: on the lead the innermost step running in the check; on another machine the step path the newest order still running there carried, or none (`ERR-01`).
@@ -90,19 +90,21 @@ Run before every check with reset mode `in-place`, and by the `reset` command. T
 
 1. **runner**: an order to a machine has no answer within its in-game ceiling plus the grace (`OBS-03`), or a check's end report does not come within its timeout plus the grace.
 2. **runner**: marks the machine `lost` with reason `no-answer` and the wall-clock time the ceiling passed, marks the session `broken`, ends the check executing `invalid` / `machine-lost` with the machine, the order that went unanswered and the machine's last 20 RPT lines, and ends each following check of the run `invalid` / `session-broken`.
-3. The game processes keep running, so a person or an AI agent can still look at the logs and the processes. The session leaves `broken` by a `game-restart` reload or by `session stop`.
+3. The game processes keep running, so a person or an AI agent can still look at the logs and the processes. The session leaves `broken` by a `game-restart` reload, which any `reload` of a broken session is (`RLD-01`), or by `session stop`.
 
 ## **P-08** A reload
 
-Triggered by `reload [files...]`. **runner** drives it.
+Triggered by `reload [files...]`. **runner** drives it. On a `broken` session the level applied is C whatever the files need, since only a game restart replaces every machine (`RLD-01`).
+
+While a machine's mission restarts or its process is replaced, at level B or C, the runner holds every new order to it until the machine is `ready` again, for at most the setup's start ceiling (`SES-04`), and then sends it with its whole ceiling; before it ends a mission or a process it waits up to 10 s for the orders already sent there to be answered, so no order is lost or run twice across a restart (`NFR-RL-04`).
 
 1. **Classify.** The runner takes the given files, or, with none given, compares every file under each watched mod's `source` folder (`CFG-01`) with the snapshot taken at the last ready state, by size, modification time and content hash. It classifies each changed file by `RLD-02`, asking the lead which functions each `.sqf` defines in `CfgFunctions` and whether each is final on every machine. The level applied is the highest any file needs.
 2. **Level A, mission.** For each function to recompile, every machine recompiles it from its file (`BIS_fnc_recompile` with the function's name), then returns a hash of `toString` of the function. The level is done when every machine returns the hash of the new file's source. A machine returning another hash fails the reload.
 3. **Level B, mission restart, singleplayer.** The lead ends the mission with `endMission "END1"`. The game loads the next entry of the `-autotest` list, which is the same session mission (`INT-AR-04`). The agent reports `ready` with the mission start count plus one.
 4. **Level B, mission restart, dedicated.** The runner stops every client and headless client process (`P-10` step 2). The server's agent kicks any user still listed (`#kick` through `serverCommand` with the session's command password) until `allUsers` holds no one, with a ceiling of 20 s, then sends `#restart`. When the server's agent reports `ready` with the next mission start count, the runner starts fresh client and headless client processes (new start numbers) as in `P-02` step 5 and waits for them as in step 7.
 5. **Level C, game restart.** The runner stops every process of the session (`P-10` steps 1 to 3, keeping the session folder and id) and starts them again as in `P-02` steps 5 to 8 with new start numbers.
-6. **Verify.** After level B or C, every agent has captured a new baseline at the mission start (`RST-02`), and the runner takes a new file snapshot. The reload result names the level applied, each file with its level and reason, and the time taken on the wall clock (`RLD-03`).
-7. A failure at any step marks the reload `failed` and the session `broken`, with the step and the machine.
+6. **Verify.** After level B or C, every agent has captured a new baseline at the mission start (`RST-02`), and the runner takes a new file snapshot; it takes one too after a reload of level none and after the mission restart of a `@reset mission` check. The reload result names the level applied, each file with its level and reason, the machines it reached, and the time taken on the wall clock (`RLD-03`).
+7. A failure at any step marks the reload `failed` and the session `broken`, with the step (the level being applied) and the machine that did not come back, in the reload's `reason` and the session's.
 
 ## **P-09** A crash: a process exits unasked
 

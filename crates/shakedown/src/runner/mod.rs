@@ -5,6 +5,7 @@
 pub mod control;
 pub mod errors;
 pub mod record;
+pub mod reload;
 pub mod run;
 pub mod session;
 
@@ -48,6 +49,8 @@ pub struct Runner {
     /// The last start that failed, with its reason, which `status` shows until the next start or
     /// `stop` (`INS-02`).
     failed: Mutex<Option<Value>>,
+    /// The last reload, in the Reload shape, for `status` (`INS-02`).
+    pub(crate) last_reload: Mutex<Option<Value>>,
 }
 
 struct State {
@@ -79,6 +82,7 @@ impl Runner {
             redactor: Mutex::new(Redactor::default()),
             executing: Mutex::new(None),
             failed: Mutex::new(None),
+            last_reload: Mutex::new(None),
         });
         let me = Arc::clone(&runner);
         tokio::spawn(async move {
@@ -309,9 +313,12 @@ impl Runner {
                     "version": shakedown_protocol::VERSION,
                     "session": self.session().map(|s| s.view()).or_else(|| self.failed.lock().unwrap().clone()),
                     "run": self.progress.lock().unwrap().clone(),
-                    "last_reload": null,
+                    "last_reload": self.last_reload.lock().unwrap().clone(),
                 }),
             }),
+            Request::Reload { files, checks, wait_s } => reload::reload(self, files, checks, wait_s)
+                .await
+                .map(|value| Event::Value { value }),
             Request::ReserveRun => Ok(Event::Value {
                 value: json!({"run_id": run::new_run_id(self)}),
             }),
@@ -418,7 +425,7 @@ impl Runner {
             session::SessionState::Ready => {}
             session::SessionState::Broken => {
                 return Err(CliError::not_now(format!(
-                    "Session {} is broken: {}. It cannot be reset. Bring every machine back with a game-restart reload, or stop it with `shakedown session stop`.",
+                    "Session {} is broken: {}. It cannot be reset. Bring every machine back with `shakedown reload`, which restarts the game of a broken session, or stop it with `shakedown session stop`.",
                     session.id,
                     session.broken_reason()
                 ))
@@ -436,7 +443,7 @@ impl Runner {
                     "Session {} is {}, so it cannot be reset now. Wait for it to be ready.",
                     session.id,
                     if other == session::SessionState::Reloading {
-                        "busy with a reset"
+                        "busy with a reload or a reset"
                     } else {
                         other.as_str()
                     }

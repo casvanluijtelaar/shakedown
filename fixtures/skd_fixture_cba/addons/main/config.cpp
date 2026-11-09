@@ -9,8 +9,24 @@ class CfgPatches {
         requiredVersion = 2.18;
         requiredAddons[] = {"cba_main", "skdfx_main"};
         version = 0.0;
-        versionStr = "0.0.3";
-        versionAr[] = {0, 0, 3};
+        versionStr = "0.0.4";
+        versionAr[] = {0, 0, 4};
+    };
+};
+
+// The reload target behind a mission restart (contract "A reload target behind a mission
+// restart"): skdfx_cba_fnc_version is a CBA PREP function, compiled as CBA mods do in XEH
+// preStart and again in preInit, so it is final and changes only at a mission start with CBA's
+// cache off.
+class Extended_PreStart_EventHandlers {
+    class skdfx_cba {
+        init = "call compile preprocessFileLineNumbers '\skdfx_cba\addons\main\XEH_preStart.sqf'";
+    };
+};
+
+class Extended_PreInit_EventHandlers {
+    class skdfx_cba {
+        init = "call compile preprocessFileLineNumbers '\skdfx_cba\addons\main\XEH_preInit.sqf'";
     };
 };
 
