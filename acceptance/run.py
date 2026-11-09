@@ -15,8 +15,8 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02, m03, m04, m05  # noqa: E402,F401  (importing a module registers its checks)
-from harness.core import BATCHES, CHECKS, SETUPS, Context  # noqa: E402
+from harness import driver, m00, m01, m02, m03, m04, m05, m06  # noqa: E402,F401  (importing a module registers its checks)
+from harness.core import AFTER_SESSION, BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
 DEFAULT_CBA = r"C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997"
@@ -38,7 +38,9 @@ def make_project(work, game, install, cba, agh):
     server with two clients and a headless client loading the same mods as cba; ded30 is ded
     with a start ceiling of 30 s, which a start of about 45 s cannot meet (US-004). slow is a dedicated
     server with one client on Altis, whose start takes longer than the 50 s a session_start call waits
-    (US-050). The .mcp.json is the one docs/agent-tools.md gives.
+    (US-050). rld is a dedicated server with two clients and a headless client whose fixtures are
+    watched by reload (M6), with the CBA fixture's sources staged in the project. The .mcp.json is the
+    one docs/agent-tools.md gives.
     """
     project = work / "project"
     shutil.copytree(HERE / "checks", project / "checks")
@@ -68,7 +70,7 @@ def make_project(work, game, install, cba, agh):
         "[setups.ded30]\nmode = \"dedicated\"\nclients = 2\nheadless = 1\nstart_timeout = 30\n"
         "mods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n\n"
         "[setups.slow]\nmode = \"dedicated\"\nclients = 1\nworld = \"Altis\"\nstart_timeout = 300\n"
-        "mods = [\"fixture\"]\n",
+        "mods = [\"fixture\"]\n" + m06.project_toml(project, game, install),
         encoding="utf-8")
     (project / ".mcp.json").write_text(json.dumps(
         {"mcpServers": {"shakedown": {"command": "shakedown", "args": ["mcp"], "timeout": 70000}}}, indent=2),
@@ -165,6 +167,8 @@ def main():
                     results.append((1, c.name, False, f"harness error: the session of setup {setup} failed: {e!r}"))
             finally:
                 cleanup(ctx, setup, log)
+                for fn in AFTER_SESSION:
+                    fn(ctx, setup)
         for c in [c for c in selected if c.phase == "end"]:
             run_check(c, 1)
         rp = ctx.runner_pid

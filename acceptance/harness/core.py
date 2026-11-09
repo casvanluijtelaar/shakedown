@@ -7,10 +7,11 @@ from . import schema
 
 CHECKS = []
 BATCHES = []
+AFTER_SESSION = []  # fn(ctx, setup), called after each session stopped, such as to put back a fixture file
 
 # The setups of the generated project, in the order their sessions run. The last one's session
 # is the one the "end" checks look at.
-SETUPS = ["ded", "cba", "sp"]
+SETUPS = ["ded", "rld", "cba", "sp"]
 
 
 class Check:
@@ -64,6 +65,8 @@ class Context:
         self.m03_keep = {}           # what M3's end checks read after the sessions stopped
         self.m04 = {}                # what M4's batches did this repeat
         self.m04_keep = {}           # what M4's start checks did, for its session and end checks
+        self.m06 = {}                # what M6's batch did this repeat
+        self.m06_keep = {}           # what M6's batch did over every repeat
         self.sessions = {}           # setup -> the Session JSON of its `session start`
         self.start_answer = None     # the answer of the current session's `session start`
         self.stops = {}              # setup -> (the `session stop` answer, game pids alive when it returned)
