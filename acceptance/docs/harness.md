@@ -104,3 +104,5 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - The session token is read from `p1`'s environment block (its PEB), where `SEC-02` puts it, to pose as `p1` from the harness's own process; it is held only in memory. Every message names a token only as a token, never its value.
 - The `exec` the harness sends to check that no intruder's code ran holds the marker's name itself, so the audit check looks for the intruder's assignment, not the name.
 - A suspended runner makes each client call wait its 5 s; resumed, the session answers `ready` with the same start numbers at the next `status`.
+- A script given to PowerShell with `-Command` receives no further arguments, so the `runner.json` ACL check writes the file's path into the script. A command that needs a runner, such as `exec` with no session, starts one with no game; the check reads the ACL while it runs.
+- The full suite of every milestone with M5 takes 24 minutes.
