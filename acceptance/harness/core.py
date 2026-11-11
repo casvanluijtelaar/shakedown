@@ -11,7 +11,7 @@ AFTER_SESSION = []  # fn(ctx, setup), called after each session stopped, such as
 
 # The setups of the generated project, in the order their sessions run. The last one's session
 # is the one the "end" checks look at.
-SETUPS = ["ded", "rld", "cba", "sp"]
+SETUPS = ["ded", "rld", "rld7", "rld7sp", "cba", "sp"]
 
 
 class Check:
@@ -67,6 +67,8 @@ class Context:
         self.m04_keep = {}           # what M4's start checks did, for its session and end checks
         self.m06 = {}                # what M6's batch did this repeat
         self.m06_keep = {}           # what M6's batch did over every repeat
+        self.m07 = {}                # what M7's batch did this repeat
+        self.m07_keep = {}           # setup -> the game-restart reload durations of M7 over every repeat
         self.sessions = {}           # setup -> the Session JSON of its `session start`
         self.start_answer = None     # the answer of the current session's `session start`
         self.stops = {}              # setup -> (the `session stop` answer, game pids alive when it returned)

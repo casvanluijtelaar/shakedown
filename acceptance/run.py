@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02, m03, m04, m05, m06  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import AFTER_SESSION, BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
@@ -70,7 +70,8 @@ def make_project(work, game, install, cba, agh):
         "[setups.ded30]\nmode = \"dedicated\"\nclients = 2\nheadless = 1\nstart_timeout = 30\n"
         "mods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n\n"
         "[setups.slow]\nmode = \"dedicated\"\nclients = 1\nworld = \"Altis\"\nstart_timeout = 300\n"
-        "mods = [\"fixture\"]\n" + m06.project_toml(project, game, install),
+        "mods = [\"fixture\"]\n" + m06.project_toml(project, game, install)
+        + m07.project_toml(project, game, install),
         encoding="utf-8")
     (project / ".mcp.json").write_text(json.dumps(
         {"mcpServers": {"shakedown": {"command": "shakedown", "args": ["mcp"], "timeout": 70000}}}, indent=2),
