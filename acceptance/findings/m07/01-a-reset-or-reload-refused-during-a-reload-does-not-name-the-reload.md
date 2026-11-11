@@ -14,7 +14,8 @@ stories: [US-058]
 generated: { by: "claude-code/tester", at: 2026-11-11T12:12:06-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-11T13:12:54-08:00, note: "The session state reloading is shared by a reload and a reset, and the refusals named only that state. The session records what it is busy with as it enters reloading (reload <id> (level <level>), or a reset), and the refusals of reset, reload, the reload tool and run name it; RLD-01, spec/contract/cli.md and docs/reloading.md say a reload is named by its id and level. Proved by m07 us_054_us_058_nfr_pf_02_reload_during_a_run_and_rerun_by_finding_in_singleplayer and _on_a_dedicated_session, which ask all three during a game-restart reload; both named checks passed through the filter, 2 of 2." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-11T13:28:55-08:00 }
 ---
 
 # A reset or reload refused during a reload says "a reload or a reset" instead of naming the reload
