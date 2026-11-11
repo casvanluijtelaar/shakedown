@@ -11,7 +11,8 @@ stories: [US-008]
 generated: { by: "claude-code/tester", at: 2026-11-09T13:35:09-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-09T14:23:53-08:00, note: "p2 was killed the moment the reset put it back, by a shot from the enemy the check makes on hc1, and respawned on the respawn marker, which is its baseline position, facing a direction of the respawn's choosing; P-06 step 4 set the player again only when its position was off. It now also sets it again while its direction is more than 1 degree off (P-06 edited; DEF-22 holds the damage and late-death cases). Proved by m02 us_008_rst_01_rst_05_a_player_killed_as_the_reset_puts_it_back_faces_its_baseline, which failed with this finding's message before the fix, and the named check passed 3 of 3 with --repeat 3." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-11T09:21:18-08:00 }
 ---
 
 # A reset on a dedicated session failed once on p2's direction and broke the session
