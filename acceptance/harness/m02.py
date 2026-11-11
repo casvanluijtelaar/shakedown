@@ -288,8 +288,10 @@ def us_004_timeout(ctx):
     assert session["state"] == "failed", f"the session ended {session['state']}, expected failed"
     assert 29 <= took <= 75, f"the start took {took:.0f} s with a start ceiling of 30 s"
     message = (session["reason"] or {}).get("message", "")
-    assert seen, "status never listed the starting session"
-    last = seen[-1][1]["machines"]
+    # The watch can see one status after the start ended, with every machine stopped; judge the last one still starting.
+    starting = [s for _, s in seen if s["state"] == "starting"]
+    assert starting, "status never listed the starting session"
+    last = starting[-1]["machines"]
     not_ready = [m for m in last if m["state"] != "ready"]
     ctx.log(f"the last status before the ceiling: {[(m['name'], m['state']) for m in last]}; message {message!r}")
     for m in not_ready:
