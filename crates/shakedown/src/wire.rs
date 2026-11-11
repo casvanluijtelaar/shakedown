@@ -76,6 +76,12 @@ pub enum Request {
     },
     /// A run id handed out before the run begins, so `run_start` returns it at once (`AGT-03`).
     ReserveRun,
+    /// Stops a run, the one with this id or the active one, and answers once its result file is
+    /// written (`RUN-05`).
+    RunStop {
+        #[serde(default)]
+        run_id: Option<String>,
+    },
     /// SQF on a machine or a group (`CTL-01`, `CTL-05`).
     Exec {
         machine: String,

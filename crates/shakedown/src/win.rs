@@ -251,6 +251,16 @@ mod imp {
         }
     }
 
+    /// Like [`on_console_event`], and also takes Ctrl+C in a process started in a new process
+    /// group, which starts with Ctrl+C ignored.
+    pub fn on_stop_keys(f: fn(u32)) {
+        use windows::Win32::System::Console::SetConsoleCtrlHandler;
+        unsafe {
+            let _ = SetConsoleCtrlHandler(None, false);
+        }
+        on_console_event(f);
+    }
+
     /// The start time of the running process `pid`, in the form of [`Child::started_at`]; `None`
     /// when no such process runs or it cannot be read.
     pub fn process_started(pid: u32) -> Option<String> {
@@ -664,6 +674,7 @@ mod imp {
     }
 
     pub fn on_console_event(_f: fn(u32)) {}
+    pub fn on_stop_keys(_f: fn(u32)) {}
 
     pub fn spawn_breakaway(
         _exe: &Path,

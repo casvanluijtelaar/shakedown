@@ -12,7 +12,7 @@ Machines are named server, p1..pN (game clients) and hc1..hcN (headless clients)
 RUN CHECKS
 1. list_checks {"tags": ["US-019"]} shows which checks a selection takes, without the game.
 2. run_start {"ids": [...]} or {"tags": [...]} returns a run_id at once. ids run in the order given; an id given twice runs twice. With "setup" and no session, the run starts one and stops it at its end.
-3. run_status {"run_id": "...", "wait_s": 50} returns as soon as a check ends, with each outcome so far. Call it again until state is finished.
+3. run_status {"run_id": "...", "wait_s": 50} returns as soon as a check ends, with each outcome so far. Call it again until state is finished, or stopped: a run stops at its runner ceiling (the sum of its checks' @timeout plus 60 s) or by run_stop {"run_id": "..."}; the check it was on is then invalid with reason run-stopped and the rest are in not_run.
 4. run_result {"run_id": "..."}: the summary, each check's outcome, reason and failed step, and result_file, the full result as JSON.
 
 READ A RESULT

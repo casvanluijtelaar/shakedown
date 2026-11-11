@@ -51,6 +51,9 @@ pub struct Runner {
     failed: Mutex<Option<Value>>,
     /// The last reload, in the Reload shape, for `status` (`INS-02`).
     pub(crate) last_reload: Mutex<Option<Value>>,
+    /// Each run's stop switch and result file, by run id, from the moment its id is handed out
+    /// (`RUN-05`).
+    pub(crate) controls: Mutex<std::collections::HashMap<String, Arc<run::Control>>>,
 }
 
 struct State {
@@ -83,6 +86,7 @@ impl Runner {
             executing: Mutex::new(None),
             failed: Mutex::new(None),
             last_reload: Mutex::new(None),
+            controls: Mutex::new(std::collections::HashMap::new()),
         });
         let me = Arc::clone(&runner);
         tokio::spawn(async move {
@@ -324,6 +328,7 @@ impl Runner {
             } => reload::reload(self, files, checks, rebuild, wait_s)
                 .await
                 .map(|value| Event::Value { value }),
+            Request::RunStop { run_id } => run::stop(self, run_id).await.map(|value| Event::Value { value }),
             Request::ReserveRun => Ok(Event::Value {
                 value: json!({"run_id": run::new_run_id(self)}),
             }),
@@ -387,6 +392,8 @@ impl Runner {
                     None => Err(CliError::not_now("No session runs. Nothing to stop.").tag("no-session")),
                 },
                 Some(s) => {
+                    // A run active on the session stops first, with its result file (P-10 step 1).
+                    run::stop_active(self, run::SESSION_STOPPED).await;
                     s.stop(self).await;
                     Ok(Event::Session {
                         session: Some(s.view()),

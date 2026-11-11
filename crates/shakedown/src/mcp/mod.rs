@@ -452,6 +452,13 @@ impl Server {
                 let a: RunArgs = args(name, arguments)?;
                 self.run_status(&a.run_id, a.wait_s, ctx).await
             }
+            "run_stop" => {
+                let a: RunArgs = args(name, arguments)?;
+                if a.wait_s.is_some() {
+                    return Err(bad("run_stop takes only run_id. Leave wait_s out".into()));
+                }
+                self.run_stop(&a.run_id).await
+            }
             "run_result" => {
                 let a: RunArgs = args(name, arguments)?;
                 if a.wait_s.is_some() {
@@ -642,6 +649,44 @@ impl Server {
         Ok(self.status_of(run_id).expect("a run's track stays").0)
     }
 
+    /// `run_stop` (`RUN-05`): stops the run and returns its `run_status` once it has ended, at
+    /// most 50 s after the call (`AGT-03`). A run that ended already is returned as it ended.
+    async fn run_stop(&self, run_id: &str) -> Result<Value, CliError> {
+        let clock = Instant::now();
+        if let Some((status, _, true)) = self.status_of(run_id) {
+            return Ok(status);
+        }
+        let id = run_id.to_string();
+        let answer = blocking(move || {
+            let mut conn = client::existing()?.ok_or_else(|| unknown_run(&id))?;
+            ops::value(
+                &mut conn,
+                &Request::RunStop {
+                    run_id: Some(id.clone()),
+                },
+                |_| {},
+            )
+        })
+        .await?;
+        // The run's own thread records the end it reads from the runner.
+        while clock.elapsed().as_secs_f64() < WAIT_MAX_S {
+            match self.status_of(run_id) {
+                Some((status, _, true)) => return Ok(status),
+                None => break,
+                _ => tokio::time::sleep(Duration::from_millis(100)).await,
+            }
+        }
+        if let Some((status, _, _)) = self.status_of(run_id) {
+            return Ok(status);
+        }
+        Ok(answer["result_file"]
+            .as_str()
+            .and_then(|f| ops::run_status_of_result(Path::new(f)))
+            .unwrap_or_else(|| {
+                json!({"run_id": run_id, "state": "stopped", "done": 0, "total": 0, "current_check": null, "outcomes": []})
+            }))
+    }
+
     /// `run_result`: the result of a run that ended, from its result file.
     fn run_result(&self, run_id: &str) -> Result<Value, CliError> {
         if let Some((_, _, false)) = self.status_of(run_id) {
@@ -724,10 +769,16 @@ fn follow(
         let _ = conn.request(&Request::SessionStop, |_| {});
     }
     match answer {
-        Ok(_) => set(&|t| {
-            t.state = "finished".into();
-            t.ended = true;
-        }),
+        Ok(event) => {
+            let state = match &event {
+                Event::RunDone { result } if result["state"] == "stopped" => "stopped",
+                _ => "finished",
+            };
+            set(&|t| {
+                t.state = state.into();
+                t.ended = true;
+            })
+        }
         Err(e) => set(&|t| {
             if t.state == "pending" {
                 t.refused = Some(e.clone());
@@ -838,6 +889,7 @@ mod tests {
             "run_start",
             "run_status",
             "run_result",
+            "run_stop",
             "reset",
             "reload",
             "exec",

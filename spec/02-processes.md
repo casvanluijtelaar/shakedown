@@ -116,7 +116,7 @@ While a machine's mission restarts or its process is replaced, at level B or C, 
 
 Triggered by `session stop`, by the end of a run that started its own session (`RUN-04`), or by a failed start.
 
-1. **runner**: marks the session `stopping` and, if a run is active, stops it (its executing check ends `invalid` / `run-stopped`).
+1. **runner**: if a run is active, stops it as `RUN-05` says, with `stopped_reason` `session-stopped`, and waits for its result file; then marks the session `stopping`.
 2. **runner**: stops the game clients and headless clients first, then the server, so no machine logs the errors of a mission ending under it: each by its process handle, with `TerminateProcess` after asking nothing, since no clean shutdown is needed for a test session. It waits on each handle with a ceiling of 10 s.
 3. **runner**: deletes the mission copy from `<game>\MPMissions`, redacts each machine's RPT in the session folder (`LOG-02`), removes the session from the run record, and marks the session `stopped`, also in the `session.json` of its session folder.
 4. **runner**: if a process outlives step 2's ceiling, it closes the job object, which ends every process left in it, and reports the process id.

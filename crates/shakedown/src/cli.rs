@@ -32,7 +32,7 @@ enum Command {
         #[arg(long = "tag")]
         tags: Vec<String>,
     },
-    /// Runs the selection against the session; with --setup and no session, starts one and stops it after (RUN-04).
+    /// Runs the selection against the session; with --setup and no session, starts one and stops it after (RUN-04). `run stop` stops the active run (RUN-05).
     Run {
         ids: Vec<String>,
         #[arg(long = "tag")]
@@ -287,6 +287,10 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
             }
             Ok(0)
         }
+        // `run stop` stops the active run (RUN-05); `stop` alone is never read as a check id.
+        Command::Run { ids, tags, setup } if ids == &["stop"] && tags.is_empty() && setup.is_none() => {
+            run_stop(cli, &out)
+        }
         Command::Run { ids, tags, setup } => run(cli, &out, ids, tags, setup.as_deref()),
         Command::Status => {
             let status = ops::status()?;
@@ -503,6 +507,13 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
     let selected = checks::select(&all, ids, tags)?;
     let spec = setup.map(|s| ops::spec(&project, s)).transpose()?;
     let mut conn = client::connect()?;
+    // The run's id is handed out before any session start, so Ctrl+C or Ctrl+Break stops the run
+    // from the moment the command starts (RUN-05).
+    let run_id = ops::value(&mut conn, &Request::ReserveRun, |_| {})?["run_id"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+    stop_on_console_event(&run_id);
     let running = ops::session_of(conn.request(&Request::SessionInfo, |_| {})?);
     let mut started_here = false;
     match (&spec, running.is_null()) {
@@ -536,7 +547,7 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
         checks: selected,
         ids: ids.to_vec(),
         tags: tags.to_vec(),
-        run_id: None,
+        run_id: Some(run_id),
     };
     let result = conn.request(&request, |e| out.progress(e));
     // A run that started its own session stops it, whatever the outcomes (RUN-04).
@@ -547,9 +558,13 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
         return Err(CliError::framework("The runner ended the run without a result."));
     };
     let summary = &result["summary"];
+    let stopped = result["state"] == "stopped";
     if cli.json {
         out.json(&result);
     } else {
+        if stopped {
+            println!("Run stopped: {}.", stopped_reason(&result));
+        }
         println!(
             "{} passed, {} failed, {} invalid, {} not run. Result: {}",
             summary["pass"],
@@ -560,13 +575,74 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
         );
     }
     let count = |k: &str| summary[k].as_u64().unwrap_or(0);
+    // A stopped run did not reach a verdict on every check: 2 unless a check failed (RUN-05).
     Ok(if count("fail") > 0 {
         1
-    } else if count("invalid") > 0 {
+    } else if count("invalid") > 0 || stopped {
         2
     } else {
         0
     })
+}
+
+/// The `stopped_reason` of a run, read from its result file.
+fn stopped_reason(result: &Value) -> String {
+    result["result_file"]
+        .as_str()
+        .and_then(|f| std::fs::read_to_string(f).ok())
+        .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+        .and_then(|r| r["run"]["stopped_reason"].as_str().map(String::from))
+        .unwrap_or_else(|| "?".into())
+}
+
+/// The run a Ctrl+C or Ctrl+Break to this command stops.
+static STOPPING: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Has a Ctrl+C or a Ctrl+Break console event stop the run `run_id` as `run stop` does, on a
+/// connection of its own, while the command goes on waiting for the run's result (`RUN-05`).
+fn stop_on_console_event(run_id: &str) {
+    *STOPPING.lock().unwrap() = Some(run_id.to_string());
+    crate::win::on_stop_keys(|event| {
+        if event > 1 {
+            return;
+        }
+        let Some(id) = STOPPING.lock().unwrap().clone() else {
+            return;
+        };
+        eprintln!("Stopping run {id}; its result file comes next.");
+        std::thread::spawn(move || {
+            if let Ok(Some(mut conn)) = client::existing() {
+                let _ = conn.request(&Request::RunStop { run_id: Some(id) }, |_| {});
+            }
+        });
+    });
+}
+
+/// `run stop` (`RUN-05`): stops the active run and prints its outcomes once its result file is
+/// written, in the shape of `run_stop`.
+fn run_stop(cli: &Cli, out: &Out) -> Result<u8, CliError> {
+    let no_run = || CliError::not_now("No run is active, so there is nothing to stop.").tag("unknown-run");
+    let mut conn = client::existing()?.ok_or_else(no_run)?;
+    let answer = ops::value(&mut conn, &Request::RunStop { run_id: None }, |e| out.progress(e))?;
+    let run_id = answer["run_id"].as_str().unwrap_or("?");
+    let status = answer["result_file"]
+        .as_str()
+        .and_then(|f| ops::run_status_of_result(std::path::Path::new(f)))
+        .unwrap_or_else(|| {
+            json!({"run_id": run_id, "state": "stopped", "done": 0, "total": 0, "current_check": null, "outcomes": []})
+        });
+    if cli.json {
+        out.json(&status);
+    } else {
+        println!(
+            "run {run_id} {}: {} of {} checks executed. Result: {}",
+            status["state"].as_str().unwrap_or("?"),
+            status["done"],
+            status["total"],
+            answer["result_file"].as_str().unwrap_or("none, the run had not begun")
+        );
+    }
+    Ok(0)
 }
 
 /// The refusal of a run with `--setup` naming another setup than the running session's.

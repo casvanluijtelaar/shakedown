@@ -212,6 +212,25 @@
       }
     },
     {
+      "name": "run_stop",
+      "description": "Stops a run: the check executing ends invalid with reason run-stopped, the checks not started are listed as not run, and the result file is written. Returns the run's status, state stopped, once the result file is written. A run that started its own session stops that session too.",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["run_id"],
+        "properties": {"run_id": {"type": "string"}}
+      },
+      "outputSchema": {
+        "type": "object", "required": ["run_id", "state", "done", "total", "current_check", "outcomes"],
+        "properties": {
+          "run_id": {"type": "string"},
+          "state": {"enum": ["starting-session", "running", "finished", "stopped"]},
+          "done": {"type": "integer"},
+          "total": {"type": "integer"},
+          "current_check": {"type": ["string", "null"]},
+          "outcomes": {"type": "array", "items": {"$ref": "#/$defs/OutcomeLine"}}
+        }
+      }
+    },
+    {
       "name": "run_result",
       "description": "The result of a run that ended: the summary, each check execution's outcome with its failed step, and the path of the full result file. A check that failed is a result, not an error.",
       "annotations": {"readOnlyHint": true},

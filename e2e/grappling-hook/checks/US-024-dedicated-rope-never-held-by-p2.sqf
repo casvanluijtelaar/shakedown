@@ -1,6 +1,6 @@
 // @check US-024 The M2 rope check with a last assertion the mod cannot meet fails with its step, each machine's last value and log excerpt
 // @tags US-024 demo dedicated
-// @setups dedicated
+// @setups dedicated dedicated-2
 // @timeout 120
 
 // The M3 demo (plan/milestones/m03.md): US-009-dedicated-freed-rope with its last assertion

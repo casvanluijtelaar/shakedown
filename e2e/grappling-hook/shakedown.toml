@@ -25,3 +25,10 @@ mods = ["cba", "agh"]
 mode = "dedicated"
 clients = 2
 mods = ["cba", "agh"]
+
+# The M8 demo's setup: `shakedown run --setup dedicated-2` runs every check in a session it
+# starts and stops (docs/unattended-runs.md).
+[setups.dedicated-2]
+mode = "dedicated"
+clients = 2
+mods = ["cba", "agh"]

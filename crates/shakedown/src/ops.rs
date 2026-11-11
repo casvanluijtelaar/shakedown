@@ -148,7 +148,15 @@ pub fn run_result(project: &Path, run_id: &str) -> Option<Value> {
 
 /// The `run_status` shape of a run that ended, from its result file.
 pub fn run_status_of_file(project: &Path, run_id: &str) -> Option<Value> {
-    let result = run_result(project, run_id)?;
+    run_status_of_result(&project.join(".shakedown").join("runs").join(run_id).join("result.json"))
+}
+
+/// The `run_status` shape of a run that ended, from the result file at `file`; `total` counts
+/// the checks not run too.
+pub fn run_status_of_result(file: &Path) -> Option<Value> {
+    let content: Value = serde_json::from_str(&std::fs::read_to_string(file).ok()?).ok()?;
+    let result = run::run_result_of(&content, file);
+    let run_id = result["run_id"].clone();
     let outcomes: Vec<Value> = result["outcomes"]
         .as_array()
         .into_iter()
@@ -159,7 +167,7 @@ pub fn run_status_of_file(project: &Path, run_id: &str) -> Option<Value> {
         })
         .collect();
     Some(json!({
-        "run_id": run_id, "state": result["state"], "done": outcomes.len(), "total": outcomes.len(),
+        "run_id": run_id, "state": result["state"], "done": outcomes.len(), "total": result["summary"]["total"],
         "current_check": null, "outcomes": outcomes,
     }))
 }

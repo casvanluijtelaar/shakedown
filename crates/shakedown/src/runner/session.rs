@@ -339,6 +339,18 @@ impl Session {
     }
 
     /// The lead machine: `server` on a dedicated session, `p1` in singleplayer.
+    /// The ports of a dedicated session, its base port and the next four, that a program holds
+    /// (`SES-03`, `STP-04`); none for singleplayer, which opens no game port.
+    fn held_ports(&self) -> Vec<u16> {
+        if self.spec.setup.mode != Mode::Dedicated {
+            return vec![];
+        }
+        let base = self.spec.base_port;
+        (base..base.saturating_add(5))
+            .filter(|p| std::net::UdpSocket::bind(("0.0.0.0", *p)).is_err())
+            .collect()
+    }
+
     pub fn lead(&self) -> &'static str {
         match self.spec.setup.mode {
             Mode::Singleplayer => "p1",
@@ -751,6 +763,21 @@ impl Session {
         }
     }
 
+    /// Sends an order like [`Session::order`]; dropped before the answer, it tells the machine to
+    /// stop the order's code (`AGT-04`, `RUN-05`).
+    pub async fn order_tracked(&self, machine: &str, order: Value, ceiling: Duration) -> Result<Value, OrderError> {
+        let id = format!("o{}", self.orders.fetch_add(1, Ordering::SeqCst) + 1);
+        let mut guard = CancelOnDrop {
+            session: self,
+            machine: machine.to_string(),
+            order: id.clone(),
+            armed: true,
+        };
+        let answer = self.order_as(machine, order, id, ceiling).await;
+        guard.armed = false;
+        answer
+    }
+
     /// Sends `exec` with SQF source and arguments, waiting the in-game ceiling plus the grace.
     pub async fn exec(&self, machine: &str, source: &str, args: Value, ceiling_s: f64) -> Result<Value, OrderError> {
         let order = json!({"kind": "exec", "source": source, "args": args, "ceiling": ceiling_s});
@@ -823,6 +850,33 @@ impl Session {
             if inner.state != SessionState::Failed {
                 inner.state = SessionState::Stopped;
             }
+        }
+        // The stop returns only once no process of the session runs and, for a dedicated session,
+        // no port of it is held (STP-04), at most STOP_CEILING after the job closed.
+        let deadline = Instant::now() + STOP_CEILING;
+        loop {
+            let alive: Vec<u32> = {
+                let inner = self.inner.lock().unwrap();
+                inner
+                    .machines
+                    .iter()
+                    .filter_map(|m| m.process.as_ref())
+                    .filter(|p| win::exited(p).is_none())
+                    .map(|p| p.pid)
+                    .collect()
+            };
+            let held = self.held_ports();
+            if alive.is_empty() && held.is_empty() {
+                break;
+            }
+            if Instant::now() >= deadline {
+                runner.log(&format!(
+                    "{}: after the stop, processes {alive:?} still run and ports {held:?} are held",
+                    self.id
+                ));
+                break;
+            }
+            tokio::time::sleep(POLL).await;
         }
         if let Some(copy) = &self.mission_copy {
             let _ = std::fs::remove_dir_all(copy);

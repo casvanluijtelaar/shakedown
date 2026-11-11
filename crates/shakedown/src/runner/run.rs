@@ -3,7 +3,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime};
 
 use serde_json::{Value, json};
@@ -12,6 +12,7 @@ use shakedown_protocol::result::{
     Session as RSession, Setup as RSetup, Step, Summary,
 };
 use shakedown_protocol::time;
+use tokio::sync::watch;
 
 use super::session::{GRACE, OrderError, Session, SessionState};
 use super::{Runner, errors};
@@ -19,9 +20,172 @@ use crate::checks::{self, CheckRef, Header};
 use crate::error::CliError;
 use crate::paths;
 
-/// A new run id, `r-<UTC time>-<n>`.
+/// A new run id, `r-<UTC time>-<n>`, with its stop switch, so the run can be stopped from the
+/// moment its id is handed out (`RUN-05`).
 pub fn new_run_id(runner: &Runner) -> String {
-    format!("r-{}-{}", time::stamp(SystemTime::now()), runner.next_run_number())
+    let id = format!("r-{}-{}", time::stamp(SystemTime::now()), runner.next_run_number());
+    control(runner, &id);
+    id
+}
+
+/// The `stopped_reason` of a run stopped with `run stop`, `run_stop`, Ctrl+C or Ctrl+Break
+/// (`RUN-05`).
+pub const BY_HAND: &str = "by-hand";
+/// The `stopped_reason` of a run stopped at its runner ceiling (`RUN-06`).
+pub const RUN_CEILING: &str = "run-ceiling";
+/// The `stopped_reason` of a run whose session was stopped under it (`P-10` step 1).
+pub const SESSION_STOPPED: &str = "session-stopped";
+
+/// What the run's own margin adds to the sum of its checks' timeouts (`RUN-06`).
+const CEILING_MARGIN: Duration = Duration::from_secs(60);
+/// How long a stop waits for the run to write its result file before it answers; under the 60 s
+/// of a tool call (`AGT-03`).
+const STOP_WAIT: Duration = Duration::from_secs(50);
+
+/// A run's stop switch, set once by the first reason that comes, and its result file once it is
+/// written.
+pub struct Control {
+    stop: watch::Sender<Option<&'static str>>,
+    result: Mutex<Option<PathBuf>>,
+}
+
+impl Control {
+    fn new() -> Control {
+        Control {
+            stop: watch::Sender::new(None),
+            result: Mutex::new(None),
+        }
+    }
+
+    /// Asks the run to stop; a reason given earlier stays.
+    pub fn request(&self, reason: &'static str) {
+        self.stop.send_if_modified(|r| {
+            if r.is_none() {
+                *r = Some(reason);
+                true
+            } else {
+                false
+            }
+        });
+    }
+
+    pub fn reason(&self) -> Option<&'static str> {
+        *self.stop.borrow()
+    }
+
+    /// Returns once the run is asked to stop, with the reason.
+    async fn stopped(&self) -> &'static str {
+        let mut rx = self.stop.subscribe();
+        let reason = rx.wait_for(|r| r.is_some()).await.map(|r| r.unwrap_or(BY_HAND));
+        match reason {
+            Ok(r) => r,
+            // The sender lives as long as `self`, so this is never reached.
+            Err(_) => std::future::pending().await,
+        }
+    }
+
+    pub fn result(&self) -> Option<PathBuf> {
+        self.result.lock().unwrap().clone()
+    }
+}
+
+/// The stop switch of the run `id`, made when it is first asked for.
+pub fn control(runner: &Runner, id: &str) -> Arc<Control> {
+    Arc::clone(
+        runner
+            .controls
+            .lock()
+            .unwrap()
+            .entry(id.to_string())
+            .or_insert_with(|| Arc::new(Control::new())),
+    )
+}
+
+/// The id of the active run, if one is active.
+fn active_run(runner: &Runner) -> Option<String> {
+    runner.progress.lock().unwrap().as_ref()?["id"]
+        .as_str()
+        .map(String::from)
+}
+
+/// Waits while the run `id` is active, at most `ceiling`.
+async fn until_ended(runner: &Runner, id: &str, ceiling: Duration) {
+    let clock = Instant::now();
+    while active_run(runner).as_deref() == Some(id) && clock.elapsed() < ceiling {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+/// `run stop` and `run_stop` (`RUN-05`): asks the run `id`, or the active run when `id` is
+/// `None`, to stop, and returns once its result file is written, at most `STOP_WAIT` later:
+/// `{"run_id", "result_file"}`, the file `null` for a run that has not begun. A run whose id was
+/// handed out before it began stops as soon as it begins, with every check not run.
+pub async fn stop(runner: &Runner, id: Option<String>) -> Result<Value, CliError> {
+    let id = match id {
+        Some(id) => id,
+        None => active_run(runner).ok_or_else(|| {
+            CliError::not_now(
+                "No run is active, so there is nothing to stop. `shakedown status` shows the session and any active run.",
+            )
+            .tag("unknown-run")
+        })?,
+    };
+    let control = runner.controls.lock().unwrap().get(&id).cloned().ok_or_else(|| {
+        CliError::wrong(format!(
+            "No run has the id {id}. Give the run_id that run_start returned, or leave it out to stop the active run."
+        ))
+        .tag("unknown-run")
+    })?;
+    if control.result().is_none() {
+        control.request(BY_HAND);
+        runner.log(&format!("run {id}: stop asked by hand"));
+        until_ended(runner, &id, STOP_WAIT).await;
+    }
+    Ok(json!({"run_id": id, "result_file": control.result()}))
+}
+
+/// Stops the active run, if any, for `reason`, and waits for its result file (`P-10` step 1).
+pub async fn stop_active(runner: &Runner, reason: &'static str) {
+    let Some(id) = active_run(runner) else { return };
+    control(runner, &id).request(reason);
+    runner.log(&format!("run {id}: stop asked, {reason}"));
+    until_ended(runner, &id, STOP_WAIT).await;
+}
+
+/// The runner ceiling of a run (`RUN-06`): the sum of the timeouts of the checks it will execute
+/// in the session's setup, read from their headers, plus 60 s. A check whose header cannot be read
+/// ends at once and adds nothing.
+fn run_ceiling(checks: &[CheckRef], declared: &[String], setup: &str) -> Duration {
+    let sum: u64 = checks
+        .iter()
+        .filter_map(|c| {
+            let text = std::fs::read_to_string(&c.path).ok()?;
+            let h = checks::parse_header_in(&text, Some(declared)).ok()?;
+            h.setups
+                .as_ref()
+                .is_none_or(|s| s.iter().any(|x| x == setup))
+                .then_some(h.timeout_s)
+        })
+        .sum();
+    Duration::from_secs(sum) + CEILING_MARGIN
+}
+
+/// The reason of the check a stop ended before it reached a verdict (`DM-05`).
+fn run_stopped(reason: &str, ceiling: Duration) -> Reason {
+    let message = match reason {
+        RUN_CEILING => format!(
+            "The run reached its runner ceiling of {} s, the sum of its checks' timeouts plus 60 s, before this check reached a verdict. Raise the @timeout of a check that needs longer, or find what runs long, such as a cleanup.",
+            ceiling.as_secs()
+        ),
+        SESSION_STOPPED => "The session was stopped before this check reached a verdict.".to_string(),
+        _ => "The run was stopped by hand (`run stop`, `run_stop`, Ctrl+C or Ctrl+Break) before this check reached a verdict.".to_string(),
+    };
+    Reason {
+        kind: "run-stopped".into(),
+        message,
+        machine: None,
+        at: time::now(),
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -66,7 +230,11 @@ pub async fn run(
         *progress = Some(progress_value(&run_id, 0, checks.len(), None));
     }
     started(run_id.clone(), checks.len());
-    let result = execute(runner, &session, project, &setups, checks, ids, tags, run_id, emit).await;
+    let control = control(runner, &run_id);
+    let result = execute(
+        runner, &session, project, &setups, checks, ids, tags, run_id, &control, emit,
+    )
+    .await;
     let mut progress = runner.progress.lock().unwrap();
     if session.state() == SessionState::Running {
         session.set_state(SessionState::Ready);
@@ -125,6 +293,7 @@ async fn execute(
     ids: Vec<String>,
     tags: Vec<String>,
     run_id: String,
+    control: &Control,
     emit: &(dyn Fn(Value, String) + Sync),
 ) -> Result<Value, CliError> {
     let started = SystemTime::now();
@@ -145,19 +314,46 @@ async fn execute(
     let progress = |done: usize, current: Option<&str>| {
         *runner.progress.lock().unwrap() = Some(progress_value(&run_id, done, checks.len(), current));
     };
+    let ceiling = run_ceiling(&checks, setups, &session.spec.setup.name);
+    // Set at the start of the first check (RUN-06).
+    let mut deadline: Option<tokio::time::Instant> = None;
+    // Why the run stopped, once it has: a check ended by the stop, or checks left not run.
+    let mut stopped: Option<&'static str> = None;
     for (n, check) in checks.iter().enumerate() {
+        if deadline.is_some_and(|d| tokio::time::Instant::now() >= d) {
+            control.request(RUN_CEILING);
+        }
+        if let Some(reason) = control.reason() {
+            stopped = Some(reason);
+            not_run.extend(checks[n..].iter().map(|c| NotRun {
+                check_id: c.id.clone(),
+                reason: "run-stopped".into(),
+            }));
+            break;
+        }
+        let deadline = *deadline.get_or_insert_with(|| tokio::time::Instant::now() + ceiling);
         progress(n, Some(&check.id));
         let repeat = {
             let n = times.entry(check.id.clone()).or_insert(0);
             *n += 1;
             *n
         };
-        let execution = execute_check(runner, session, &run_id, &folder, executions.len() + 1, check, setups)
-            .await
-            .map(|mut e| {
-                e.repeat = repeat;
-                e
-            });
+        let execution = execute_check(
+            runner,
+            session,
+            &run_id,
+            &folder,
+            executions.len() + 1,
+            check,
+            setups,
+            control,
+            (deadline, ceiling),
+        )
+        .await
+        .map(|mut e| {
+            e.repeat = repeat;
+            e
+        });
         let Some(execution) = execution else {
             not_run.push(NotRun {
                 check_id: check.id.clone(),
@@ -165,9 +361,15 @@ async fn execute(
             });
             continue;
         };
+        if execution.reason.as_ref().is_some_and(|r| r.kind == "run-stopped") {
+            stopped = control.reason();
+        }
         let line = outcome_line(&execution, executions.len());
         emit(line, outcome_text(&execution));
         executions.push(execution);
+    }
+    if let Some(reason) = stopped {
+        runner.log(&format!("{} run {run_id}: stopped, {reason}", session.id));
     }
 
     progress(checks.len(), None);
@@ -185,12 +387,12 @@ async fn execute(
         framework_version: shakedown_protocol::VERSION.into(),
         run: Run {
             id: run_id.clone(),
-            state: "finished".into(),
+            state: if stopped.is_some() { "stopped" } else { "finished" }.into(),
             started_at: time::format_system_time(started),
             ended_at: time::now(),
             duration_s: round3(clock.elapsed().as_secs_f64()),
             selection: Selection { ids, tags },
-            stopped_reason: None,
+            stopped_reason: stopped.map(String::from),
         },
         session: RSession {
             id: session.id.clone(),
@@ -218,6 +420,7 @@ async fn execute(
     std::fs::write(&file, text)
         .map_err(|e| CliError::framework(format!("Cannot write the result file {}: {e}.", file.display())))?;
     runner.log(&format!("{} run {run_id}: done, {}", session.id, file.display()));
+    *control.result.lock().unwrap() = Some(file.clone());
 
     Ok(run_result_of(&value, &file))
 }
@@ -255,7 +458,10 @@ pub fn run_result_of(result: &Value, file: &Path) -> Value {
 /// the session's setup. Every machine marks the execution's start before its reset and its end
 /// after the body and the wait for errors in flight; the lines between, each machine's script
 /// errors and the `expectError` blocks decide the outcome with the lead's report (`ERR-01` to
-/// `ERR-04`, `LOG-04`).
+/// `ERR-04`, `LOG-04`). A stop of the run, or its runner ceiling (`deadline`, `ceiling`), that
+/// comes during the reset or the body ends the check `invalid` / `run-stopped` and stops its body
+/// in the game (`RUN-05`, `RUN-06`); its logs are cut out as for any other check.
+#[allow(clippy::too_many_arguments)]
 async fn execute_check(
     runner: &Runner,
     session: &Arc<Session>,
@@ -264,6 +470,8 @@ async fn execute_check(
     n: usize,
     check: &CheckRef,
     setups: &[String],
+    control: &Control,
+    (deadline, ceiling): (tokio::time::Instant, Duration),
 ) -> Option<CheckExecution> {
     let started = SystemTime::now();
     let clock = Instant::now();
@@ -356,8 +564,27 @@ async fn execute_check(
     let key = format!("{run_id}#{n}");
     mark(session, &key, "start", &check.id).await;
     *runner.executing.lock().unwrap() = Some((key.clone(), check.id.clone()));
-    let (mut execution, report, executing_at) =
-        prepare_and_execute(runner, session, run_id, check, &header, &text, started, clock).await;
+    let raced = tokio::select! {
+        done = prepare_and_execute(runner, session, run_id, check, &header, &text, started, clock) => Ok(done),
+        reason = stop_or_ceiling(control, deadline) => Err(reason),
+    };
+    *session.check.lock().unwrap() = None;
+    let (mut execution, report, executing_at) = match raced {
+        Ok(done) => done,
+        Err(reason) => {
+            let e = ended(
+                check,
+                Some(&header),
+                started,
+                clock,
+                "invalid",
+                Some(run_stopped(reason, ceiling)),
+                vec![],
+                Evidence::default(),
+            );
+            (e, Value::Null, None)
+        }
+    };
     // P-05 step 9: script errors still in flight.
     tokio::time::sleep(ERRORS_IN_FLIGHT).await;
     mark(session, &key, "end", &check.id).await;
@@ -379,6 +606,17 @@ async fn execute_check(
     execution.ended_at = time::now();
     execution.duration_s = round3(clock.elapsed().as_secs_f64());
     Some(execution)
+}
+
+/// Returns the reason once the run is asked to stop, or `run-ceiling` once `deadline` passes.
+async fn stop_or_ceiling(control: &Control, deadline: tokio::time::Instant) -> &'static str {
+    tokio::select! {
+        reason = control.stopped() => reason,
+        _ = tokio::time::sleep_until(deadline) => {
+            control.request(RUN_CEILING);
+            control.reason().unwrap_or(RUN_CEILING)
+        }
+    }
 }
 
 /// How long the runner waits after a check's end report for script errors still in flight
@@ -493,7 +731,8 @@ async fn prepare_and_execute(
     // The check's code, and every order its code routes, go into the audit under its id (SEC-04).
     session.audit(&check.id, lead, order["source"].as_str().unwrap_or_default());
     *session.check.lock().unwrap() = Some(check.id.clone());
-    let answer = session.order(lead, order, ceiling).await;
+    // Dropped by a stop of the run before the end report, the order stops the body in the game.
+    let answer = session.order_tracked(lead, order, ceiling).await;
     *session.check.lock().unwrap() = None;
     match answer {
         Ok(report) => {
@@ -1012,6 +1251,98 @@ mod tests {
         assert_eq!(r.checks[0].reason.as_ref().unwrap().kind, "assertion");
         assert_eq!(r.summary.fail, 1);
         validate(&r);
+    }
+
+    /// `RUN-06`, `US-063` 1: eight checks of `@timeout 1` have a runner ceiling of 68 s; a check
+    /// whose `@setups` leaves out the session's setup adds nothing.
+    #[test]
+    fn us_063_run_06_the_ceiling_is_the_sum_of_the_timeouts_plus_60_s() {
+        let dir = std::env::temp_dir().join(format!("skd-run06-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut refs = Vec::new();
+        for i in 0..8 {
+            let path = dir.join(format!("c{i}.sqf"));
+            std::fs::write(
+                &path,
+                "// @check US-063 one second
+// @timeout 1
+",
+            )
+            .unwrap();
+            refs.push(CheckRef {
+                id: format!("c{i}"),
+                path,
+            });
+        }
+        let other = dir.join("other.sqf");
+        std::fs::write(
+            &other,
+            "// @check US-063 elsewhere
+// @setups ded
+// @timeout 500
+",
+        )
+        .unwrap();
+        refs.push(CheckRef {
+            id: "other".into(),
+            path: other,
+        });
+        let declared = vec!["sp".to_string(), "ded".to_string()];
+        assert_eq!(run_ceiling(&refs, &declared, "sp"), Duration::from_secs(68));
+        assert_eq!(run_ceiling(&refs, &declared, "ded"), Duration::from_secs(568));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// `RUN-05`, `RUN-06`: the first reason a run is asked to stop for is the one it keeps.
+    #[tokio::test]
+    async fn run_05_the_first_stop_reason_wins() {
+        let c = Control::new();
+        assert_eq!(c.reason(), None);
+        c.request(RUN_CEILING);
+        c.request(BY_HAND);
+        assert_eq!(c.stopped().await, RUN_CEILING);
+        let c = Control::new();
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(50);
+        assert_eq!(stop_or_ceiling(&c, deadline).await, RUN_CEILING);
+        assert_eq!(c.reason(), Some(RUN_CEILING));
+    }
+
+    /// `US-034` 1, `US-063` 1, `RES-01`: a stopped run's result, its check `invalid` /
+    /// `run-stopped` and the rest not run, is valid against the schema.
+    #[test]
+    fn us_034_us_063_a_stopped_result_is_valid_against_the_schema() {
+        let check = CheckRef {
+            id: "second".into(),
+            path: PathBuf::from("second.sqf"),
+        };
+        for reason in [BY_HAND, RUN_CEILING, SESSION_STOPPED] {
+            let e = ended(
+                &check,
+                None,
+                SystemTime::now(),
+                Instant::now(),
+                "invalid",
+                Some(run_stopped(reason, Duration::from_secs(68))),
+                vec![],
+                Evidence::default(),
+            );
+            let mut r = sample("pass");
+            r.checks.push(e);
+            r.not_run = vec![NotRun {
+                check_id: "third".into(),
+                reason: "run-stopped".into(),
+            }];
+            r.summary = Summary::of(&r.checks, 1);
+            r.run.state = "stopped".into();
+            r.run.stopped_reason = Some(reason.into());
+            assert_eq!((r.summary.total, r.summary.invalid, r.summary.not_run), (3, 1, 1));
+            validate(&r);
+        }
+        assert!(
+            run_stopped(RUN_CEILING, Duration::from_secs(68))
+                .message
+                .contains("68 s")
+        );
     }
 
     #[test]

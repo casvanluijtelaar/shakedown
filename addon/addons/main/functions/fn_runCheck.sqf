@@ -33,7 +33,11 @@ if (skd_compileErrors isNotEqualTo []) then {
 } else {
     private _script = [] spawn _body;
     skd_check set ["body", _script];
+    // A run stopped during the check (RUN-05) terminates the body by the order of kind cancel,
+    // through skd_execs; the runner no longer waits for this order's report.
+    skd_execs set [_order get "id", _script];
     waitUntil { scriptDone _script || { diag_tickTime > (skd_check get "deadline") } };
+    skd_execs deleteAt (_order get "id");
     if (!scriptDone _script) then {
         terminate _script;
         if (isNil { skd_check get "end" }) then {

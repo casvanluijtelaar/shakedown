@@ -1,6 +1,6 @@
 // @check US-009 On a dedicated server p1 lets go of a placed rope with its key, and the server and both clients agree the rope is free
 // @tags US-009 demo dedicated
-// @setups dedicated
+// @setups dedicated dedicated-2
 // @timeout 120
 
 // arma-grappling-hook's US-009 (let go at any height), criterion 1, on a dedicated server with two

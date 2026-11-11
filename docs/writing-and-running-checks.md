@@ -69,6 +69,7 @@ A header mistake is found without the game. Fix the file and run the check again
 |---|---|
 | `shakedown list [<id>...] [--tag <tag>]...` | Lists checks from the files, with no game. A check whose header is wrong is listed with what is wrong. |
 | `shakedown run <id>... --setup sp` | Starts a session of setup `sp`, runs the checks, stops the session. |
+| `shakedown run stop` | Stops the active run; Ctrl+C or Ctrl+Break in the console of `run` does the same ([Running a suite unattended](unattended-runs.md)). |
 | `shakedown session start --setup sp` | Starts a session and returns when it is ready. |
 | `shakedown run <id>...` | Runs the checks against the running session, which stays up. |
 | `shakedown session stop` | Stops the session and returns when its game processes are gone. |
@@ -86,7 +87,7 @@ pass    smoke  (0.0 s)
 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\...\e2e\.shakedown\runs\r-20261105-161317-1\result.json
 ```
 
-Exit codes: 0 every check passed, 1 a check failed, 2 none failed and one was invalid, 3 the request is wrong (an unknown check or setup, a malformed project file), 4 it cannot be done now (no session, a session already running, the game or Steam missing), 5 the framework failed (see `runner.log`). Add `--json` to any command for one JSON document on stdout.
+Exit codes: 0 every check passed, 1 a check failed, 2 none failed and one was invalid or the run was stopped ([Running a suite unattended](unattended-runs.md)), 3 the request is wrong (an unknown check or setup, a malformed project file), 4 it cannot be done now (no session, a session already running, the game or Steam missing), 5 the framework failed (see `runner.log`). Add `--json` to any command for one JSON document on stdout.
 
 ## What a run leaves behind
 

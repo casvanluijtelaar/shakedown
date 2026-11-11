@@ -1,5 +1,6 @@
 // @check US-009 A player on a placed rope presses the let-go key and drops off the rope at once
 // @tags US-009 demo
+// @setups sp
 // @timeout 120
 
 // arma-grappling-hook's US-009 (let go at any height), criterion 1, rewritten as a Shakedown check:

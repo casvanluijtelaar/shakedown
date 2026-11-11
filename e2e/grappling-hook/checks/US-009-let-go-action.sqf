@@ -1,5 +1,6 @@
 // @check US-009 A player on a placed rope chooses Let go of the rope in the scroll menu and drops off it
 // @tags US-009
+// @setups sp
 // @timeout 120
 
 // arma-grappling-hook's US-009, criterion 3: the scroll-menu action lets go as the key does.

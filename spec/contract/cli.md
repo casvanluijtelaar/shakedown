@@ -82,7 +82,7 @@ Without `--json`, output is short lines of text for a person; its wording is not
 | `shakedown session stop` | Stops the session and returns when nothing of it runs (`SES-07`). On a failed start that `status` still shows, clears it and exits 0. | `session_stop` |
 | `shakedown list [<id>...] [--tag <tag>]...` | Lists checks from the files, with no runner, each selected check once (`RUN-02`). | `list_checks` |
 | `shakedown run [<id>...] [--tag <tag>]... [--setup <name>]` | Runs the selection against the session and returns when the run ends, printing one line per check execution as it ends. An id given more than once runs that check once per time it is given, in the order given (`RUN-03`); the line of its second and later executions carries `#<repeat>` right after the check id, before the duration. With `--setup` and no session, starts one and stops it after (`RUN-04`). With `--setup` naming another setup than the running session's, refuses. | `run_start`, then `run_status` and `run_result` |
-| `shakedown run stop` | Stops the active run (`RUN-05`). | `run_stop` |
+| `shakedown run stop` | Stops the active run and returns once its result file is written, printing the run's status (`RUN-05`). With no run active, exit 4. `run` with the one word `stop` and no other option is always this command, never a check named `stop`; such a check runs with `--tag` or beside another id. | `run_stop` |
 | `shakedown reset` | Resets the session (`RST-03`). Refused, exit 4, while a run, a reload or a reset is in progress, naming it; for a reload, its id and level; for a run, its id, its progress and `shakedown run stop` (`RLD-01`). | `reset` |
 | `shakedown reload [<file>...]` | Reloads changed mod code (`RLD-01`). Files are paths under a watched `source` or the checks folder, relative to the current folder; with none, the changed files are found. A changed check is level `none`; any other file is level `game-restart`, which stops every game process, runs each setup mod's `rebuild` and starts them again. Prints the level applied, each file with its level and reason, the machines reached and the time. On a `broken` session it restarts the game. Refused, exit 4, while a run, a reload or a reset is in progress, naming it; for a reload, its id and level; for a run, its id, its progress and `shakedown run stop`. A reload that ended `failed` exits 4 naming the level, the machine and why. | `reload` |
 | `shakedown exec --machine <m> (--code <sqf> \| --file <path>) [--args <json>] [--ceiling <s>]` | Runs SQF on a machine or a group and prints the value and any script errors it raised (`CTL-01`, `CTL-05`). `--ceiling` default 10, above 0, at most 600. | `exec` |
@@ -96,7 +96,7 @@ Without `--json`, output is short lines of text for a person; its wording is not
 | `shakedown mcp` | Runs the MCP server on stdio (`AGT-01`). | - |
 | `shakedown runner` | Runs the runner. Started by the other commands; not for direct use. | - |
 
-The command line has no ceiling of 60 s per call; `run`, `session start`, `reload` and `exec` wait up to their own ceilings. A run started by `shakedown run` is stopped when the command receives a Ctrl+C or a Ctrl+Break console event, as `run stop` does (`RUN-05`); a program that drives the command line sends Ctrl+Break to the command's process group.
+The command line has no ceiling of 60 s per call; `run`, `session start`, `reload` and `exec` wait up to their own ceilings. A run started by `shakedown run` is stopped when the command receives a Ctrl+C or a Ctrl+Break console event, as `run stop` does (`RUN-05`), from the moment the command starts, also while the session it starts is starting; the command then prints the run's lines and summary, stops a session it started, and exits by the outcomes. A further Ctrl+C or Ctrl+Break is taken as the same stop. A program that drives the command line sends Ctrl+Break to the command's process group.
 
 ## The runner's file and connection
 
@@ -114,7 +114,7 @@ The command line and the MCP server reach the runner through these; a test of `S
 |---|---|
 | `0` | Done. For `run`: every executed check passed. |
 | `1` | `run`: at least one check `fail`. |
-| `2` | `run`: no check `fail`, at least one `invalid`. |
+| `2` | `run`: no check `fail`, and at least one `invalid` or the run was stopped (`RUN-05`, `RUN-06`). |
 | `3` | The request is wrong: an unknown command, option, check, machine or setup, a malformed project file, SQF that does not compile. The message says what to fix. |
 | `4` | The request is right but cannot be done now: no session, a session already running, a precondition of `SES-03` failed, a session start that ended `failed`, a reload that ended `failed`, the session is `broken` or busy with a run, a reload or a reset, the runner refused, the runner does not answer or runs another version. The message says what to do. |
 | `5` | The framework itself failed. The message gives the path of `runner.log`. |

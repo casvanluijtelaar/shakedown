@@ -36,6 +36,7 @@ The demo project `e2e/grappling-hook` has such a `.mcp.json`: start Claude Code 
 | `run_start` | `shakedown run` | Starts a run and returns its `run_id` at once. |
 | `run_status` | - | A run's progress and outcomes so far; with `wait_s` it waits for the next check to end. |
 | `run_result` | `shakedown run --json` | The result of a run that ended: the same JSON `run --json` prints. |
+| `run_stop` | `shakedown run stop` | Stops a run and returns its status, state `stopped`, once its result file is written ([Running a suite unattended](unattended-runs.md)). |
 | `reset` | `shakedown reset` | Resets the session in place. |
 | `reload` | `shakedown reload` | Reloads changed files, or the `files` given relative to the project, at the level they need; on a broken session restarts the game ([Reloading](reloading.md)). Returns when done, or after 50 s with state `applying`. |
 | `exec` | `shakedown exec` | SQF on a machine or a group, its value as data and the script errors it raised. |
@@ -46,13 +47,11 @@ The demo project `e2e/grappling-hook` has such a `.mcp.json`: start Claude Code 
 | `errors` | `shakedown errors` | The script errors the session caught. |
 | `guide` | `shakedown guide` | The text below. |
 
-`run_stop` comes with the milestone that builds its command.
-
 ## What every tool keeps to
 
 - **Structured results.** Each tool has an `inputSchema` and an `outputSchema`, and returns `structuredContent` and the same JSON as one text block (`AGT-02`). The shapes a tool shares with the result file, such as `ScriptError`, are those of [result.schema.json](../spec/contract/result.schema.json).
 - **No call past 60 s** (`AGT-03`). `exec`, `wait_until` and `expect` take a `ceiling` of at most 50 s, default 10; `run_status` a `wait_s` of at most 50. A call that waits sends `notifications/progress` every 4 s when the request carries a progress token. A run never holds a call: `run_start` returns at once.
-- **Cancelling stops the work** (`AGT-04`). When the client cancels `exec`, `wait_until`, `expect` or `inspect`, the server closes the call's connection to the runner, and the runner stops the code on the machine; `inspect` then lists no script of it. A session start and a run go on when their call is cancelled; stop them with `session_stop`.
+- **Cancelling stops the work** (`AGT-04`). When the client cancels `exec`, `wait_until`, `expect` or `inspect`, the server closes the call's connection to the runner, and the runner stops the code on the machine; `inspect` then lists no script of it. A session start goes on when its call is cancelled; stop it with `session_stop`. A run never holds a call; stop it with `run_stop`.
 - **Long results go to a file** (`AGT-07`). A result over 20,000 characters is written to `.shakedown/results/` in the project and the tool returns `{"result_path": <path>}`. `logs` keeps its own lines under the limit and names the file with all of them in `path`.
 - **A failing check is a result.** `run_result` of a run whose checks failed is a successful call; their outcomes say `fail`.
 
@@ -86,7 +85,7 @@ A failure of the framework itself is a JSON-RPC error, not a tool result.
 
 1. `guide` once, then `status`.
 2. `session_start` with a setup. When it returns `starting`, call `status` until the session is `ready` or `failed`; a failed start keeps its `reason` there.
-3. `run_start` with `ids` or `tags`, then `run_status` with `wait_s` 50 until its state is `finished`: each call returns as soon as a check ends, with every outcome so far.
+3. `run_start` with `ids` or `tags`, then `run_status` with `wait_s` 50 until its state is `finished` or `stopped`: each call returns as soon as a check ends, with every outcome so far. `run_stop` stops a run that should not go on.
 4. `run_result` for the summary, each check's reason and failed step, and the path of the result file. `logs` with `check_id` and `run_id` gives a check's log lines.
 5. To look into a failure: `inspect` the machine, `exec` code on it, `wait_until` and `expect` to try what the check does, `errors` for the script errors.
 6. `session_stop` when done.
@@ -110,7 +109,7 @@ Machines are named server, p1..pN (game clients) and hc1..hcN (headless clients)
 RUN CHECKS
 1. list_checks {"tags": ["US-019"]} shows which checks a selection takes, without the game.
 2. run_start {"ids": [...]} or {"tags": [...]} returns a run_id at once. ids run in the order given; an id given twice runs twice. With "setup" and no session, the run starts one and stops it at its end.
-3. run_status {"run_id": "...", "wait_s": 50} returns as soon as a check ends, with each outcome so far. Call it again until state is finished.
+3. run_status {"run_id": "...", "wait_s": 50} returns as soon as a check ends, with each outcome so far. Call it again until state is finished, or stopped: a run stops at its runner ceiling (the sum of its checks' @timeout plus 60 s) or by run_stop {"run_id": "..."}; the check it was on is then invalid with reason run-stopped and the rest are in not_run.
 4. run_result {"run_id": "..."}: the summary, each check's outcome, reason and failed step, and result_file, the full result as JSON.
 
 READ A RESULT
