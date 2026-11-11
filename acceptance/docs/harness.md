@@ -116,3 +116,10 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - A `shakedown reload` file path is relative to the current folder; the reload gives it back absolute but not normalised (`<project>\..\..\...`), so the checks compare paths after `normpath`.
 - SQF strings escape a quote by doubling it, not with a backslash: a step name holding `\"` does not compile, and the check ends `fail` / `check-error`.
 - Two session starts died on `Error 20 reading file` of a base-game PBO right after Steam had been restarted; the third started. The playbook's rule holds: start again before calling it a finding.
+
+## What the M7 round learned
+
+- A `game-restart` reload of `rld7`, a dedicated server with two clients loading `@skd_fixture` alone, took 44.0 to 45.1 s by `duration_s`; of `rld7sp`, singleplayer, 24.0 to 24.8 s. From the reload order to the outcome of the last of the three tagged checks took 50.2 to 51.3 s and 29.2 to 29.7 s.
+- `status` gives the active run's `current_check` as soon as the check starts, and the session `reloading` at the first poll after `shakedown reload` starts, so a request made during either needs no timing beyond a poll twice a second. Every refusal answered at once.
+- A check that must still be running when the harness asks for something waits for a value the server sets 15 s later with `skdfx_fnc_setFlagLater`, as the M4 waits do; the value is one of the execution, since `skdfx_flag` survives the reset.
+- One M7 repeat, two runs, two game restarts and the refusals, takes about 2 min 20 s on `rld7` and 1 min 35 s on `rld7sp`.
