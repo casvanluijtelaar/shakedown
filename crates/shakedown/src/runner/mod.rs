@@ -441,18 +441,18 @@ impl Runner {
             }
             other => {
                 return Err(CliError::not_now(format!(
-                    "Session {} is {}, so it cannot be reset now. Wait for it to be ready.",
+                    "Session {} is {}, so it cannot be reset now. Wait for it to be ready; `shakedown status` shows it.",
                     session.id,
                     if other == session::SessionState::Reloading {
-                        "busy with a reload or a reset"
+                        format!("busy with {}", session.busy_with())
                     } else {
-                        other.as_str()
+                        other.as_str().to_string()
                     }
                 ))
                 .tag("session-busy"));
             }
         }
-        if !session.transition(session::SessionState::Ready, session::SessionState::Reloading) {
+        if !session.begin_busy(session::SessionState::Ready, "a reset".into()) {
             return Err(CliError::not_now(format!(
                 "Session {} became busy; try the reset again when it is ready.",
                 session.id

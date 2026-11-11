@@ -59,7 +59,7 @@ pub async fn run(
             return Err(CliError::not_now(format!(
                 "Session {} is {}, not ready, so it cannot run checks now. Wait for it, or stop it with `shakedown session stop`.",
                 session.id,
-                session_state_word(session.state())
+                session_state_word(&session)
             ))
             .tag("session-busy"));
         }
@@ -102,16 +102,16 @@ fn busy_with_run(session_id: &str, what: &str, progress: &Value) -> CliError {
     .tag("session-busy")
 }
 
-fn session_state_word(state: SessionState) -> &'static str {
-    match state {
-        SessionState::Starting => "starting",
-        SessionState::Ready => "ready",
-        SessionState::Running => "running a run",
-        SessionState::Reloading => "busy with a reload or a reset",
-        SessionState::Broken => "broken",
-        SessionState::Failed => "failed",
-        SessionState::Stopping => "stopping",
-        SessionState::Stopped => "stopped",
+fn session_state_word(session: &Session) -> String {
+    match session.state() {
+        SessionState::Starting => "starting".into(),
+        SessionState::Ready => "ready".into(),
+        SessionState::Running => "running a run".into(),
+        SessionState::Reloading => format!("busy with {}", session.busy_with()),
+        SessionState::Broken => "broken".into(),
+        SessionState::Failed => "failed".into(),
+        SessionState::Stopping => "stopping".into(),
+        SessionState::Stopped => "stopped".into(),
     }
 }
 

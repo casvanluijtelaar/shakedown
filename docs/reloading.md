@@ -58,11 +58,13 @@ The changed files are found by content: a file with new content, a new file and 
 - **`none`** is applied at once: nothing in the game changes, and the next run reads the checks from disk.
 - **`game-restart`** stops every process of the session, runs each setup mod's `rebuild` in the order of the setup's mods, and starts the processes again in the same session folder, each machine a new start with its start number one higher and its own profile folder (`machines\<name>-<start>`). Every machine captures a new baseline, and the runner takes a new snapshot of the watched files. On the test machine a dedicated session with two clients took 80 to 83 s, 82 s on average, over ten reloads with a rebuild that copies one file, as long as starting the session (`NFR-PF-02` sets the target at 90 s plus the rebuild); a singleplayer session took about 45 s.
 
-A reload or a `reset` is refused while a run, another reload or a reset is in progress, exit code 4 (the tools: `session-busy`), naming what is in progress; for a run, its id, its progress and `shakedown run stop`. The run goes on untouched, and the change waits in your files until you ask again:
+A reload or a `reset` is refused while a run, another reload or a reset is in progress, exit code 4 (the tools: `session-busy`), naming what is in progress: for a reload, its id and level; for a run, its id, its progress and `shakedown run stop`. The run goes on untouched, and the change waits in your files until you ask again:
 
 ```
 $ shakedown reload
 Session s-20261111-194841 is running run r-20261111-194939-6 (0 of 1 checks done, now at slow), so it cannot reload now. Wait for the run to end, or stop it with `shakedown run stop`.
+$ shakedown reset
+Session s-20261111-194841 is busy with reload rl-20261111-195102-7 (level game-restart), so it cannot be reset now. Wait for it to be ready; `shakedown status` shows it.
 ```
 
 The `reload` tool returns when the reload is done, or after 50 s with state `applying`; `shakedown status` then shows it as `last_reload`.

@@ -160,8 +160,9 @@ pub async fn reload(
         SessionState::Broken => true,
         SessionState::Reloading => {
             return Err(CliError::not_now(format!(
-                "Session {} is busy with a reload or a reset. Wait for it to end; `shakedown status` shows it.",
-                session.id
+                "Session {} is busy with {}, so it cannot reload now. Wait for it to end; `shakedown status` shows it.",
+                session.id,
+                session.busy_with()
             ))
             .tag("session-busy"));
         }
@@ -209,13 +210,6 @@ pub async fn reload(
     } else {
         SessionState::Ready
     };
-    if !session.transition(from, SessionState::Reloading) {
-        return Err(CliError::not_now(format!(
-            "Session {} became busy; try the reload again when it is ready.",
-            session.id
-        ))
-        .tag("session-busy"));
-    }
     let id = format!("rl-{}-{}", time::stamp(SystemTime::now()), runner.next_run_number());
     let started_at = time::now();
     let clock = Instant::now();
@@ -260,6 +254,13 @@ pub async fn reload(
             })
         }
     };
+    if !session.begin_busy(from, format!("reload {id} (level {level})")) {
+        return Err(CliError::not_now(format!(
+            "Session {} became busy; try the reload again when it is ready.",
+            session.id
+        ))
+        .tag("session-busy"));
+    }
     *runner.last_reload.lock().unwrap() = Some(shape("applying", vec![], Value::Null, 0.0));
     runner.log(&format!(
         "{} reload {id}: level {level}, {} files",

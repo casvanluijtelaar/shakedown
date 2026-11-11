@@ -123,6 +123,9 @@ struct Inner {
     /// was replaced; the result file lists those that took part in a run (`RES-02`).
     retired: Vec<(Machine, SystemTime)>,
     reason: Option<Value>,
+    /// While the session is `reloading`, what it is busy with: the reload with its id and level,
+    /// or a reset, which a refusal names (`RLD-01`).
+    busy: String,
     job: Option<Job>,
     pending: HashMap<String, (String, oneshot::Sender<Value>)>,
     /// A poll a machine runs for another (`P-03`): its order id to the machine that asked for it
@@ -313,6 +316,26 @@ impl Session {
         drop(inner);
         self.changed.notify_waiters();
         true
+    }
+
+    /// Moves the session from `from` to `reloading` only if it is in `from`, recording `what` it
+    /// is busy with for the refusals of `RLD-01`; false otherwise.
+    pub(crate) fn begin_busy(&self, from: SessionState, what: String) -> bool {
+        let mut inner = self.inner.lock().unwrap();
+        if inner.state != from {
+            return false;
+        }
+        inner.state = SessionState::Reloading;
+        inner.busy = what;
+        drop(inner);
+        self.changed.notify_waiters();
+        true
+    }
+
+    /// What the `reloading` session is busy with, such as `reload rl-... (level game-restart)` or
+    /// `a reset` (`RLD-01`).
+    pub(crate) fn busy_with(&self) -> String {
+        self.inner.lock().unwrap().busy.clone()
     }
 
     /// The lead machine: `server` on a dedicated session, `p1` in singleplayer.
@@ -1060,6 +1083,7 @@ pub async fn start(
             machines: plan.iter().map(|(n, k)| Machine::new(n, k, 1, profile(n))).collect(),
             retired: Vec::new(),
             reason: None,
+            busy: String::new(),
             job: None,
             pending: HashMap::new(),
             streams: HashMap::new(),

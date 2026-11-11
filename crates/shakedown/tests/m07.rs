@@ -288,7 +288,8 @@ impl Drop for Changed {
 ///
 /// - `US-058` 1 and 2: with the staged target changed, a reload, a reset and the `reload` tool
 ///   asked during a run are refused naming the run, its progress and `run stop`; the run's checks
-///   end as in a run with no reload asked, and no start number changes.
+///   end as in a run with no reload asked, and no start number changes. Asked during the reload
+///   that follows, they are refused naming that reload.
 /// - `US-054` 1 to 3: `reload` with no files restarts the game with the rebuild, reporting the
 ///   level, the file and its reason, every machine and the time; the checks tagged with the
 ///   finding, rerun, see `"2"` on every machine with every start one higher and `reload` `full`,
@@ -356,8 +357,46 @@ fn reload_loop(name: &str, setup: &str, names: &[&str]) {
 
     // US-054 1: the change, still staged, reloaded with no files.
     let t = Instant::now();
-    let (code, r, err) = cmd(&dir, &["reload"]);
-    let reload_wall = t.elapsed().as_secs_f64();
+    let reloading = {
+        let dir = dir.clone();
+        std::thread::spawn(move || {
+            let r = cmd(&dir, &["reload"]);
+            (r, t.elapsed().as_secs_f64())
+        })
+    };
+
+    // US-058 1: a reset, a reload and the `reload` tool asked while the reload applies are
+    // refused naming the reload in progress (`RLD-01`).
+    let mut reload_id = String::new();
+    for _ in 0..300 {
+        let (_, s, _) = cmd(&dir, &["status"]);
+        if s["session"]["state"] == "reloading" && s["last_reload"]["state"] == "applying" {
+            reload_id = s["last_reload"]["id"].as_str().unwrap_or_default().to_string();
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    assert!(!reload_id.is_empty(), "the reload never showed as applying in status");
+    let named = format!("busy with reload {reload_id}");
+    let (code, _, err) = cmd(&dir, &["reset"]);
+    println!("US-058 reset during {reload_id}: exit {code}: {err}");
+    assert_eq!(code, 4, "{err}");
+    assert!(err.contains(&named), "{err}");
+    let (code, _, err) = cmd(&dir, &["reload"]);
+    println!("US-058 reload during {reload_id}: exit {code}: {err}");
+    assert_eq!(code, 4, "{err}");
+    assert!(err.contains(&named), "{err}");
+    let mut mcp = Mcp::start(&exe(), &dir, &[]);
+    let answer = mcp.call("reload", json!({}));
+    println!("US-058 reload tool during {reload_id}: {}", answer.text());
+    assert!(
+        answer.is_error() && answer.text().starts_with("session-busy:") && answer.text().contains(&named),
+        "{}",
+        answer.result
+    );
+    drop(mcp);
+
+    let ((code, r, err), reload_wall) = reloading.join().unwrap();
     println!("US-054 reload: exit {code} in {reload_wall:.1} s: {r}");
     assert_eq!(code, 0, "{r} {err}");
     assert_eq!(

@@ -41,7 +41,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 ## Reload
 
-- **RLD-01** (must) `reload [files...]` brings changed mod code into the running session at the level the change needs, as process `P-08` says. With no files given it finds the changed files itself by comparing the watched `source` folders with the snapshot taken at the last ready state. A `reload` or a `reset` asked while a run, a reload or a reset is in progress is refused, naming what is in progress and, for a run, its progress and `run stop`. A `reload` of a `broken` session applies level `game-restart`, whatever the files need, which brings every machine back as a new start (`CR-03`, `CR-05`).
+- **RLD-01** (must) `reload [files...]` brings changed mod code into the running session at the level the change needs, as process `P-08` says. With no files given it finds the changed files itself by comparing the watched `source` folders with the snapshot taken at the last ready state. A `reload` or a `reset` asked while a run, a reload or a reset is in progress is refused, naming what is in progress: for a reload, its id and level; for a run, its id, its progress and `run stop`. A `reload` of a `broken` session applies level `game-restart`, whatever the files need, which brings every machine back as a new start (`CR-03`, `CR-05`).
 - **RLD-02** (must) Each changed file is classified, and the highest level any file needs is applied (`CR-03`; conflict C1):
 
   | Change | Level | Reason given |
