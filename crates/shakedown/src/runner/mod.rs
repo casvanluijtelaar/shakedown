@@ -426,6 +426,9 @@ impl Runner {
             )
             .tag("no-session"));
         };
+        if let Some(refusal) = run::refuse_during_run(self, &session.id, "be reset") {
+            return Err(refusal);
+        }
         match session.state() {
             session::SessionState::Ready => {}
             session::SessionState::Broken => {
@@ -436,13 +439,6 @@ impl Runner {
                 ))
                 .tag("session-broken"));
             }
-            session::SessionState::Running => {
-                let progress = self.progress.lock().unwrap().clone().unwrap_or(Value::Null);
-                return Err(CliError::not_now(format!(
-                    "Session {} is running run {} ({} of {} checks done). Wait for it to end, or stop it with `shakedown run stop`.",
-                    session.id, progress["id"], progress["done"], progress["total"]
-                )));
-            }
             other => {
                 return Err(CliError::not_now(format!(
                     "Session {} is {}, so it cannot be reset now. Wait for it to be ready.",
@@ -452,14 +448,16 @@ impl Runner {
                     } else {
                         other.as_str()
                     }
-                )));
+                ))
+                .tag("session-busy"));
             }
         }
         if !session.transition(session::SessionState::Ready, session::SessionState::Reloading) {
             return Err(CliError::not_now(format!(
                 "Session {} became busy; try the reset again when it is ready.",
                 session.id
-            )));
+            ))
+            .tag("session-busy"));
         }
         let clock = Instant::now();
         let outcome = run::reset(self, &session).await;

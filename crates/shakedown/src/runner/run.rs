@@ -50,22 +50,56 @@ pub async fn run(
         ))
         .tag("session-broken"));
     }
-    if session.state() != SessionState::Ready {
-        return Err(CliError::not_now(format!(
-            "Session {} is {}, not ready, so it cannot run checks now. Wait for it, or stop it with `shakedown session stop`.",
-            session.id,
-            session_state_word(session.state())
-        ))
-        .tag("session-busy"));
-    }
-    session.set_state(SessionState::Running);
     let run_id = run_id.unwrap_or_else(|| new_run_id(runner));
+    {
+        // The progress is set under the same lock as the state, so a reload or a reset asked at
+        // any moment of the run sees the run and its progress (`RLD-01`).
+        let mut progress = runner.progress.lock().unwrap();
+        if !session.transition(SessionState::Ready, SessionState::Running) {
+            return Err(CliError::not_now(format!(
+                "Session {} is {}, not ready, so it cannot run checks now. Wait for it, or stop it with `shakedown session stop`.",
+                session.id,
+                session_state_word(session.state())
+            ))
+            .tag("session-busy"));
+        }
+        *progress = Some(progress_value(&run_id, 0, checks.len(), None));
+    }
     started(run_id.clone(), checks.len());
     let result = execute(runner, &session, project, &setups, checks, ids, tags, run_id, emit).await;
+    let mut progress = runner.progress.lock().unwrap();
     if session.state() == SessionState::Running {
         session.set_state(SessionState::Ready);
     }
+    *progress = None;
     result
+}
+
+/// The active run's progress as `status` shows it (`INS-02`).
+fn progress_value(run_id: &str, done: usize, total: usize, current: Option<&str>) -> Value {
+    json!({"id": run_id, "state": "running", "done": done, "total": total, "current_check": current})
+}
+
+/// The refusal of a `reload` or a `reset` asked while a run is active, naming the run, its
+/// progress and `run stop` (`RLD-01`, `US-058`); `None` when no run is active. A run is active
+/// from its start to its result file, also while a check of it breaks the session.
+pub fn refuse_during_run(runner: &Runner, session_id: &str, what: &str) -> Option<CliError> {
+    let progress = runner.progress.lock().unwrap().clone()?;
+    Some(busy_with_run(session_id, what, &progress))
+}
+
+fn busy_with_run(session_id: &str, what: &str, progress: &Value) -> CliError {
+    let current = match progress["current_check"].as_str() {
+        Some(c) => format!(", now at {c}"),
+        None => String::new(),
+    };
+    CliError::not_now(format!(
+        "Session {session_id} is running run {} ({} of {} checks done{current}), so it cannot {what} now. Wait for the run to end, or stop it with `shakedown run stop`.",
+        progress["id"].as_str().unwrap_or("?"),
+        progress["done"].as_u64().unwrap_or(0),
+        progress["total"].as_u64().unwrap_or(0),
+    ))
+    .tag("session-busy")
 }
 
 fn session_state_word(state: SessionState) -> &'static str {
@@ -109,9 +143,7 @@ async fn execute(
     // How often each check has come up in this run: its executions' `repeat` (`RUN-03`).
     let mut times: BTreeMap<String, u32> = BTreeMap::new();
     let progress = |done: usize, current: Option<&str>| {
-        *runner.progress.lock().unwrap() = Some(json!({
-            "id": run_id, "state": "running", "done": done, "total": checks.len(), "current_check": current,
-        }));
+        *runner.progress.lock().unwrap() = Some(progress_value(&run_id, done, checks.len(), current));
     };
     for (n, check) in checks.iter().enumerate() {
         progress(n, Some(&check.id));
@@ -138,7 +170,7 @@ async fn execute(
         executions.push(execution);
     }
 
-    *runner.progress.lock().unwrap() = None;
+    progress(checks.len(), None);
     mark(session, &run_id, "end", "").await;
     let mut run_logs = BTreeMap::new();
     for machine in session.machine_names() {
@@ -863,6 +895,31 @@ pub fn logs(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `US-058` 1, `RLD-01`: a reload asked during a run is refused with exit code 4 and the MCP
+    /// code `session-busy`, naming the run, its progress and `run stop`.
+    #[test]
+    fn us_058_rld_01_a_reload_during_a_run_names_the_run_its_progress_and_run_stop() {
+        let progress = progress_value("r-20261111-120000-3", 2, 5, Some("slow"));
+        let e = busy_with_run("s-1", "reload", &progress);
+        assert_eq!((e.code, e.mcp_code()), (4, Some("session-busy")));
+        for part in [
+            "s-1",
+            "r-20261111-120000-3",
+            "2 of 5 checks done",
+            "now at slow",
+            "cannot reload",
+            "`shakedown run stop`",
+        ] {
+            assert!(e.message.contains(part), "{part}: {}", e.message);
+        }
+        let e = busy_with_run("s-1", "be reset", &progress_value("r-1", 5, 5, None));
+        assert!(
+            e.message.contains("5 of 5 checks done)") && e.message.contains("cannot be reset"),
+            "{}",
+            e.message
+        );
+    }
 
     fn validate(result: &ResultFile) {
         let schema: Value = serde_json::from_str(include_str!("../../../../spec/contract/result.schema.json")).unwrap();

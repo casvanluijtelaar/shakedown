@@ -1,7 +1,7 @@
 ---
 type: Documentation
 title: Reloading and the mission restart
-description: How reload classifies a changed file and applies its level, why every change of mod code is a game restart made in one step with the mod's rebuild, how to set a mod up for it, how a check asks for a mission restart with @reset mission, how a broken session comes back, and what the reload result holds.
+description: How reload classifies a changed file and applies its level, why every change of mod code is a game restart made in one step with the mod's rebuild, how to set a mod up for it, why a reload during a run is refused, how to rerun the checks a finding names, what reloads inside the mission and what partial means, how a check asks for a mission restart with @reset mission, how a broken session comes back, and what the reload result holds.
 status: draft
 ---
 
@@ -58,7 +58,14 @@ The changed files are found by content: a file with new content, a new file and 
 - **`none`** is applied at once: nothing in the game changes, and the next run reads the checks from disk.
 - **`game-restart`** stops every process of the session, runs each setup mod's `rebuild` in the order of the setup's mods, and starts the processes again in the same session folder, each machine a new start with its start number one higher and its own profile folder (`machines\<name>-<start>`). Every machine captures a new baseline, and the runner takes a new snapshot of the watched files. On the test machine a dedicated session with two clients took 80 to 83 s, 82 s on average, over ten reloads with a rebuild that copies one file, as long as starting the session (`NFR-PF-02` sets the target at 90 s plus the rebuild); a singleplayer session took about 45 s.
 
-A reload is refused while a run, another reload or a reset is in progress, with what is in progress; for a run, its progress and `shakedown run stop`. The `reload` tool returns when the reload is done, or after 50 s with state `applying`; `shakedown status` then shows it as `last_reload`.
+A reload or a `reset` is refused while a run, another reload or a reset is in progress, exit code 4 (the tools: `session-busy`), naming what is in progress; for a run, its id, its progress and `shakedown run stop`. The run goes on untouched, and the change waits in your files until you ask again:
+
+```
+$ shakedown reload
+Session s-20261111-194841 is running run r-20261111-194939-6 (0 of 1 checks done, now at slow), so it cannot reload now. Wait for the run to end, or stop it with `shakedown run stop`.
+```
+
+The `reload` tool returns when the reload is done, or after 50 s with state `applying`; `shakedown status` then shows it as `last_reload`.
 
 The result, as `--json` prints it and the `reload` tool returns it:
 
@@ -76,6 +83,23 @@ The result, as `--json` prints it and the `reload` tool returns it:
 ```
 
 `machines` are the machines the reload reached. `duration_s` is the time from the reload order to every machine ready on the new code, the rebuild included.
+
+## Rerunning the checks a finding names
+
+Tag every check that proves a finding with its id, `// @tags m07-1`, and after the fix reload and rerun them by the tag:
+
+```
+shakedown reload
+shakedown run --tag m07-1
+```
+
+With `@skd_fixture` alone, the time from the reload to the last of three short checks' outcomes on the test machine was about 29 s in singleplayer (the reload about 24 s) and about 50 s on a dedicated session with two clients (the reload about 44 s). A setup that loads more mods, such as CBA_A3, takes longer to start, and so to reload.
+
+## What reloads inside the mission, and `partial`
+
+No change of mod code reloads inside the running mission, neither by a recompile nor by a mission restart: the game holds the files it has read (`DEF-21`). A check reloads inside the mission without any reload at all, since it is read fresh for every execution. Everything else is the game restart above.
+
+Every check execution in the result file has a `reload` field. It is `partial` only after a reload of mod code inside the mission, where handlers the mod registered by value keep the old code until a mission restart (`RLD-05`). Since no such reload exists, every execution records `full`: the checks ran on the code the game started with.
 
 ## A reload that does not complete
 

@@ -151,20 +151,13 @@ pub async fn reload(
         )
         .tag("no-session"));
     };
+    // A run is refused first: its session may be broken partway through it (`RLD-01`, `US-058`).
+    if let Some(refusal) = super::run::refuse_during_run(runner, &session.id, "reload") {
+        return Err(refusal);
+    }
     let broken = match session.state() {
         SessionState::Ready => false,
         SessionState::Broken => true,
-        SessionState::Running => {
-            let progress = runner.progress.lock().unwrap().clone().unwrap_or(Value::Null);
-            return Err(CliError::not_now(format!(
-                "Session {} is running run {} ({} of {} checks done), so it cannot reload now. Wait for the run to end, or stop it with `shakedown run stop`.",
-                session.id,
-                progress["id"].as_str().unwrap_or("?"),
-                progress["done"],
-                progress["total"]
-            ))
-            .tag("session-busy"));
-        }
         SessionState::Reloading => {
             return Err(CliError::not_now(format!(
                 "Session {} is busy with a reload or a reset. Wait for it to end; `shakedown status` shows it.",

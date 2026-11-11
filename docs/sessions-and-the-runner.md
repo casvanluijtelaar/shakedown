@@ -66,7 +66,7 @@ A runner can run and still not answer: suspended in a debugger, hung, or a runne
 
   ```
   $ shakedown status --json
-  {"runner": "unreachable", "runner_pid": 12380, "version": "0.0.7", "session": null, "run": null, "last_reload": null}
+  {"runner": "unreachable", "runner_pid": 12380, "version": "0.0.8", "session": null, "run": null, "last_reload": null}
   ```
 
 - every other command exits 4 with what to do:
@@ -76,7 +76,7 @@ A runner can run and still not answer: suspended in a debugger, hung, or a runne
   The runner (process 12380) does not answer. Ending that process ends its session's game processes with it; the next command then starts a fresh runner.
   ```
 
-  A runner of another version answers, and the message names both versions: `The runner (process 12380) runs version 0.0.6, and this command is version 0.0.7. ...`
+  A runner of another version answers, and the message names both versions: `The runner (process 12380) runs version 0.0.7, and this command is version 0.0.8. ...`
 
 - every MCP tool but `status`, `list_checks` and `guide` returns `isError` with the code `runner-unreachable` and the same message, and `status` returns `runner` `unreachable` ([Agent tools](agent-tools.md)).
 
