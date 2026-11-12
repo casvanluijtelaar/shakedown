@@ -16,3 +16,4 @@ description: One Finding concept per defect or document gap, in a folder per mil
 * [M5 findings](m05/) - The findings of M5 A session that outlives its client.
 * [M6 findings](m06/) - The findings of M6 Reload by restart.
 * [M7 findings](m07/) - The findings of M7 Reload inside the mission.
+* [M8 findings](m08/) - The findings of M8 Walk away.

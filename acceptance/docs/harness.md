@@ -126,3 +126,11 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - `status` gives the active run's `current_check` as soon as the check starts, and the session `reloading` at the first poll after `shakedown reload` starts, so a request made during either needs no timing beyond a poll twice a second. Every refusal answered at once.
 - A check that must still be running when the harness asks for something waits for a value the server sets 15 s later with `skdfx_fnc_setFlagLater`, as the M4 waits do; the value is one of the execution, since `skdfx_flag` survives the reset.
 - One M7 repeat, two runs, two game restarts and the refusals, takes about 2 min 20 s on `rld7` and 1 min 35 s on `rld7sp`.
+
+## What the M8 round learned
+
+- A process this harness starts may inherit the ignoring of Ctrl+C from the agent shell; `console_signal.py` turns Ctrl+C handling back on before it starts `shakedown run`, so the command gets the event as it would in a console a person opened.
+- `run --setup dedicated-2` of three checks takes 73 to 82 s with its start and stop; stopped by Ctrl+C in its second check, about 50 s. A `session stop` of `dedicated-2` returns in 0.8 to 1.0 s with no process, port or mission copy left.
+- While a `dedicated-2` session runs, `netstat -ano` shows UDP 2402 and 2404 held by the server and 2406 by a client; the port checks first see those, so an empty list after the stop means something.
+- The eight ceiling checks stop 68.0 s after the first started, at the sixth check, every time: the cleanups run at the start of the next reset, so the fifth check's cleanup is running at the ceiling.
+- The full suite of every milestone with M8 takes 43 minutes.
