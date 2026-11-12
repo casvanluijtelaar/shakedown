@@ -28,11 +28,13 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 | `harness/m06.py` | The checks of M6 and their batch in the `rld` session: a check edited and run again, a `@reset mission` check, reloads of a new file and `config.cpp`, a mission restart and a game restart that each lose `p2`, and the staged change of `@skd_fixture_cba` reloaded and put back. It writes the staged copy and the `rld` setup into the project and puts the installed fixture files back after the session (`FIX-03`). |
 | `harness/m07.py` | The checks of M7 and their batch, once in the `rld7` session (a dedicated server with two clients) and once in the `rld7sp` session (singleplayer): a run during which a reload and a reset are asked, beside the same run with none, and the staged `fn_version.sqf` changed to `"2"` and reloaded, with a reset and a second reload asked during it, then the three checks tagged `m07-demo` run by their tag, and the change put back. It writes the staged copy of `@skd_fixture` and both setups into the project and puts the installed file back after each session (`FIX-03`). |
 | `harness/m08.py` | The checks of M8: per repeat, with no session running, in projects of their own (`walk` with `dedicated-2`, `ceil` with `sp`), the full run, its Ctrl+C stop, the ceiling run, and `session stop` and `session_stop` with the ports and mission copies around them; and the `sp` batch, which stops three checks by Ctrl+C, Ctrl+Break, `run stop` and `run_stop` and runs the eight ceiling checks by command and by tool. |
+| `harness/m09.py` | The checks of M9: per repeat, with no session running, in the project `m09` of its own (setups `ded`, a dedicated server with two clients, and `sp`, each loading `@skd_fixture` alone), four dedicated sessions that each lose `p2` (suspended by its id, crashed by `skdfx_fnc_crash` while a check waits on it, crashed just after an assertion failed, and ended with `taskkill /F`) and one singleplayer session (the three outcomes, the held clock, a cleanup that never ends, a reload of the broken session and a reset that fails). |
 | `harness/console_signal.py` | Runs one `shakedown` command in a hidden console of its own and sends it Ctrl+C (to the console) or Ctrl+Break (to its process group) when the harness writes a go file. |
 | `harness/win.py` | The Windows calls M5 needs, through `ctypes`: suspend and resume a process by id, its creation time and environment block, the process tree with command lines from `Win32_Process`, and a job object with kill-on-close, with or without breakaway. |
 | `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `m06/` for M6's checks, `m07/` for M7's, `m08/` for M8's, `agh/` for the M1, M2 and M3 demos against arma-grappling-hook. |
 | `templates/` | SQF checks written into the project in numbered copies. |
 | `walk/` | The three checks of M8's walk-away suite, copied into the `walk` project. |
+| `m09/` | The SQF checks of M9, copied into the `m09` project. |
 
 ## Checks
 
@@ -134,3 +136,14 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - While a `dedicated-2` session runs, `netstat -ano` shows UDP 2402 and 2404 held by the server and 2406 by a client; the port checks first see those, so an empty list after the stop means something.
 - The eight ceiling checks stop 68.0 s after the first started, at the sixth check, every time: the cleanups run at the start of the next reset, so the fifth check's cleanup is running at the ceiling.
 - The full suite of every milestone with M8 takes 43 minutes.
+
+## What the M9 round learned
+
+- Four `ded` sessions and one `sp` session per repeat, each started and stopped by its part, take about 6.5 minutes; a round of three about 20 minutes.
+- A `ded` start, with `@skd_fixture` alone, was ready in 43.7 to 47.3 s; an `sp` start in 23.6 to 25.0 s.
+- A process suspended with `NtSuspendProcess` was lost 9.5 to 10.2 s after the suspension by the result's `reason.at`, and its check ended about 12.5 s after it, the wait for errors in flight included. `inspect` of a machine suspended a moment before returned it `lost` in 9.2 to 10.1 s.
+- `skdfx_fnc_crash` ends the process about 1.3 s after its fault. A fault 1 s into a check whose assertion fails at its 2 s ceiling lost `p2` 0.1 to 0.4 s after the assertion, inside the 1.5 s the execution goes on after its outcome; a fault 0.5 s in followed by an assertion that fails at once lost it after the execution had ended.
+- A clock held with `skdfx_fnc_holdClock` is flagged from about 3.5 s after the hold begins, by `health.since`; a hold that begins 0.3 s after an assertion fails is therefore dated after the execution ended. The flag was first seen clear 5.1 to 5.6 s after the clock moved again.
+- `inspect`, `exec`, `logs` and `errors` answered in under 0.1 s during a check.
+- The full suite of every milestone with M9 takes 50 minutes.
+

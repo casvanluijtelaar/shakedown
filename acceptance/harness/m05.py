@@ -717,7 +717,7 @@ def us060_resumed(ctx):
     after = out["after"]
     assert after["runner"] == "running", f"status after the resume gave runner {after['runner']}"
     s = after["session"]
-    assert s and s["id"] == out["sid"] and s["state"] == "ready", f"status after the resume gave {s and (s['id'], s['state'])}"
+    assert s and s["id"] == out["sid"] and s["state"] == "ready", f"status after the resume gave {s and (s['id'], s['state'])}, reason {s and str(s.get('reason'))[:600]}, "         f"machines {s and [(m['name'], m['state']) for m in s['machines']]}"
     starts = {m["name"]: m["start"] for m in s["machines"]}
     assert starts == out["starts"], f"start numbers before {out['starts']}, after {starts}"
 

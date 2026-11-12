@@ -17,3 +17,4 @@ description: One Finding concept per defect or document gap, in a folder per mil
 * [M6 findings](m06/) - The findings of M6 Reload by restart.
 * [M7 findings](m07/) - The findings of M7 Reload inside the mission.
 * [M8 findings](m08/) - The findings of M8 Walk away.
+* [M9 findings](m09/) - The findings of M9 Invalid, not failed.
