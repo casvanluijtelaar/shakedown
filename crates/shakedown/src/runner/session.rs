@@ -139,6 +139,8 @@ pub const WATCH_RATIO: f64 = 0.5;
 pub const HEARTBEAT_GAP: Duration = Duration::from_secs(10);
 /// How often the runner looks at every machine's process and heartbeat (`P-07`, `P-09`).
 const WATCH_EVERY: Duration = Duration::from_millis(250);
+/// A watch round this late shows that the runner itself did not run (`SES-06`, `US-060`).
+const RUNNER_PAUSE: Duration = Duration::from_secs(2);
 /// How long the runner waits for a crash dump still being written (`P-09` step 2).
 const DUMP_WAIT: Duration = Duration::from_secs(5);
 
@@ -1947,9 +1949,27 @@ impl Session {
     /// The watch of every `ready` machine that is not held, every `WATCH_EVERY`, until the session
     /// stops: a process that ended unasked is lost as `exited` (`P-09`), and a machine whose
     /// heartbeat has not come for `HEARTBEAT_GAP` is lost as `no-answer` (`P-07`, `HLT-02`).
+    ///
+    /// The gap is the time the runner itself ran without a heartbeat: a round that comes more than
+    /// `RUNNER_PAUSE` late shows that the runner was paused, suspended or starved, and the
+    /// heartbeats sent meanwhile are still in its connections, so that round judges nothing and
+    /// the gap of every machine counts from it (`SES-06`, `US-060`).
     async fn watch(self: Arc<Self>, runner: Arc<Runner>) {
+        let mut round = Instant::now();
+        let mut resumed: Option<Instant> = None;
         loop {
             tokio::time::sleep(WATCH_EVERY).await;
+            let late = round.elapsed();
+            round = Instant::now();
+            if late >= RUNNER_PAUSE {
+                runner.log(&format!(
+                    "{} the runner did not run for {:.1} s; the heartbeat gap counts from now",
+                    self.id,
+                    late.as_secs_f64()
+                ));
+                resumed = Some(round);
+                continue;
+            }
             match self.state() {
                 SessionState::Stopping | SessionState::Stopped | SessionState::Failed => return,
                 SessionState::Starting => continue,
@@ -1973,7 +1993,10 @@ impl Session {
                         name: m.name.clone(),
                         pid: m.pid,
                         exit: m.process.as_ref().and_then(win::exited),
-                        gap: m.last_beat.map_or(Duration::ZERO, |t| t.elapsed()),
+                        gap: m
+                            .last_beat
+                            .map_or(Duration::ZERO, |t| t.elapsed())
+                            .min(resumed.map_or(Duration::MAX, |t| t.elapsed())),
                         last: m.last_answer_at.clone(),
                         asked: inner
                             .pending

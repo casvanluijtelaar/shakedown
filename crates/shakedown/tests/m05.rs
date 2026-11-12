@@ -976,6 +976,7 @@ fn us_052_us_053_us_060_us_007_local_control_audit_and_an_unreachable_runner() {
         .collect();
     assert_eq!(s["runner_pid"], runner);
     w::suspend(runner, true);
+    let suspended = Instant::now();
     let t = Instant::now();
     let (code, st, _) = cli_json(&dir, &["status"]);
     println!("US-060 status took {:.1} s", t.elapsed().as_secs_f64());
@@ -1005,17 +1006,49 @@ fn us_052_us_053_us_060_us_007_local_control_audit_and_an_unreachable_runner() {
     outputs.push(a.text());
     assert_eq!(a.data()["runner"], "unreachable");
     assert_eq!(shakedown_pids("runner"), vec![runner], "a second runner started");
+    // US-060 3, SES-06, HLT-02: the runner stays suspended past the heartbeat gap of 10 s, as
+    // long as the machines' heartbeats would take to make them lost, while status keeps
+    // answering that it is unreachable.
+    let held = within(Duration::from_secs(40), || {
+        let (_, st, _) = cli_json(&dir, &["status"]);
+        assert_eq!(st["runner"], "unreachable", "{st}");
+        suspended.elapsed() >= Duration::from_secs(20)
+    });
+    assert!(held);
+    println!(
+        "US-060 the runner was suspended for {:.1} s",
+        suspended.elapsed().as_secs_f64()
+    );
     w::suspend(runner, false);
-    let s = status(&dir);
-    assert_eq!(s["session"]["id"], id.as_str());
-    assert_eq!(s["session"]["state"], "ready");
-    let now: Vec<(Value, Value)> = s["session"]["machines"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|m| (m["name"].clone(), m["start"].clone()))
-        .collect();
-    assert_eq!(now, starts, "US-060: a machine was restarted");
+    // Once resumed, the same session stays ready with every machine ready at its start number,
+    // for longer than the heartbeat gap.
+    let resumed = Instant::now();
+    let mut seen = 0;
+    within(Duration::from_secs(20), || {
+        let s = status(&dir);
+        assert_eq!(s["session"]["id"], id.as_str());
+        assert_eq!(
+            s["session"]["state"],
+            "ready",
+            "US-060 after {:?}: {s}",
+            resumed.elapsed()
+        );
+        let now: Vec<(Value, Value, Value)> = s["session"]["machines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|m| (m["name"].clone(), m["start"].clone(), m["state"].clone()))
+            .collect();
+        let want: Vec<(Value, Value, Value)> = starts
+            .iter()
+            .map(|(n, st)| (n.clone(), st.clone(), json!("ready")))
+            .collect();
+        assert_eq!(now, want, "US-060: a machine was restarted or lost");
+        seen += 1;
+        resumed.elapsed() >= Duration::from_secs(15)
+    });
+    println!("US-060 status was ready {seen} times over 15 s after the resume");
+    assert!(seen >= 5);
 
     // US-060 criterion 4: a stand-in that runner.json names answers with another version.
     let real = std::fs::read_to_string(runner_dir().join("runner.json")).unwrap();

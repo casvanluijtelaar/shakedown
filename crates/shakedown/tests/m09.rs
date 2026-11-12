@@ -79,6 +79,14 @@ mods = ["fixture"]
                 .into(),
         ),
         (
+            "waitp1",
+            "// @check US-044 a step waits on p1
+// @timeout 60
+[\"wait on p1 that never holds\", { [\"p1\", { false }, \"a condition that never holds\", 20] call skd_fnc_waitUntil }] call skd_fnc_step;
+"
+                .into(),
+        ),
+        (
             "crashp2",
             "// @check US-016 p2 crashes, then the check waits on it\n// @timeout 60\n[\"p2\", { [0] call skdfx_fnc_crash }] call skd_fnc_on;\n[\"p2\", { false }, \"a condition that never holds\", 40] call skd_fnc_waitUntil;\n"
                 .into(),
@@ -479,4 +487,42 @@ fn us_016_us_043_us_041_a_client_ends_or_crashes_during_a_check() {
     let (_, r, _) = run(&dir, &["failthencrash", "pass"]);
     assert_eq!(outcome(&r, 0).0, "fail");
     assert_eq!(outcome(&r, 0).1, "assertion");
+}
+
+/// `US-044` 1 and 2, `INS-01`: inspect of `p1` while `p1` runs the wait of the check's step
+/// names the run, the check and that step, as inspect of the lead does.
+#[test]
+#[ignore = "starts the game; run on the test machine"]
+fn us_044_ins_01_inspect_of_a_client_running_a_steps_wait_names_the_step() {
+    let dir = project("step");
+    let _session = start(&dir, "ded2");
+    let step = Value::from(vec!["wait on p1 that never holds"]);
+    let mut seen = None;
+    let (_, r, _, _) = run_while(&dir, &["waitp1"], || {
+        let clock = Instant::now();
+        for _ in 0..60 {
+            let (code, v, err) = cmd(&dir, &["inspect", "--machine", "p1"]);
+            assert_eq!(code, 0, "{err}");
+            if v["step_path"] == step {
+                let (_, lead, _) = cmd(&dir, &["inspect", "--machine", "server"]);
+                seen = Some((clock.elapsed(), v, lead));
+                break;
+            }
+            if clock.elapsed() > Duration::from_secs(15) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(250));
+        }
+    });
+    let (after, p1, lead) = seen.expect("US-044: inspect of p1 never named the step running");
+    println!(
+        "US-044 inspect of p1 after {after:?}: run {} check {} step {}; the lead: step {}",
+        p1["run_id"], p1["check_id"], p1["step_path"], lead["step_path"]
+    );
+    assert_eq!(p1["check_id"], "waitp1");
+    assert_eq!(p1["run_id"], r["run"]["id"]);
+    assert_eq!(lead["step_path"], step);
+    // Out of a check, no step runs on p1.
+    let (_, v, _) = cmd(&dir, &["inspect", "--machine", "p1"]);
+    assert_eq!(v["step_path"], Value::from(Vec::<String>::new()), "{v}");
 }

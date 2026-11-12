@@ -19,8 +19,19 @@ private _out = createHashMapFromArray [
     ["tick", diag_tickTime toFixed 3],
     ["fps", diag_fps toFixed 1],
     ["frame", diag_frameNo toFixed 0],
-    ["step_path", if (!isNil "skd_check" && { !(skd_check get "done") }) then { call skd_fnc_stepPath } else { [] }]
+    ["step_path", []]
 ];
+// The step running: the step of the check that runs here, or else the lead's step whose order
+// (a wait, a poll or code run here) is the newest still running here.
+if (!isNil "skd_check" && { !(skd_check get "done") }) then {
+    _out set ["step_path", call skd_fnc_stepPath];
+} else {
+    private _i = -1;
+    for "_j" from count skd_orderPaths - 1 to 0 step -1 do {
+        if (((skd_orderPaths select _j) select 1) isNotEqualTo []) exitWith { _i = _j };
+    };
+    if (_i >= 0) then { _out set ["step_path", (skd_orderPaths select _i) select 1] };
+};
 if (!isNull _unit) then {
     private _player = createHashMapFromArray [
         ["class", typeOf _unit],

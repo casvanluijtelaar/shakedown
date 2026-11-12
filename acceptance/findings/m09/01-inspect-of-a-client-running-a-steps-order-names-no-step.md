@@ -11,7 +11,8 @@ checks:
   - "US-044 INS-01 inspect of p1 while p1 runs the wait of the check's step names the run, the check and that step"
 stories: [US-044]
 generated: { by: "claude-code/tester", at: 2026-11-12T12:40:00-08:00 }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-12T14:05:00-08:00, note: "Inspect of a machine that runs no check names the lead's step whose order (a wait, a poll or code of a step) is the newest still running there; INS-01 and docs/asking-a-running-game.md say so. The m09 game test us_044_ins_01_inspect_of_a_client_running_a_steps_wait_names_the_step proves it, and the named check passes." }
 verified: []
 ---
 
