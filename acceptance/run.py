@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07, m08  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import AFTER_SESSION, BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
@@ -73,6 +73,7 @@ def make_project(work, game, install, cba, agh):
         "mods = [\"fixture\"]\n" + m06.project_toml(project, game, install)
         + m07.project_toml(project, game, install),
         encoding="utf-8")
+    m08.project_files(project)
     (project / ".mcp.json").write_text(json.dumps(
         {"mcpServers": {"shakedown": {"command": "shakedown", "args": ["mcp"], "timeout": 70000}}}, indent=2),
         encoding="utf-8")
@@ -151,8 +152,13 @@ def main():
             log(f"Another game ({sorted(busy)}) or runner ({driver.runner_pid()}) is running; stop it first. "
                 "No in-session check ran.")
             return 4
-        for c in [c for c in selected if c.phase in ("nosteam", "claude")] + [c for c in selected if c.phase == "start"]:
+        for c in [c for c in selected if c.phase in ("nosteam", "claude")] +                 [c for c in selected if c.phase == "start" and not c.repeat]:
+            ctx.repeat_n = 1
             run_check(c, 1)
+        for n in range(1, args.repeat + 1):
+            for c in [c for c in selected if c.phase == "start" and c.repeat]:
+                ctx.repeat_n = n
+                run_check(c, n)
         setups = [s for s in SETUPS if any(c.phase == "session" and c.setup == s for c in selected)]
         if any(c.phase == "end" for c in selected) and "sp" not in setups:
             setups.append("sp")

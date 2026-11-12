@@ -15,11 +15,12 @@ SETUPS = ["ded", "rld", "rld7", "rld7sp", "cba", "sp"]
 
 
 class Check:
-    def __init__(self, name, phase, needs, fn, setup):
+    def __init__(self, name, phase, needs, fn, setup, repeat=False):
         self.name, self.phase, self.needs, self.fn, self.setup = name, phase, list(needs), fn, setup
+        self.repeat = repeat
 
 
-def check(name, phase, needs=(), setup="sp"):
+def check(name, phase, needs=(), setup="sp", repeat=False):
     """Registers an acceptance check.
 
     phase: "offline" runs once with no game; "start" runs once before the first session and
@@ -27,9 +28,11 @@ def check(name, phase, needs=(), setup="sp"):
     its setup; "end" runs once after the last session stopped; "nosteam" needs no steam process
     running, so it runs, before the "start" checks, only when a --check value selects it.
     needs: the SQF check ids a "session" check reads from the runs its setup's batches make.
+    repeat: a "start" check that runs once per repeat, after the other "start" checks, with
+    ctx.repeat_n set to the repeat; such a check starts and stops its own session each time.
     """
     def wrap(fn):
-        CHECKS.append(Check(name, phase, needs, fn, setup))
+        CHECKS.append(Check(name, phase, needs, fn, setup, repeat))
         return fn
     return wrap
 
