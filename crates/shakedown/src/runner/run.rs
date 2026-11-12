@@ -382,6 +382,18 @@ async fn execute(
         }
     }
     let summary = Summary::of(&executions, not_run.len());
+    for machine in session.machine_names() {
+        if session.is_lost(&machine) {
+            session.settled(&machine).await;
+        }
+    }
+    let mut machines = session.result_machines(started);
+    for m in machines.iter_mut() {
+        if let Some(lost) = m.lost.as_mut() {
+            let found: Vec<PathBuf> = lost.dumps.iter().map(PathBuf::from).collect();
+            lost.dumps = copy_dumps(&folder, &m.name, &found);
+        }
+    }
     let result = ResultFile {
         schema: SCHEMA.into(),
         framework_version: shakedown_protocol::VERSION.into(),
@@ -404,7 +416,7 @@ async fn execute(
                 world: session.spec.setup.world.clone(),
                 mods: session.spec.setup.mods.clone(),
             },
-            machines: session.result_machines(started),
+            machines,
         },
         summary: summary.clone(),
         checks: executions.clone(),
@@ -564,21 +576,44 @@ async fn execute_check(
     let key = format!("{run_id}#{n}");
     mark(session, &key, "start", &check.id).await;
     *runner.executing.lock().unwrap() = Some((key.clone(), check.id.clone()));
-    let raced = tokio::select! {
-        done = prepare_and_execute(runner, session, run_id, check, &header, &text, started, clock) => Ok(done),
-        reason = stop_or_ceiling(control, deadline) => Err(reason),
+    // A machine lost during the check ends it at once (P-07 step 2, P-09 step 3); the lead's
+    // report still counts for a cause that came first if it comes within a second (DM-06). The
+    // body's order is dropped with `work`, which stops the body in the game.
+    let raced = {
+        let work = prepare_and_execute(runner, session, run_id, check, &header, &text, started, clock);
+        tokio::pin!(work);
+        tokio::select! {
+            done = &mut work => Ok(done),
+            reason = stop_or_ceiling(control, deadline) => Err(Some(reason)),
+            _ = session.wait_lost(clock) => {
+                match tokio::time::timeout(Duration::from_secs(1), &mut work).await {
+                    Ok(done) => Ok(done),
+                    Err(_) => Err(None),
+                }
+            }
+        }
     };
     *session.check.lock().unwrap() = None;
     let (mut execution, report, executing_at) = match raced {
         Ok(done) => done,
         Err(reason) => {
+            let reason = match reason {
+                Some(reason) => run_stopped(reason, ceiling),
+                // Replaced by the lost machine's own reason below.
+                None => Reason {
+                    kind: "machine-lost".into(),
+                    message: "A machine was lost during the check.".into(),
+                    machine: None,
+                    at: time::now(),
+                },
+            };
             let e = ended(
                 check,
                 Some(&header),
                 started,
                 clock,
                 "invalid",
-                Some(run_stopped(reason, ceiling)),
+                Some(reason),
                 vec![],
                 Evidence::default(),
             );
@@ -603,9 +638,103 @@ async fn execute_check(
         errors::from_rpt(&mut errors, &machine, &check.id, &lines);
     }
     errors::judge(&mut execution, errors, &report["expects"], executing_at.as_deref());
+    let mut causes = Vec::new();
+    if let Some((machine, _)) = session.lost_since(clock)
+        && let Some(lost) = session.settled(&machine).await
+    {
+        causes.push(lost_reason(folder, &machine, &lost));
+        let tail = session
+            .profile(&machine)
+            .map(|p| super::session::rpt_tail(&p, 20))
+            .unwrap_or_default();
+        execution.evidence.attached.push(Attached {
+            label: format!("the last 20 lines of {machine}'s RPT"),
+            value: json!(tail),
+        });
+    }
+    if let Some(flag) = session.flag_since(&execution.started_at) {
+        causes.push(unhealthy_reason(&flag));
+    }
+    decide(&mut execution, causes);
     execution.ended_at = time::now();
     execution.duration_s = round3(clock.elapsed().as_secs_f64());
     Some(execution)
+}
+
+/// The reason of a check a lost machine ended (`DM-05`, `P-07`, `P-09`): the machine, how it was
+/// lost, its exit code and its crash dumps, copied into the run folder.
+fn lost_reason(folder: &Path, machine: &str, lost: &super::session::LostRecord) -> Reason {
+    let dumps = copy_dumps(folder, machine, &lost.dumps);
+    let dumps = match (lost.reason, dumps.is_empty()) {
+        ("exited", true) => "; it left no crash dump in its profile folder".to_string(),
+        ("exited", false) => format!("; its crash dumps: {}", dumps.join(", ")),
+        _ => String::new(),
+    };
+    let next = if lost.reason == "exited" {
+        "The environment failed, not the mod; the session is broken: restart its game with `shakedown reload`, or stop it with `shakedown session stop`."
+    } else {
+        "The environment failed, not the mod; its process still runs for inspection, and the session is broken: restart its game with `shakedown reload`, or stop it with `shakedown session stop`."
+    };
+    Reason {
+        kind: "machine-lost".into(),
+        message: format!("{}{dumps}. {next}", lost.message),
+        machine: Some(machine.into()),
+        at: lost.at.clone(),
+    }
+}
+
+/// The reason of a check that overlapped an interval the clock watch flagged (`HLT-02`).
+fn unhealthy_reason(flag: &super::session::FlagInterval) -> Reason {
+    let what = if flag.clock == "frame" {
+        "frame number"
+    } else {
+        "mission time"
+    };
+    Reason {
+        kind: "unhealthy".into(),
+        message: format!(
+            "{}'s {what} stopped at {} while it still answered: over {:.1} s of real time its mission time advanced {:.2} s. The environment failed, not the mod; the check runs again once the machine's clocks move.",
+            flag.machine, flag.from, flag.advanced.1, flag.advanced.0
+        ),
+        machine: Some(flag.machine.clone()),
+        at: flag.from.clone(),
+    }
+}
+
+/// `DM-06`: of the causes of `invalid` the runner saw and the cause the check ended with, the
+/// first in wall-clock time decides. A check that passed, or ended for a cause that came later,
+/// takes the first of the runner's causes; a `machine-lost` the check saw itself gives way to
+/// the runner's own record of that loss, which names the exit code and the dumps.
+fn decide(execution: &mut CheckExecution, causes: Vec<Reason>) {
+    let Some(first) = causes.into_iter().min_by(|a, b| a.at.cmp(&b.at)) else {
+        return;
+    };
+    let keep = execution.outcome != "pass"
+        && execution
+            .reason
+            .as_ref()
+            .is_some_and(|r| r.at < first.at && r.kind != "machine-lost");
+    if !keep {
+        execution.outcome = "invalid".into();
+        execution.reason = Some(first);
+    }
+}
+
+/// Copies a lost machine's crash dumps into the run folder as `dumps/<machine>/<file>`, once,
+/// and returns their paths relative to it (`P-09` step 2, `RES-04`).
+fn copy_dumps(folder: &Path, machine: &str, dumps: &[PathBuf]) -> Vec<String> {
+    dumps
+        .iter()
+        .filter_map(|d| {
+            let rel = format!("dumps/{machine}/{}", d.file_name()?.to_string_lossy());
+            let to = folder.join(&rel);
+            if !to.is_file() {
+                std::fs::create_dir_all(to.parent()?).ok()?;
+                std::fs::copy(d, &to).ok()?;
+            }
+            Some(rel)
+        })
+        .collect()
 }
 
 /// Returns the reason once the run is asked to stop, or `run-ceiling` once `deadline` passes.
@@ -631,6 +760,9 @@ const MARKER_CEILING: Duration = Duration::from_secs(3);
 async fn mark(session: &Arc<Session>, key: &str, edge: &str, check_id: &str) {
     let mut handles = Vec::new();
     for machine in session.machine_names() {
+        if session.is_lost(&machine) {
+            continue;
+        }
         let session = Arc::clone(session);
         let args = json!([key, edge, check_id]);
         handles.push(tokio::spawn(async move {
@@ -656,7 +788,8 @@ async fn excerpt(
     let end = crate::logs::marker(key, "end");
     let mut text = crate::logs::read_text(&rpt);
     for _ in 0..(MARKER_CEILING.as_millis() / 100) {
-        if text.contains(&end) {
+        // A lost machine writes no end marker; its lines up to its last are kept (US-043).
+        if text.contains(&end) || session.is_lost(machine) {
             break;
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -740,7 +873,7 @@ async fn prepare_and_execute(
             (e, report, executing_at)
         }
         Err(e) => {
-            let why = match e {
+            let why = match &e {
                 OrderError::NotConnected | OrderError::Lost => {
                     format!("{lead} lost its connection to the runner during the check")
                 }
@@ -750,7 +883,16 @@ async fn prepare_and_execute(
                     GRACE.as_secs()
                 ),
             };
-            session.set_broken(lead, why.clone());
+            if matches!(e, OrderError::Ceiling) {
+                session.lose(
+                    lead,
+                    "no-answer",
+                    None,
+                    format!("{why}; it was asked to run check {}", check.id),
+                );
+            } else if !session.is_lost(lead) {
+                session.set_broken(lead, why.clone());
+            }
             let reason = Reason {
                 kind: "machine-lost".into(),
                 message: format!("{why}."),
@@ -1225,6 +1367,7 @@ mod tests {
                     game_version: "2.22.154089 stable".into(),
                     mods: vec![],
                     end_state: "ready".into(),
+                    lost: None,
                 }],
             },
             summary,
@@ -1343,6 +1486,102 @@ mod tests {
                 .message
                 .contains("68 s")
         );
+    }
+
+    fn reason(kind: &str, at: &str) -> Reason {
+        Reason {
+            kind: kind.into(),
+            message: format!("{kind} at {at}"),
+            machine: Some("p2".into()),
+            at: at.into(),
+        }
+    }
+
+    /// `DM-06`, `US-041` 3, `US-059` 3: the first cause in wall-clock time decides. A failed
+    /// assertion before the loss or the stopped clock stays `fail`; one after it does not hide
+    /// it; a check that passed takes the runner's cause; a `machine-lost` the check saw itself
+    /// gives way to the runner's record of the loss.
+    #[test]
+    fn us_041_us_059_dm_06_the_first_cause_decides() {
+        let mut e = sample("fail").checks.remove(0);
+        e.reason = Some(reason("assertion", "2026-11-12T12:00:01.000Z"));
+        decide(&mut e, vec![reason("machine-lost", "2026-11-12T12:00:01.500Z")]);
+        assert_eq!(
+            (e.outcome.as_str(), e.reason.as_ref().unwrap().kind.as_str()),
+            ("fail", "assertion")
+        );
+
+        decide(&mut e, vec![reason("unhealthy", "2026-11-12T12:00:00.500Z")]);
+        assert_eq!(
+            (e.outcome.as_str(), e.reason.as_ref().unwrap().kind.as_str()),
+            ("invalid", "unhealthy")
+        );
+
+        let mut e = sample("pass").checks.remove(0);
+        decide(
+            &mut e,
+            vec![
+                reason("unhealthy", "2026-11-12T12:00:03.000Z"),
+                reason("machine-lost", "2026-11-12T12:00:02.000Z"),
+            ],
+        );
+        assert_eq!(
+            (e.outcome.as_str(), e.reason.as_ref().unwrap().kind.as_str()),
+            ("invalid", "machine-lost")
+        );
+
+        let mut e = sample("fail").checks.remove(0);
+        e.outcome = "invalid".into();
+        e.reason = Some(reason("machine-lost", "2026-11-12T12:00:01.000Z"));
+        let mut runner_cause = reason("machine-lost", "2026-11-12T12:00:02.000Z");
+        runner_cause.message = "p2's process exited unasked with exit code 1".into();
+        decide(&mut e, vec![runner_cause]);
+        assert!(e.reason.as_ref().unwrap().message.contains("exit code 1"));
+
+        let mut e = sample("pass").checks.remove(0);
+        decide(&mut e, vec![]);
+        assert_eq!(e.outcome, "pass");
+    }
+
+    /// `US-016` 2, `US-043` 2, `RES-05`: a lost machine's dumps are copied into the run folder as
+    /// `dumps/<machine>/<file>`, its reason names them and its exit code, and a result with the
+    /// machine `lost` is valid against the schema.
+    #[test]
+    fn us_016_us_043_res_05_a_lost_machine_is_in_the_result_with_its_dumps() {
+        let dir = std::env::temp_dir().join(format!("skd-m09-dumps-{}", std::process::id()));
+        let profile = dir.join("profile");
+        std::fs::create_dir_all(&profile).unwrap();
+        let dump = profile.join("arma3_x64_2026-11-12_10-54-04.mdmp");
+        std::fs::write(&dump, b"MDMP").unwrap();
+        let run = dir.join("run");
+        let lost = super::super::session::LostRecord {
+            reason: "exited",
+            at: "2026-11-12T12:00:02.000Z".into(),
+            instant: Instant::now(),
+            exit_code: Some(3221225477),
+            message: "p2's process 4242 exited unasked with exit code 3221225477 (0xC0000005)".into(),
+            dumps: vec![dump.clone()],
+            searching: false,
+        };
+        let r = lost_reason(&run, "p2", &lost);
+        assert_eq!(r.kind, "machine-lost");
+        assert_eq!(r.machine.as_deref(), Some("p2"));
+        assert!(
+            r.message.contains("0xC0000005") && r.message.contains("dumps/p2/arma3_x64_2026-11-12_10-54-04.mdmp"),
+            "{}",
+            r.message
+        );
+        assert!(run.join("dumps/p2/arma3_x64_2026-11-12_10-54-04.mdmp").is_file());
+        let mut result = sample("pass");
+        result.session.machines[0].end_state = "lost".into();
+        result.session.machines[0].lost = Some(shakedown_protocol::result::Lost {
+            reason: "exited".into(),
+            at: lost.at.clone(),
+            exit_code: lost.exit_code,
+            dumps: copy_dumps(&run, "p2", &lost.dumps),
+        });
+        validate(&result);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

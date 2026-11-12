@@ -1,9 +1,9 @@
 [workspace]
 resolver = "3"
-members = ["crates/shakedown", "crates/shakedown-ext", "crates/shakedown-protocol"]
+members = ["crates/shakedown", "crates/shakedown-ext", "crates/shakedown-protocol", "fixtures/skdfx-ext"]
 
 [workspace.package]
-version = "0.0.8"
+version = "0.0.10"
 edition = "2024"
 rust-version = "1.99"
 publish = false

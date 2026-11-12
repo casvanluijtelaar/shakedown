@@ -8,6 +8,7 @@ The destination defaults to target/shakedown in the repository. It receives:
     @shakedown/addons/shakedown_main.pbo
     @shakedown/shakedown_x64.dll
     fixtures/@skd_fixture/addons/skdfx_main.pbo
+    fixtures/@skd_fixture/skdfx_x64.dll     the fixture's extension (FIX-01)
     fixtures/@skd_fixture_cba/addons/skdfx_cba_main.pbo
     fixtures/skdfx/addons/main/...        the fixture's unpacked file tree
     fixtures/skdfx_cba/addons/main/...    the CBA fixture's unpacked file tree
@@ -73,7 +74,7 @@ def main():
         game = args[i + 1]
         del args[i : i + 2]
     dest = os.path.abspath(args[0]) if args else os.path.join(ROOT, "target", "shakedown")
-    run(["cargo", "build", "--release", "-p", "shakedown", "-p", "shakedown-ext"], ROOT)
+    run(["cargo", "build", "--release", "-p", "shakedown", "-p", "shakedown-ext", "-p", "skdfx-ext"], ROOT)
     addon = os.path.join(ROOT, "addon")
     run(["hemtt", "build"], addon)
     for folder, _, _ in FIXTURES:
@@ -96,6 +97,9 @@ def main():
         source = os.path.join(ROOT, "fixtures", folder)
         copy_tree(os.path.join(source, ".hemttout", "build", "addons"), os.path.join(installed, mod_name, "addons"))
         copy_tree(os.path.join(source, "addons"), os.path.join(installed, prefix, "addons"))
+    fixture_dll = "skdfx_ext.dll" if os.name == "nt" else "libskdfx_ext.so"
+    fixture_ext = "skdfx_x64.dll" if os.name == "nt" else "skdfx_x64.so"
+    shutil.copy2(os.path.join(release, fixture_dll), os.path.join(installed, "@skd_fixture", fixture_ext))
 
     if os.name == "nt":
         if not os.path.isdir(game):

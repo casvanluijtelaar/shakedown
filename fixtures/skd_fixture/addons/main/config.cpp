@@ -25,6 +25,10 @@ class CfgFunctions {
             class setFlag {};
             class setFlagLater {};
             class throw {};
+            // Failures on demand (contract "Failures on demand", FIX-01, FIX-02).
+            class crash {};
+            class exit {};
+            class holdClock {};
             // The reload target inside the mission (contract "A reload target inside the mission").
             class version {};
         };

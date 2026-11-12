@@ -88,8 +88,8 @@ Run before every check with reset mode `in-place`, and by the `reset` command. T
 
 ## **P-07** A stall: a machine stops answering
 
-1. **runner**: an order to a machine has no answer within its in-game ceiling plus the grace (`OBS-03`), or a check's end report does not come within its timeout plus the grace.
-2. **runner**: marks the machine `lost` with reason `no-answer` and the wall-clock time the ceiling passed, marks the session `broken`, ends the check executing `invalid` / `machine-lost` with the machine, the order that went unanswered and the machine's last 20 RPT lines, and ends each following check of the run `invalid` / `session-broken`.
+1. **runner**: an order to a machine has no answer within its in-game ceiling plus the grace (`OBS-03`), a check's end report does not come within its timeout plus the grace, or a `ready` machine's heartbeat has not come for 10 s (`HLT-02`).
+2. **runner**: marks the machine `lost` with reason `no-answer` and the wall-clock time the ceiling or the heartbeat's 10 s passed, answers every order still waiting on it as lost, marks the session `broken`, ends the check executing at once `invalid` / `machine-lost` with the machine, the orders it was given that went unanswered and the machine's last 20 RPT lines, and ends each following check of the run `invalid` / `session-broken`. A lost machine is sent no further order: `exec` returns it `lost` and `inspect` returns it with state `lost`, at once.
 3. The game processes keep running, so a person or an AI agent can still look at the logs and the processes. The session leaves `broken` by a `game-restart` reload, which any `reload` of a broken session is (`RLD-01`), or by `session stop`.
 
 ## **P-08** A reload

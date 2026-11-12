@@ -130,4 +130,19 @@ addMissionEventHandler ["ExtensionCallback", {
         ["player", hasInterface && { !isNull player }],
         ["baseline", [skd_baseline] call skd_fnc_encode]
     ]] call skd_fnc_send;
+    // From ready on, a heartbeat every second of real time carries this machine's clocks
+    // (HLT-02). It is sent from a per-frame handler gated on diag_tickTime, not a scheduled loop,
+    // so it keeps coming while the scheduled environment or the simulation stands still.
+    skd_beatAt = diag_tickTime;
+    addMissionEventHandler ["EachFrame", {
+        if (diag_tickTime - skd_beatAt >= 1) then {
+            skd_beatAt = diag_tickTime;
+            [createHashMapFromArray [
+                ["kind", "heartbeat"],
+                ["machine", skd_machine],
+                ["clocks", call skd_fnc_clocks],
+                ["fps", diag_fps toFixed 1]
+            ]] call skd_fnc_send;
+        };
+    }];
 };

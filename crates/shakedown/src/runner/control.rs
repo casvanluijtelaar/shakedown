@@ -11,7 +11,7 @@ use tokio::task::JoinSet;
 
 use super::Runner;
 use super::errors;
-use super::session::{Session, SessionState};
+use super::session::{GRACE, OrderError, Session, SessionState};
 use crate::config::Mode;
 use crate::error::CliError;
 
@@ -159,6 +159,20 @@ async fn send(
         set.spawn(async move {
             let clock = Instant::now();
             let (id, answer) = session.exec_tracked(&name, &source, args, ceiling).await;
+            // No answer within the ceiling plus the grace: the machine is lost (OBS-03, P-07).
+            if let Err(OrderError::Ceiling) = answer {
+                let asked: String = source.split_whitespace().collect::<Vec<_>>().join(" ");
+                session.lose(
+                    &name,
+                    "no-answer",
+                    None,
+                    format!(
+                        "{name} did not answer within the ceiling of {ceiling} s plus the grace of {} s; it was asked to run `{}`",
+                        GRACE.as_secs(),
+                        asked.chars().take(80).collect::<String>()
+                    ),
+                );
+            }
             (i, name, id, answer.ok(), clock.elapsed().as_secs_f64())
         });
     }
@@ -332,14 +346,19 @@ pub async fn inspect(runner: &Runner, machine: &str, near: Option<&str>, radius:
     }
     let session = session(runner)?;
     let name = targets(&session, machine, false)?.remove(0);
-    let answers = send(
-        &session,
-        std::slice::from_ref(&name),
-        "_this call skd_fnc_inspect",
-        &json!([near.unwrap_or_default(), radius]),
-        INSPECT_CEILING_S,
-    )
-    .await;
+    // A lost machine is not asked: it is returned lost at once (INS-01, US-045).
+    let answers = if session.is_lost(&name) {
+        vec![(name.clone(), String::new(), None, 0.0)]
+    } else {
+        send(
+            &session,
+            std::slice::from_ref(&name),
+            "_this call skd_fnc_inspect",
+            &json!([near.unwrap_or_default(), radius]),
+            INSPECT_CEILING_S,
+        )
+        .await
+    };
     let (_, _, answer, _) = answers.into_iter().next().expect("one machine");
     let mut view = session.machine(&name).unwrap_or(Value::Null);
     let v = match answer {

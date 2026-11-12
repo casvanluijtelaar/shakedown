@@ -63,6 +63,19 @@ pub struct Machine {
     pub game_version: String,
     pub mods: Vec<ModVersion>,
     pub end_state: String,
+    /// How and when a machine that was `lost` was lost (`RES-05`, `P-07`, `P-09`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lost: Option<Lost>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Lost {
+    /// `exited` or `no-answer`.
+    pub reason: String,
+    pub at: String,
+    pub exit_code: Option<u32>,
+    /// The crash dumps copied into the run folder, under `dumps/<machine>/`.
+    pub dumps: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

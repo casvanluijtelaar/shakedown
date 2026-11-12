@@ -45,7 +45,8 @@ The install folder holds:
 shakedown.exe
 @shakedown\addons\shakedown_main.pbo     the in-game agent and the check API
 @shakedown\shakedown_x64.dll             the extension
-fixtures\@skd_fixture\                  the fixture mod, which needs nothing but the game
+fixtures\@skd_fixture\                  the fixture mod, which needs nothing but the game, with its
+                                        extension skdfx_x64.dll, which ends a game process on demand
 fixtures\@skd_fixture_cba\              the fixture mod with a CBA keybind
 fixtures\skdfx\, fixtures\skdfx_cba\    the fixtures' unpacked files
 ```

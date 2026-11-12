@@ -83,7 +83,64 @@ pub struct Machine {
     held: bool,
     process: Option<Child>,
     tx: Option<mpsc::UnboundedSender<String>>,
+    /// How and when the machine was lost (`P-07`, `P-09`), once it is.
+    pub lost: Option<LostRecord>,
+    /// The heartbeats of the last few seconds, the newest last (`HLT-02`).
+    beats: Vec<Beat>,
+    /// When the last heartbeat came, or the machine became ready.
+    last_beat: Option<Instant>,
+    /// The clock the watch flagged, while it is flagged (`HLT-02`).
+    flag: Option<FlagInterval>,
 }
+
+/// How a machine was lost: its process `exited`, or it gave `no-answer` (`P-07`, `P-09`).
+#[derive(Debug, Clone)]
+pub struct LostRecord {
+    pub reason: &'static str,
+    /// The wall-clock time it was lost (`RES-05`).
+    pub at: String,
+    pub instant: Instant,
+    pub exit_code: Option<u32>,
+    /// What the check it ended and the session's reason say.
+    pub message: String,
+    /// The crash dumps in its profile folder (`P-09` step 2).
+    pub dumps: Vec<PathBuf>,
+    /// While the runner still looks for dumps being written.
+    pub searching: bool,
+}
+
+/// One heartbeat's clocks (`OBS-05`).
+#[derive(Debug, Clone)]
+struct Beat {
+    utc: String,
+    tick: f64,
+    time: f64,
+    frame: f64,
+}
+
+/// An interval in which the clock watch flagged a machine (`HLT-02`): which clock stopped, the
+/// wall-clock time it stopped advancing, the time the flag was raised and the time it cleared.
+#[derive(Debug, Clone)]
+pub struct FlagInterval {
+    pub machine: String,
+    pub clock: &'static str,
+    pub from: String,
+    pub since: String,
+    pub cleared: Option<String>,
+    /// How much mission time and real time passed over the window that raised it.
+    pub advanced: (f64, f64),
+}
+
+/// The real time over which the clock watch judges a machine's clocks (`HLT-02`).
+pub const WATCH_WINDOW_S: f64 = 5.0;
+/// Below this share of real time, mission time is said to have stopped (`HLT-02`).
+pub const WATCH_RATIO: f64 = 0.5;
+/// A machine whose heartbeat has not come for this long has stopped answering (`HLT-02`, `P-07`).
+pub const HEARTBEAT_GAP: Duration = Duration::from_secs(10);
+/// How often the runner looks at every machine's process and heartbeat (`P-07`, `P-09`).
+const WATCH_EVERY: Duration = Duration::from_millis(250);
+/// How long the runner waits for a crash dump still being written (`P-09` step 2).
+const DUMP_WAIT: Duration = Duration::from_secs(5);
 
 impl Machine {
     fn new(name: &str, kind: &'static str, start: u32, profile: PathBuf) -> Machine {
@@ -104,8 +161,75 @@ impl Machine {
             held: false,
             process: None,
             tx: None,
+            lost: None,
+            beats: Vec::new(),
+            last_beat: None,
+            flag: None,
         }
     }
+}
+
+/// What an order asked, in a few words, for the message of a machine lost while it waited
+/// (`P-07` step 2).
+fn describe(order: &Value) -> String {
+    let short = |s: &str| {
+        let one: String = s.split_whitespace().collect::<Vec<_>>().join(" ");
+        if one.chars().count() > 80 {
+            format!("{}...", one.chars().take(80).collect::<String>())
+        } else {
+            one
+        }
+    };
+    let source = order["source"].as_str().unwrap_or_default();
+    match order["kind"].as_str().unwrap_or_default() {
+        "check" => format!("to run check {}", order["check_id"].as_str().unwrap_or("?")),
+        "poll" => format!("to poll `{}`", short(source)),
+        "exec" => format!("to run `{}`", short(source)),
+        other => format!("an order of kind {other}"),
+    }
+}
+
+/// The clock watch over a machine's heartbeats (`HLT-02`): the clock that stopped over the last
+/// `WATCH_WINDOW_S` of real time, with the time it stopped and how much mission time and real
+/// time passed over the window, or `None` while both clocks move. A history shorter than the
+/// window is judged once it is long enough.
+fn stopped_clock(beats: &[Beat]) -> Option<(&'static str, String, (f64, f64))> {
+    let newest = beats.last()?;
+    let start = beats.iter().rev().find(|b| newest.tick - b.tick >= WATCH_WINDOW_S)?;
+    let real = newest.tick - start.tick;
+    let mission = newest.time - start.time;
+    let clock = if newest.frame <= start.frame {
+        "frame"
+    } else if mission < WATCH_RATIO * real {
+        "mission-time"
+    } else {
+        return None;
+    };
+    // It stopped by the first beat that shows it: the end of the first stopped step of the run
+    // of stopped steps that ends at the newest beat. A cause in the check before that beat came
+    // first (DM-06), so a failure is never hidden by a stop the beats only show later.
+    let mut from = newest.utc.clone();
+    for pair in beats.windows(2).rev() {
+        if healthy(&pair[0], &pair[1]) {
+            break;
+        }
+        from = pair[1].utc.clone();
+    }
+    Some((clock, from, (mission, real)))
+}
+
+/// Whether both clocks moved between two heartbeats.
+fn healthy(a: &Beat, b: &Beat) -> bool {
+    b.frame > a.frame && b.time - a.time >= WATCH_RATIO * (b.tick - a.tick)
+}
+
+/// Whether both clocks moved over the whole of the last `WATCH_WINDOW_S`, which clears a flag.
+fn moving_again(beats: &[Beat]) -> bool {
+    let Some(newest) = beats.last() else { return false };
+    let Some(i) = beats.iter().rposition(|b| newest.tick - b.tick >= WATCH_WINDOW_S) else {
+        return false;
+    };
+    beats[i..].windows(2).all(|p| healthy(&p[0], &p[1]))
 }
 
 /// A file of a watched `source` folder as the snapshot saw it (`RLD-01`, `P-08` step 1).
@@ -127,7 +251,11 @@ struct Inner {
     /// or a reset, which a refusal names (`RLD-01`).
     busy: String,
     job: Option<Job>,
-    pending: HashMap<String, (String, oneshot::Sender<Value>)>,
+    /// Each order waiting for its answer: the machine it went to, where the answer goes, and what
+    /// it asked, which a machine lost while it waits is named with (`P-07`).
+    pending: HashMap<String, (String, oneshot::Sender<Value>, String)>,
+    /// Every interval in which the clock watch flagged a machine (`HLT-02`), the newest last.
+    flags: Vec<FlagInterval>,
     /// A poll a machine runs for another (`P-03`): its order id to the machine that asked for it
     /// and that machine's reference.
     streams: HashMap<String, (String, String)>,
@@ -199,7 +327,11 @@ fn machine_view(m: &Machine) -> Value {
         "process_started_at": m.process_started_at,
         "profile": m.profile,
         "last_answer_at": m.last_answer_at,
-        "health": {"flag": null, "since": null, "heartbeat": null},
+        "health": {
+            "flag": m.flag.as_ref().map(|f| f.clock),
+            "since": m.flag.as_ref().map(|f| f.since.clone()),
+            "heartbeat": m.beats.last().map(|b| json!({"utc": b.utc, "tick": b.tick, "time": b.time, "frame": b.frame as u64})),
+        },
     })
 }
 
@@ -251,6 +383,17 @@ impl Session {
             .iter()
             .find(|m| m.name == name)
             .and_then(|m| m.pid)
+    }
+
+    /// The exit code of a machine's current process once it has ended, `None` while it runs.
+    pub fn exit_code(&self, name: &str) -> Option<u32> {
+        let inner = self.inner.lock().unwrap();
+        inner
+            .machines
+            .iter()
+            .find(|m| m.name == name)
+            .and_then(|m| m.process.as_ref())
+            .and_then(win::exited)
     }
 
     pub fn has_machine(&self, name: &str) -> bool {
@@ -415,6 +558,12 @@ impl Session {
                 start: m.start,
                 game_version: m.game_version.clone().unwrap_or_default(),
                 mods: m.mods.clone(),
+                lost: m.lost.as_ref().map(|l| shakedown_protocol::result::Lost {
+                    reason: l.reason.to_string(),
+                    at: l.at.clone(),
+                    exit_code: l.exit_code,
+                    dumps: l.dumps.iter().map(|d| d.display().to_string()).collect(),
+                }),
                 end_state: if m.state == "lost" {
                     "lost".into()
                 } else if m.state == "stopped" {
@@ -531,11 +680,9 @@ impl Session {
             }
         }
         writer.abort();
+        // A process that ended is lost through the watch of its process handle (P-09), and one
+        // that stops answering through its heartbeat (P-07); the connection alone decides nothing.
         let mut inner = self.inner.lock().unwrap();
-        let stopping = matches!(
-            inner.state,
-            SessionState::Stopping | SessionState::Stopped | SessionState::Failed
-        );
         let current = inner.machines.iter().any(|m| m.name == machine && m.start == start);
         if let Some(m) = inner
             .machines
@@ -543,13 +690,10 @@ impl Session {
             .find(|m| m.name == machine && m.start == start)
         {
             m.tx = None;
-            if !stopping {
-                m.state = "lost";
-            }
         }
         // Every order still waiting on this machine is answered by the closed channel.
         if current {
-            inner.pending.retain(|_, (target, _)| *target != machine);
+            inner.pending.retain(|_, (target, _, _)| *target != machine);
         }
         drop(inner);
         self.changed.notify_waiters();
@@ -564,7 +708,29 @@ impl Session {
         }
         if let Some(m) = inner.machines.iter_mut().find(|m| m.name == machine) {
             m.last_answer_at = Some(shakedown_protocol::time::now());
+            if kind == "heartbeat" {
+                m.last_beat = Some(Instant::now());
+                let c = &message["clocks"];
+                let n = |v: &Value| v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok()));
+                if let (Some(utc), Some(tick), Some(time), Some(frame)) =
+                    (c["utc"].as_str(), n(&c["tick"]), n(&c["time"]), n(&c["frame"]))
+                {
+                    m.beats.push(Beat {
+                        utc: utc.to_string(),
+                        tick,
+                        time,
+                        frame,
+                    });
+                    // The window that is judged, and the steps before it to find when a clock
+                    // stopped.
+                    let keep = tick - 3.0 * WATCH_WINDOW_S;
+                    m.beats.retain(|b| b.tick >= keep);
+                }
+            }
             if kind == "ready" {
+                m.beats.clear();
+                m.flag = None;
+                m.last_beat = Some(Instant::now());
                 m.agent_ready = true;
                 // A dedicated client is ready once the server sees it at client state 10, which
                 // the start asks the server (P-02 step 7).
@@ -578,6 +744,14 @@ impl Session {
             }
         }
         match kind.as_str() {
+            "heartbeat" => {
+                let changed = watch_clocks(&mut inner, machine);
+                drop(inner);
+                if changed {
+                    self.changed.notify_waiters();
+                }
+                return;
+            }
             // A script error the machine's handler caught (ERR-01).
             "error" => {
                 inner.history.push(message.clone());
@@ -632,7 +806,7 @@ impl Session {
             }
             _ => {
                 if let Some(order) = message["order"].as_str()
-                    && let Some((_, reply)) = inner.pending.remove(order)
+                    && let Some((_, reply, _)) = inner.pending.remove(order)
                 {
                     let _ = reply.send(message);
                 }
@@ -679,14 +853,9 @@ impl Session {
                         GRACE.as_secs()
                     ),
                 };
-                {
-                    let mut inner = self.inner.lock().unwrap();
-                    if let Some(m) = inner.machines.iter_mut().find(|m| m.name == target) {
-                        m.state = "lost";
-                    }
-                }
-                if self.state() != SessionState::Stopping {
-                    self.set_broken(&target, why.clone());
+                if matches!(e, OrderError::Ceiling) {
+                    let asked = describe(&message["order"]);
+                    self.lose(&target, "no-answer", None, format!("{why}; it was asked {asked}"));
                 }
                 json!({"state": "lost", "message": why})
             }
@@ -720,6 +889,9 @@ impl Session {
         ceiling: Duration,
     ) -> Result<Value, OrderError> {
         order["id"] = Value::String(id.clone());
+        if self.is_lost(machine) {
+            return Err(OrderError::NotConnected);
+        }
         // An order to a machine whose mission restarts waits until the machine is ready again,
         // within the start ceiling the restart itself has, and then has its whole ceiling, so no
         // order is sent into the gap and lost (NFR-RL-04).
@@ -750,7 +922,9 @@ impl Session {
                 .find(|m| m.name == machine)
                 .and_then(|m| m.tx.clone())
                 .ok_or(OrderError::NotConnected)?;
-            inner.pending.insert(id.clone(), (machine.to_string(), reply));
+            inner
+                .pending
+                .insert(id.clone(), (machine.to_string(), reply, describe(&order)));
             tx.send(order.to_string()).map_err(|_| OrderError::NotConnected)?;
         }
         match tokio::time::timeout(ceiling, answer).await {
@@ -1140,6 +1314,7 @@ pub async fn start(
             busy: String::new(),
             job: None,
             pending: HashMap::new(),
+            flags: Vec::new(),
             streams: HashMap::new(),
             refs: HashMap::new(),
             errors: Vec::new(),
@@ -1182,6 +1357,7 @@ pub async fn start(
     session.versions().await;
     session.take_snapshot();
     session.set_state(SessionState::Ready);
+    tokio::spawn(Arc::clone(&session).watch(Arc::clone(runner)));
     progress(format!("session {id}: ready"));
     runner.log(&format!("{id}: ready"));
     Ok(session)
@@ -1385,7 +1561,7 @@ impl Session {
         for _ in 0..(STOP_CEILING.as_millis() / POLL.as_millis()) {
             let busy = {
                 let inner = self.inner.lock().unwrap();
-                inner.pending.values().any(|(target, _)| names.contains(target))
+                inner.pending.values().any(|(target, _, _)| names.contains(target))
             };
             if !busy {
                 break;
@@ -1445,7 +1621,7 @@ impl Session {
             old.state = "stopped";
             inner.retired.push((old, now));
         }
-        inner.pending.retain(|_, (target, _)| !names.contains(target));
+        inner.pending.retain(|_, (target, _, _)| !names.contains(target));
     }
 
     /// A mission restart, level B of `P-08`: in singleplayer the lead ends the mission and the
@@ -1602,6 +1778,270 @@ impl Session {
             m.held = false;
         }
         drop(inner);
+        self.changed.notify_waiters();
+    }
+}
+
+/// The clock watch of `HLT-02` on one heartbeat of `machine`: raises its flag when a clock stopped
+/// over the last window, and clears it once both clocks moved over a whole window again. True
+/// when the flag changed. Only a `ready` machine that is not held is watched.
+fn watch_clocks(inner: &mut Inner, machine: &str) -> bool {
+    let Some(i) = inner.machines.iter().position(|m| m.name == machine) else {
+        return false;
+    };
+    let m = &inner.machines[i];
+    if m.state != "ready" || m.held || m.lost.is_some() {
+        return false;
+    }
+    if m.flag.is_none() {
+        let Some((clock, from, advanced)) = stopped_clock(&m.beats) else {
+            return false;
+        };
+        let flag = FlagInterval {
+            machine: machine.to_string(),
+            clock,
+            from,
+            since: shakedown_protocol::time::now(),
+            cleared: None,
+            advanced,
+        };
+        inner.machines[i].flag = Some(flag.clone());
+        inner.flags.push(flag);
+        return true;
+    }
+    if !moving_again(&m.beats) {
+        return false;
+    }
+    inner.machines[i].flag = None;
+    let now = shakedown_protocol::time::now();
+    if let Some(f) = inner
+        .flags
+        .iter_mut()
+        .rev()
+        .find(|f| f.machine == machine && f.cleared.is_none())
+    {
+        f.cleared = Some(now);
+    }
+    true
+}
+
+/// The crash dumps in a profile folder, each with its size.
+fn dump_files(profile: &Path) -> Vec<(PathBuf, u64)> {
+    let mut found: Vec<(PathBuf, u64)> = std::fs::read_dir(profile)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| {
+            p.extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("mdmp") || e.eq_ignore_ascii_case("bidmp"))
+        })
+        .map(|p| {
+            let size = std::fs::metadata(&p).map_or(0, |m| m.len());
+            (p, size)
+        })
+        .collect();
+    found.sort();
+    found
+}
+
+impl Session {
+    /// Whether a machine of the session is `lost`.
+    pub fn is_lost(&self, machine: &str) -> bool {
+        let inner = self.inner.lock().unwrap();
+        inner.machines.iter().any(|m| m.name == machine && m.lost.is_some())
+    }
+
+    /// Marks a machine `lost` with `reason` (`exited` or `no-answer`), the wall-clock time and
+    /// `message`, answers every order still waiting on it as lost, and marks the session `broken`
+    /// with that message and the machine's last 20 RPT lines (`P-07` step 2, `P-09` step 2). The
+    /// game processes keep running. False when the machine was lost already, or the session is
+    /// starting or stopping, whose own steps handle a machine that goes away.
+    pub(crate) fn lose(&self, machine: &str, reason: &'static str, exit_code: Option<u32>, message: String) -> bool {
+        {
+            let mut inner = self.inner.lock().unwrap();
+            if matches!(
+                inner.state,
+                SessionState::Starting | SessionState::Stopping | SessionState::Stopped | SessionState::Failed
+            ) {
+                return false;
+            }
+            let Some(m) = inner.machines.iter_mut().find(|m| m.name == machine) else {
+                return false;
+            };
+            if m.lost.is_some() {
+                return false;
+            }
+            m.state = "lost";
+            m.lost = Some(LostRecord {
+                reason,
+                at: shakedown_protocol::time::now(),
+                instant: Instant::now(),
+                exit_code,
+                message: message.clone(),
+                dumps: vec![],
+                searching: reason == "exited",
+            });
+            let tail = rpt_tail(&m.profile, 20);
+            inner.pending.retain(|_, (target, _, _)| target != machine);
+            inner.state = SessionState::Broken;
+            inner.reason = Some(json!({"message": message, "machine": machine, "rpt_tail": tail}));
+        }
+        self.changed.notify_waiters();
+        true
+    }
+
+    /// The first machine lost at or after `since`, with how it was lost.
+    pub fn lost_since(&self, since: Instant) -> Option<(String, LostRecord)> {
+        let inner = self.inner.lock().unwrap();
+        inner
+            .machines
+            .iter()
+            .filter_map(|m| m.lost.as_ref().map(|l| (m.name.clone(), l.clone())))
+            .filter(|(_, l)| l.instant >= since)
+            .min_by_key(|(_, l)| l.instant)
+    }
+
+    /// Returns once a machine is lost at or after `since`.
+    pub async fn wait_lost(&self, since: Instant) -> (String, LostRecord) {
+        loop {
+            let notified = self.changed.notified();
+            if let Some(lost) = self.lost_since(since) {
+                return lost;
+            }
+            tokio::select! {
+                _ = notified => {}
+                _ = tokio::time::sleep(POLL) => {}
+            }
+        }
+    }
+
+    /// A lost machine's record once the search for its crash dumps has ended, at most
+    /// `DUMP_WAIT` and a second later.
+    pub async fn settled(&self, machine: &str) -> Option<LostRecord> {
+        let deadline = Instant::now() + DUMP_WAIT + Duration::from_secs(1);
+        loop {
+            let lost = {
+                let inner = self.inner.lock().unwrap();
+                inner.machines.iter().find(|m| m.name == machine)?.lost.clone()
+            }?;
+            if !lost.searching || Instant::now() >= deadline {
+                return Some(lost);
+            }
+            tokio::time::sleep(POLL).await;
+        }
+    }
+
+    /// The first interval the clock watch flagged that is still open or cleared at or after
+    /// `from`, a wall-clock time: one that overlaps everything since `from` (`HLT-02`).
+    pub fn flag_since(&self, from: &str) -> Option<FlagInterval> {
+        let inner = self.inner.lock().unwrap();
+        inner
+            .flags
+            .iter()
+            .filter(|f| f.cleared.as_deref().is_none_or(|c| c >= from))
+            .min_by(|a, b| a.from.cmp(&b.from))
+            .cloned()
+    }
+
+    /// The watch of every `ready` machine that is not held, every `WATCH_EVERY`, until the session
+    /// stops: a process that ended unasked is lost as `exited` (`P-09`), and a machine whose
+    /// heartbeat has not come for `HEARTBEAT_GAP` is lost as `no-answer` (`P-07`, `HLT-02`).
+    async fn watch(self: Arc<Self>, runner: Arc<Runner>) {
+        loop {
+            tokio::time::sleep(WATCH_EVERY).await;
+            match self.state() {
+                SessionState::Stopping | SessionState::Stopped | SessionState::Failed => return,
+                SessionState::Starting => continue,
+                _ => {}
+            }
+            struct Seen {
+                name: String,
+                pid: Option<u32>,
+                exit: Option<u32>,
+                gap: Duration,
+                last: Option<String>,
+                asked: Vec<String>,
+            }
+            let seen: Vec<Seen> = {
+                let inner = self.inner.lock().unwrap();
+                inner
+                    .machines
+                    .iter()
+                    .filter(|m| m.state == "ready" && !m.held && m.lost.is_none())
+                    .map(|m| Seen {
+                        name: m.name.clone(),
+                        pid: m.pid,
+                        exit: m.process.as_ref().and_then(win::exited),
+                        gap: m.last_beat.map_or(Duration::ZERO, |t| t.elapsed()),
+                        last: m.last_answer_at.clone(),
+                        asked: inner
+                            .pending
+                            .values()
+                            .filter(|(target, _, _)| *target == m.name)
+                            .map(|(_, _, what)| what.clone())
+                            .collect(),
+                    })
+                    .collect()
+            };
+            for m in seen {
+                if let Some(code) = m.exit {
+                    let message = format!(
+                        "{}'s process {} exited unasked with exit code {code} ({code:#010X})",
+                        m.name,
+                        m.pid.map_or("?".into(), |p| p.to_string())
+                    );
+                    if self.lose(&m.name, "exited", Some(code), message.clone()) {
+                        runner.log(&format!("{} {}: lost: {message}", self.id, m.name));
+                        tokio::spawn(Arc::clone(&self).find_dumps(m.name.clone()));
+                    }
+                } else if m.gap >= HEARTBEAT_GAP {
+                    let asked = if m.asked.is_empty() {
+                        "nothing at the time".to_string()
+                    } else {
+                        m.asked.join(", ")
+                    };
+                    let message = format!(
+                        "{} stopped answering: no heartbeat came for {} s, its last answer at {}; it was asked {asked}",
+                        m.name,
+                        m.gap.as_secs(),
+                        m.last.as_deref().unwrap_or("none")
+                    );
+                    if self.lose(&m.name, "no-answer", None, message.clone()) {
+                        runner.log(&format!("{} {}: lost: {message}", self.id, m.name));
+                    }
+                }
+            }
+        }
+    }
+
+    /// Looks in a lost machine's profile folder for its crash dumps, waiting up to `DUMP_WAIT`
+    /// for one still being written, and records them (`P-09` step 2).
+    async fn find_dumps(self: Arc<Self>, machine: String) {
+        let Some(profile) = self.profile(&machine) else { return };
+        let deadline = Instant::now() + DUMP_WAIT;
+        let mut last = dump_files(&profile);
+        loop {
+            tokio::time::sleep(POLL).await;
+            let now = dump_files(&profile);
+            let steady = !now.is_empty() && now == last;
+            last = now;
+            if steady || Instant::now() >= deadline {
+                break;
+            }
+        }
+        {
+            let mut inner = self.inner.lock().unwrap();
+            if let Some(l) = inner
+                .machines
+                .iter_mut()
+                .find(|m| m.name == machine)
+                .and_then(|m| m.lost.as_mut())
+            {
+                l.dumps = last.into_iter().map(|(p, _)| p).collect();
+                l.searching = false;
+            }
+        }
         self.changed.notify_waiters();
     }
 }
@@ -1822,6 +2262,101 @@ fn shell(command: &str) -> std::process::Command {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Heartbeats one second apart from `tick` 100, each advancing mission time by `rate` of real
+    /// time and the frame by 60.
+    fn beats(rates: &[f64]) -> Vec<Beat> {
+        let mut out = vec![Beat {
+            utc: "2026-11-12T12:00:00.000Z".into(),
+            tick: 100.0,
+            time: 50.0,
+            frame: 1000.0,
+        }];
+        for (i, rate) in rates.iter().enumerate() {
+            let last = out.last().unwrap().clone();
+            out.push(Beat {
+                utc: format!("2026-11-12T12:00:{:02}.000Z", i + 1),
+                tick: last.tick + 1.0,
+                time: last.time + rate,
+                frame: last.frame + 60.0,
+            });
+        }
+        out
+    }
+
+    /// `HLT-02`, `US-059` 1: mission time that advances less than half as much as real time over
+    /// 5 s flags the machine `mission-time`, from the first beat that shows the stop; a clock that
+    /// moves is not flagged, nor a history shorter than the window.
+    #[test]
+    fn us_059_hlt_02_a_stopped_mission_time_is_flagged_from_when_it_stopped() {
+        assert!(stopped_clock(&beats(&[1.0; 8])).is_none());
+        assert!(stopped_clock(&beats(&[0.0; 4])).is_none());
+        let (clock, from, (mission, real)) = stopped_clock(&beats(&[1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])).unwrap();
+        assert_eq!(clock, "mission-time");
+        assert_eq!(from, "2026-11-12T12:00:04.000Z");
+        assert_eq!(real, 5.0);
+        assert!(mission < 2.5, "{mission}");
+        // A slow clock, above half of real time, is not stopped.
+        assert!(stopped_clock(&beats(&[0.6; 8])).is_none());
+        let mut frozen = beats(&[1.0; 6]);
+        for b in frozen.iter_mut() {
+            b.frame = 7.0;
+        }
+        assert_eq!(stopped_clock(&frozen).unwrap().0, "frame");
+    }
+
+    /// `HLT-02`, `US-059` 2: the flag clears only once both clocks moved over a whole window.
+    #[test]
+    fn us_059_hlt_02_the_flag_clears_after_5_s_of_moving_clocks() {
+        assert!(!moving_again(&beats(&[0.0, 0.0, 1.0, 1.0, 1.0, 1.0])));
+        assert!(!moving_again(&beats(&[0.0, 1.0, 1.0, 1.0])));
+        assert!(moving_again(&beats(&[0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0])));
+    }
+
+    /// `HLT-02`, `INS-04`: the watch over a machine's heartbeats raises its flag into the session's
+    /// intervals and the machine's health, and clears both; a machine not `ready` is not watched.
+    #[test]
+    fn hlt_02_ins_04_the_flag_is_raised_and_cleared_on_the_machine() {
+        let mut inner = Inner {
+            state: SessionState::Running,
+            machines: vec![Machine::new("p1", "client", 1, PathBuf::from("p1-1"))],
+            retired: vec![],
+            reason: None,
+            busy: String::new(),
+            job: None,
+            pending: HashMap::new(),
+            flags: vec![],
+            streams: HashMap::new(),
+            refs: HashMap::new(),
+            errors: vec![],
+            history: vec![],
+        };
+        inner.machines[0].beats = beats(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        assert!(
+            !watch_clocks(&mut inner, "p1"),
+            "a machine that is not ready is not watched"
+        );
+        inner.machines[0].state = "ready";
+        assert!(watch_clocks(&mut inner, "p1"));
+        let view = machine_view(&inner.machines[0]);
+        assert_eq!(view["health"]["flag"], "mission-time");
+        assert_eq!(view["health"]["heartbeat"]["frame"], 1360);
+        assert_eq!(inner.flags.len(), 1);
+        assert!(!watch_clocks(&mut inner, "p1"), "the flag is raised once");
+        inner.machines[0].beats = beats(&[0.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
+        assert!(watch_clocks(&mut inner, "p1"));
+        assert!(machine_view(&inner.machines[0])["health"]["flag"].is_null());
+        assert!(inner.flags[0].cleared.is_some());
+    }
+
+    /// `P-07` step 2: an order is named in the words of a lost machine's message.
+    #[test]
+    fn p_07_an_order_is_described_for_a_lost_machine() {
+        assert_eq!(describe(&json!({"kind": "check", "check_id": "x"})), "to run check x");
+        let long = "a".repeat(200);
+        let d = describe(&json!({"kind": "poll", "source": long}));
+        assert!(d.starts_with("to poll `aaa") && d.ends_with("...`"), "{d}");
+    }
 
     #[tokio::test]
     async fn rld_06_a_rebuild_runs_in_the_project_folder_and_a_failing_one_names_its_exit() {

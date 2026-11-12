@@ -28,7 +28,7 @@ shakedown exec --machine server --code "sleep 1; 1 + 1" --json
 
 The code runs scheduled on the machine, so it may `sleep` and `waitUntil` (`CTL-03`). `--args '[42, "a"]'` gives it a JSON array as `_this`; `--file <path>` reads the code from a file. The value comes back encoded as the result file encodes values: objects and groups as `{"$type": "object", "netId": ...}`, and an object given in `--args` that way arrives as the object (`DM-13`, `DM-14`).
 
-- `--ceiling` is the in-game ceiling in seconds, default 10, at most 600. Code still running at it is stopped and its state is `ceiling`; a machine that has not answered 10 s after it is `lost`.
+- `--ceiling` is the in-game ceiling in seconds, default 10, at most 600. Code still running at it is stopped and its state is `ceiling`; a machine that has not answered 10 s after it is `lost`, and its session `broken` ([Outcomes and a broken session](outcomes-and-broken-sessions.md)).
 - A script error the code raises does not stop it (`CTL-05`): the value comes back, the error is listed in `errors` with its machine, text, file, line and time, and the command exits 0. Its `check_id` is `null`, as it was raised outside any check.
 - Code that does not compile exits 3 with the engine's message, such as `The code does not compile on p1: Invalid number in expression (line 1).`
 - A command stopped before the answer (Ctrl+C, or a cancelled tool call) stops the code on the machine.
@@ -62,7 +62,7 @@ shakedown inspect --machine p1
 shakedown inspect --machine server --near 2:14 --radius 20 --json
 ```
 
-A compact summary, read without stopping anything (`INS-01`): the machine as `status` lists it; the mission, its start count and the clocks (`time`, `tick`, `fps`, `frame`); the run, check and step running; the player unit (class, position ASL, direction, damage, alive, vehicle, animation) or `null` on a machine without one; up to 50 objects within `--radius` metres (default 50) of the player or of the object whose net id `--near` gives; up to 50 running scheduled scripts; and the last 10 script errors of that machine. Code `exec` runs is a script named `skd_exec <order>` while it runs; `inspect` leaves its own out.
+A compact summary, read without stopping anything (`INS-01`): the machine as `status` lists it; the mission, its start count and the clocks (`time`, `tick`, `fps`, `frame`); the run, check and step running; the player unit (class, position ASL, direction, damage, alive, vehicle, animation) or `null` on a machine without one; up to 50 objects within `--radius` metres (default 50) of the player or of the object whose net id `--near` gives; up to 50 running scheduled scripts; and the last 10 script errors of that machine. Code `exec` runs is a script named `skd_exec <order>` while it runs; `inspect` leaves its own out. A machine that is `lost` is not asked: `inspect` returns it at once with `state` `lost` and every other field `null`, and one that stops answering while `inspect` waits is returned the same way within 20 s and is then `lost`, its session `broken` ([Outcomes and a broken session](outcomes-and-broken-sessions.md)).
 
 ## Script errors: `errors`
 

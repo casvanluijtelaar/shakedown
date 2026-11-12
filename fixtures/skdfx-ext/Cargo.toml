@@ -1,0 +1,15 @@
+[package]
+name = "skdfx-ext"
+description = "The fixture's extension skdfx_x64.dll: ends its game process on demand (FIX-01)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+name = "skdfx_ext"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# arma-rs is taken from crates.io under its declared MIT license (research 20-licenses-and-rules.md).
+arma-rs = "1.13.0"

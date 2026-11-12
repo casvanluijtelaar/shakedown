@@ -80,7 +80,7 @@ launched ──▶ connected ──▶ ready ──▶ stopped
 | `launched` | The process runs; its extension has not connected. |
 | `connected` | The extension connected and showed the session token. The session mission has not reported in. |
 | `ready` | The in-game agent answered the runner's hello in the session mission, and on a dedicated session the server reports the client at client state 10 (`BRIEFING READ`) or later. |
-| `lost` | The process exited without being asked, or the machine did not answer an order within its runner ceiling. Records the wall-clock time, the exit code and any crash dump found in its profile folder. |
+| `lost` | The process exited without being asked, or the machine did not answer an order within its runner ceiling, or its heartbeat did not come for 10 s (`HLT-02`). Records the wall-clock time, the exit code and any crash dump found in its profile folder. |
 | `stopped` | The process ended after the runner asked it to. |
 
 A `game-restart` reload or a `mission` reset on a dedicated session replaces a machine with a new start of the same role (start number plus one). The old machine ends `stopped`.
@@ -121,7 +121,7 @@ pending ──▶ preparing ──▶ executing ──▶ done(outcome)
   - `explicit` - the check called `skd_fnc_fail`.
 - **DM-04** The outcome is `fail` with reason kind `check-error` when the check itself is wrong: its source does not compile, its header is malformed, it names a machine the session does not have, an action that does not exist on the target, a keybind that is not registered, or it calls the API with wrong arguments. A broken check is the author's to fix, so it is never `invalid`; the reason says what to fix (`CR-31`, `CR-50`).
 - **DM-05** The outcome is `invalid` when the environment, not the mod, stopped the check from reaching a verdict. Its reason kind is one of (`CR-31`, G3):
-  - `machine-lost` - a machine's process exited, or it did not answer within a runner ceiling; the reason names the machine, the exit code if any, and any crash dump.
+  - `machine-lost` - a machine's process exited, or it did not answer within a runner ceiling or sent no heartbeat for 10 s; the reason names the machine, the exit code if any, and any crash dump.
   - `session-broken` - the session was `broken` before the check started.
   - `reset-failed` - the reset before the check did not complete.
   - `reload-failed` - the reload the check needed did not complete.
