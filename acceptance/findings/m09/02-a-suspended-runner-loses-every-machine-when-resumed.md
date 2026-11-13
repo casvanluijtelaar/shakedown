@@ -13,7 +13,8 @@ stories: [US-060]
 generated: { by: "claude-code/tester", at: 2026-11-12T13:45:28-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-12T14:05:00-08:00, note: "The heartbeat gap counts only time the runner runs: a watch round 2 s or more late judges nothing and counts every machine's gap from then (HLT-02, P-07, docs/outcomes-and-broken-sessions.md). The m05 game test us_052_us_053_us_060_us_007 holds the runner suspended 30 s and sees the session ready for 15 s after the resume; the named check passes." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-12T14:15:40-08:00 }
 ---
 
 # A runner suspended for some seconds and resumed marks every machine lost and the session broken
