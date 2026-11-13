@@ -12,7 +12,7 @@ One binary, `shakedown`, does everything. Every command except `list`, `guide`, 
 
 ## The project file: `shakedown.toml`
 
-The project is the nearest folder, from the current folder upward, that holds `shakedown.toml`, or the folder given with `--project`. Relative paths in the file are relative to the project folder. An unknown key, a missing required key or a value of the wrong type is refused with exit code 3, naming the key and its line (`CFG-01`).
+The project is the nearest folder, from the current folder upward, that holds `shakedown.toml`, or the folder given with `--project`. Relative paths in the file are relative to the project folder and may climb out of it with `..`; the runner resolves each path to one without `.` or `..` before it gives it to the game, which refuses a `-mod` folder whose path holds `..`. An unknown key, a missing required key or a value of the wrong type is refused with exit code 3, naming the key and its line (`CFG-01`).
 
 ```toml
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'   # required

@@ -1,9 +1,8 @@
 /*
     One phase of the reset in place (P-06, RST-01), on the machine it runs on. The runner runs the
-    phases in order: "cleanups" on the lead machine, then "free", "restore" and "verify" on every
-    machine at once. In singleplayer every machine is p1.
+    phases in order, each on every machine at once: "cleanups", "free", "restore" and "verify". In singleplayer every machine is p1.
 
-    - "cleanups" [ceiling]: runs the cleanups the previous check registered, last first (P-06
+    - "cleanups" [ceiling]: runs the cleanups the previous check registered for this machine, last first (P-06
       step 1). A cleanup still running at the ceiling is terminated and named.
     - "free" [ceiling]: waits for this machine's player to be alive (a dead player respawns at
       once, RST-05) and moves it out of any vehicle, so no deletion takes a player with it.

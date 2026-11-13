@@ -1,6 +1,7 @@
 /*
     Starts reading a value on a machine every frame (OBS-01, OBS-06): the code runs in a script of
-    its own on that machine, with its arguments as _this, until it is told to stop or its ceiling
+    its own on that machine, with its arguments as _this, each object and group in them looked up
+    by its net id at every evaluation (DM-14), until it is told to stop or its ceiling
     passes. On the lead machine, and in singleplayer, the script runs here; on another machine it
     runs there, and each new value comes back through the runner (P-03).
 
@@ -12,12 +13,13 @@
 params ["_machine", "_code", "_args", ["_ceiling", 60]];
 private _poller = [[], 0, false, scriptNull, "", ""];
 if (_machine isEqualTo skd_machine || { (skd_check get "mode") isEqualTo "singleplayer" }) exitWith {
-    private _script = [[_args] call skd_fnc_cross, _code, _poller] spawn {
+    private _script = [[_args] call skd_fnc_encode, _code, _poller] spawn {
         params ["_skd_args", "_skd_code", "_skd_poller"];
         private _skd_remote = true;
         while { !(_skd_poller select 2) } do {
             private _skd_errors = skd_errorCount;
-            private _skd_value = switch (true) do { default { _skd_args call _skd_code } };
+            private _skd_now = [_skd_args] call skd_fnc_decode;
+            private _skd_value = switch (true) do { default { _skd_now call _skd_code } };
             if (skd_errorCount > _skd_errors) then {
                 _skd_poller set [5, skd_lastError];
                 _skd_poller set [2, true];

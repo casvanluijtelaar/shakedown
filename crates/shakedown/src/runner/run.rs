@@ -917,7 +917,7 @@ async fn prepare_and_execute(
 /// The ceiling of a reset (`RST-04`).
 pub const RESET_CEILING_S: f64 = 15.0;
 
-/// Resets the session in place (`P-06`): the cleanups on the lead, then the phases `free`,
+/// Resets the session in place (`P-06`): the phases `cleanups` (each machine's own), `free`,
 /// `restore` and `verify` on every machine at once, each phase waiting for every machine. Returns
 /// how long it took, or what did not match when it failed or a machine did not answer.
 pub async fn reset(runner: &Runner, session: &Arc<Session>) -> Result<f64, String> {
@@ -970,7 +970,7 @@ pub async fn reset(runner: &Runner, session: &Arc<Session>) -> Result<f64, Strin
             out
         }
     };
-    let mut mismatches = phase("cleanups", vec![lead.to_string()], json!([left()])).await;
+    let mut mismatches = phase("cleanups", names.clone(), json!([left()])).await;
     if mismatches.is_empty() {
         mismatches = phase("free", names.clone(), json!([left()])).await;
     }

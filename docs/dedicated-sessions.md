@@ -103,9 +103,19 @@ private _crate = ["skdfx_Crate", AGLToASL [100, 102, 0], 0] call skd_fnc_create;
 }, "p2 sees the crate in place", 5, [_crate]] call skd_fnc_waitUntil;
 ```
 
+Which functions look an object in `args` up, and when:
+
+| Function | When the object in `args` is looked up on the target | A machine that does not know it yet |
+|---|---|---|
+| `skd_fnc_waitUntil`, `skd_fnc_tryWaitUntil`, `skd_fnc_expectOn`, `skd_fnc_expectEach`, `skd_fnc_expectAgree` | Before every evaluation, every frame. | Reads `objNull` until the object reaches it, then the object. |
+| `skd_fnc_useAction` (its `target`) | Every frame while it waits for the action. | Waits for it, within the ceiling. |
+| `skd_fnc_on`, `skd_fnc_onEach`, `skd_fnc_cleanup` | Once, when the code starts there. | Gets `objNull` for the whole run of the code. |
+
+So wait first, then act: `skd_fnc_on` sent at once after `skd_fnc_create` can get `objNull` on a client, and code that polls the object inside it then reads `objNull` until its ceiling. After the wait above, the client has the object, and a `skd_fnc_on` that follows gets it.
+
 ## The reset across machines
 
-Before every check, and on `shakedown reset`, every machine is brought back to the state of the mission's start, in four phases the runner drives on every machine at once: the previous check's cleanups run on the server; each client frees its player (alive again after a death, out of any vehicle); each machine deletes what was created on it since the start, restores its own player's loadout, health, position, direction and animation, and sets the server's start date and weather; then each machine checks the result, the server also every player's position as it sees it. On the test machine a reset after a check that changed everything takes about 0.75 s, and one with nothing to undo about 0.45 s.
+Before every check, and on `shakedown reset`, every machine is brought back to the state of the mission's start, in four phases the runner drives on every machine at once: the previous check's cleanups run, each on the machine it names (the server unless it names another); each client frees its player (alive again after a death, out of any vehicle); each machine deletes what was created on it since the start, restores its own player's loadout, health, position, direction and animation, and sets the server's start date and weather; then each machine checks the result, the server also every player's position as it sees it. On the test machine a reset after a check that changed everything takes about 0.75 s, and one with nothing to undo about 0.45 s.
 
 A player killed in a check respawns at once and is back at its start position for the next check; the body is deleted, and the client keeps its start number 1.
 

@@ -131,6 +131,26 @@ pub fn load(root: &Path) -> Result<Project, CliError> {
     parse(root, &text).map_err(|e| e.tag("config-error"))
 }
 
+/// The path with every `.` dropped and every `..` taking away the part before it, without asking
+/// the file system. The game refuses a `-mod` folder whose path holds `..` (`CFG-01`), so every
+/// path of the project file reaches a game start in this form.
+fn lexical(path: &Path) -> PathBuf {
+    use std::path::Component;
+    let mut out = PathBuf::new();
+    for part in path.components() {
+        match part {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !matches!(out.components().next_back(), Some(Component::Normal(_))) || !out.pop() {
+                    out.push("..");
+                }
+            }
+            other => out.push(other.as_os_str()),
+        }
+    }
+    out
+}
+
 /// Parses the project file text; `root` resolves relative paths.
 pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
     let line = |span: Range<usize>| text[..span.start.min(text.len())].matches('\n').count() + 1;
@@ -159,7 +179,7 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
     })?;
     let resolve = |p: &str| {
         let p = PathBuf::from(p);
-        if p.is_absolute() { p } else { root.join(p) }
+        lexical(&if p.is_absolute() { p } else { root.join(p) })
     };
     let name_ok = |n: &str| {
         n.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
@@ -336,6 +356,15 @@ mods = ["cba"]
         assert_eq!(p.base_port, 2402);
         assert_eq!(p.checks, root().join("checks"));
         assert_eq!(p.mods["cba"].patch.as_deref(), Some("cba_main"));
+    }
+
+    #[test]
+    fn cfg_01_m10_1_a_relative_path_that_climbs_out_of_the_project_folder_holds_no_dot_dot() {
+        let root = PathBuf::from(r"C:\repo\acceptance\shakedown");
+        let text = GOOD.replace(r"C:\mods\cba", r"..\..\.hemttout\.\build");
+        let p = parse(&root, &text).unwrap();
+        assert_eq!(p.mods["cba"].path, PathBuf::from(r"C:\repo\.hemttout\build"));
+        assert_eq!(lexical(Path::new(r"a\..\..\b")), PathBuf::from(r"..\b"));
     }
 
     #[test]

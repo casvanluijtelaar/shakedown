@@ -155,4 +155,4 @@ pending ──▶ preparing ──▶ executing ──▶ done(outcome)
   | Code | `{"$type": "code", "text": "<toString>"}` |
   | Any other type | `{"$type": "<typeName>", "text": "<str value>"}` |
 
-- **DM-14** A tagged object or group that arrives at a machine as an argument is turned back into the object or group with `objectFromNetId` or `groupFromNetId` before the code runs. Code arguments are not turned back into code (`CR-10`).
+- **DM-14** A tagged object or group that arrives at a machine as an argument is turned back into the object or group with `objectFromNetId` or `groupFromNetId`: once, before the code runs, for code that runs once (`skd_fnc_on`, `skd_fnc_onEach`, a cleanup, `exec`), and again before every evaluation for code that is evaluated every frame (a wait and a polled assertion). An object or group the machine does not know yet arrives as `objNull` or `grpNull`; a wait finds it at the first evaluation after it reaches the machine. Code arguments are not turned back into code (`CR-10`).

@@ -1,6 +1,7 @@
 /*
     Runs an order of kind poll for another machine (OBS-01, OBS-06): evaluates the code every frame
-    with the arguments as _this, and sends each value that differs from the last one sent, at most
+    with the arguments as _this, each object and group in them looked up by its net id at every
+    evaluation (DM-14), so one that reaches this machine after the order is found once it is here, and sends each value that differs from the last one sent, at most
     one every 0.05 s, until told to stop or until its ceiling passes. Then answers the order.
 
     Arguments: [order] - HashMap with "id", "source", "args", "ceiling".
@@ -10,7 +11,6 @@ private _id = _order get "id";
 private _ceiling = _order getOrDefault ["ceiling", 10];
 private _args = _order getOrDefault ["args", []];
 if (isNil "_args") then { _args = [] };
-_args = [_args] call skd_fnc_decode;
 // The lead's step the order was sent from stamps the errors raised while it runs (ERR-01).
 private _path = _order getOrDefault ["path", []];
 if (isNil "_path") then { _path = [] };
@@ -40,7 +40,8 @@ private _script = [_args, _code, _id, _stop, _ceiling] spawn {
     private _skd_reads = 0;
     while { !(_skd_stop select 0) && { diag_tickTime - _skd_start < _skd_ceiling } } do {
         private _skd_errors = skd_errorCount;
-        private _skd_value = [switch (true) do { default { _skd_args call _skd_code } }] call skd_fnc_encode;
+        private _skd_now = [_skd_args] call skd_fnc_decode;
+        private _skd_value = [switch (true) do { default { _skd_now call _skd_code } }] call skd_fnc_encode;
         // A read that raises a script error ends the poll and tells the lead (OBS-01).
         if (skd_errorCount > _skd_errors) exitWith {
             _skd_reads = _skd_reads + 1;

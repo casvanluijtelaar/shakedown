@@ -88,7 +88,7 @@ private _enemy = ["O_Soldier_F", AGLToASL [100, 140, 0], 180] call skd_fnc_creat
 [0.9, 0.2, 0.6] call skd_fnc_setWeather;
 ```
 
-- `skd_fnc_create [class, position, direction]` creates a `CfgVehicles` class at an ASL position, direction first, and returns it; a soldier class is a unit in a new group of its config's side. An unknown class ends the check `fail` / `check-error`: `skd_fnc_create: the class "B_Soldier_Typo" is not in CfgVehicles (or is not creatable). ...` It returns once the server has made the object. On a dedicated session another machine sees it a moment later: a check that reads it there at once can find no object, or the object at the spot the engine made it, before it is in place. Such a check waits for it first, as [dedicated sessions](dedicated-sessions.md) shows.
+- `skd_fnc_create [class, position, direction]` creates a `CfgVehicles` class at an ASL position, direction first, and returns it; a soldier class is a unit in a new group of its config's side. An unknown class ends the check `fail` / `check-error`: `skd_fnc_create: the class "B_Soldier_Typo" is not in CfgVehicles (or is not creatable). ...` It returns once the server has made the object. On a dedicated session another machine sees it a moment later: a check that reads it there at once can find no object, or the object at the spot the engine made it, before it is in place. Such a check waits for it first with `skd_fnc_waitUntil`, which looks the object up again every frame, before it hands the object to `skd_fnc_on`, which looks it up once and gives code on a machine that does not know it yet `objNull`; [dedicated sessions](dedicated-sessions.md#code-waits-and-agreement-across-machines) shows the wait and which function looks an object up when.
 - `skd_fnc_place [unit, position, direction, ceiling]` takes an object or a machine name (that machine's player) and returns once the unit stands within 0.1 m and 3 degrees of it.
 - `skd_fnc_setDate [[year, month, day, hour, minute], ceiling]` and `skd_fnc_setWeather [overcast, fog, rain, ceiling]` (each 0 to 1) return once the machines report the new date, or the overcast within 0.01.
 
@@ -106,17 +106,36 @@ Whatever a check creates, through these functions or its own SQF, the next reset
 
 `skd_fnc_pressKey [machine, mod, action, mode]` presses a keybind a mod registered with CBA, by the mod and action names it registered: it calls the keybind's own key-down code, key-up code or both (`mode` `"press"`, the default, `"down"` or `"up"`) as the game's key handler would, with its first bound key. A keybind that is not registered ends the check `fail` / `check-error` with the keybinds registered for that mod, in lower case; without CBA in the setup, with `skd_fnc_pressKey: CBA is not loaded on p1, ...`. A check that presses no key needs no CBA.
 
+`skd_fnc_pressKey` returns `true` once the keybind's code ran, not what that code returned, so it does not say whether the key was consumed or passed on to the game. A check that asserts that calls the keybind's code itself on the player's machine, as `skd_fnc_pressKey` does, and reads its value:
+
+```sqf
+private _passed = ["p1", {
+    private _bind = ["Grappling hooks", "agh_letGo"] call CBA_fnc_getKeybind;
+    private _key = (_bind select 8) param [0, _bind select 5];
+    _key params ["_dik", "_mods"];
+    _mods params ["_shift", "_ctrl", "_alt"];
+    private _out = nil;
+    isNil { _out = [findDisplay 46, _dik, _shift, _ctrl, _alt] call (_bind select 3) };
+    _out
+}] call skd_fnc_on;
+[_passed, "==", false, "off a rope the key passes on to the game"] call skd_fnc_expect;
+```
+
 ## Cleanups and ending a check
 
 ```sqf
 private _id = player addAction ["Wave", {}];
 [{ player removeAction (_this select 0) }, [_id]] call skd_fnc_cleanup;
 
+// On a dedicated session: state that lives on p1 is put back on p1.
+["p1", { player allowDamage false }] call skd_fnc_on;
+[{ player allowDamage true }, [], "p1"] call skd_fnc_cleanup;
+
 if (isNil "agh_fnc_placeHook") then { ["arma-grappling-hook is not loaded"] call skd_fnc_invalid };
 if (_n > 3) then { ["too many boxes"] call skd_fnc_fail };
 ```
 
-`skd_fnc_cleanup [code, args]` registers code that runs at the start of the next reset, last registered first, for state the reset cannot name: an action added to the player, a variable, a mod's setting. `skd_fnc_fail [message]` ends the check `fail` / `explicit`; `skd_fnc_invalid [message]` ends it `invalid` / `explicit`, for a cause outside the mod that the check itself detects.
+`skd_fnc_cleanup [code, args, machine]` registers code that runs on `machine` at the start of the next reset, each machine's last registered first, for state the reset cannot name: an action added to the player, a variable, a mod's setting. It runs whatever the check's outcome, so a check that fails half way leaves no such state to the next. `machine` defaults to the lead machine: `p1` in singleplayer, the server on a dedicated session. State that is local to one client, such as an action on its player, `allowDamage` on its unit, a CBA event handler or a variable in its `missionNamespace`, is undone on that client, so its cleanup names it. Like code given to `skd_fnc_on`, a cleanup sees only its `args` as `_this` and calls no `skd_fnc_*` function. `skd_fnc_fail [message]` ends the check `fail` / `explicit`; `skd_fnc_invalid [message]` ends it `invalid` / `explicit`, for a cause outside the mod that the check itself detects.
 
 ## The reset between checks
 
