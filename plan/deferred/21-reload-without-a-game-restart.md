@@ -3,8 +3,8 @@ type: Deferred
 title: "A changed mod file reaches a running game only through a game restart"
 description: "The game holds every loose mod file it has read, shared for reading only, until a time nothing tried controls, so every .sqf change reloads by a game restart; what makes the game let go of a file, and the two ways round the hold that research 27 did not run, are left to find."
 id: DEF-21
-state: open
-milestone: null
+state: planned
+milestone: M14
 status: stable
 ---
 
@@ -35,4 +35,4 @@ Option 1 first, as a bounded spike: it is the cheapest and, if it works, it rest
 ## Acceptance criteria
 
 - A spike in `research/` says, for each option it ran, whether a changed `.sqf` of `@skd_fixture_cba` reaches every machine of a dedicated session with two clients without a game restart, 10 of 10.
-- If one does, `RLD-02`, `P-08`, `NFR-PF-01`, `NFR-PF-02`, `US-054`, `US-055` and `FIX-03` are edited to the level it allows, and M7 is planned against it.
+- If one does, `RLD-02`, `P-08`, `NFR-PF-01`, `NFR-PF-02`, `US-054`, `US-055` and `FIX-03` are edited to the level it allows, and M14 builds against it.

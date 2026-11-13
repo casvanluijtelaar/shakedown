@@ -24,4 +24,3 @@ As a test author, I want one command for my whole suite across singleplayer and 
 ## Next to
 
 - [US-075](US-075-setup-session-fails-in-each-setup-run.md) (system fail): one setup's session fails to start.
-- [US-079](US-079-unknown-setup-in-check-header.md) (mistake): a check names a setup the project does not declare.

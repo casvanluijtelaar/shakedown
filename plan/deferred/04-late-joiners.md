@@ -3,8 +3,8 @@ type: Deferred
 title: "Late joiners for the grappling-hook port"
 description: "arma-grappling-hook's dedicated M00 checks include a client that joins late, and joining late is MCH-01, a should, so those cases cannot be ported in M10."
 id: DEF-04
-state: open
-milestone: null
+state: planned
+milestone: M11
 status: stable
 verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
 ---

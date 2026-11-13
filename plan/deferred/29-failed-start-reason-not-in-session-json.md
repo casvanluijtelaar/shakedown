@@ -3,8 +3,8 @@ type: Deferred
 title: "session.json of a failed start holds no reason"
 description: "A start that failed, such as one the game ended with Error 20 reading file on a base-game PBO, writes reason null into session.json, so once status no longer holds it nothing says why the start failed."
 id: DEF-29
-state: open
-milestone: null
+state: planned
+milestone: M16
 status: stable
 ---
 

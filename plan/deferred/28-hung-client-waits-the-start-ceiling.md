@@ -3,8 +3,8 @@ type: Deferred
 title: "A client that hangs in its start holds session start for the whole start ceiling"
 description: "A game process that runs but never connects during a start is seen only when the start ceiling of 180 s passes, so session start waits the full ceiling before it fails."
 id: DEF-28
-state: open
-milestone: null
+state: planned
+milestone: M16
 status: stable
 ---
 
