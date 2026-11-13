@@ -22,7 +22,7 @@ Every check execution ends with exactly one outcome, and every outcome but `pass
 | `fail` | `explicit` | The check called `skd_fnc_fail`. |
 | `invalid` | `machine-lost` | A machine's process ended, or the machine stopped answering. The message names the machine, how it was lost, its exit code and its crash dumps. |
 | `invalid` | `session-broken` | The session was `broken` before the check started. |
-| `invalid` | `reset-failed` | The reset before the check did not complete within its 15 s; the message lists what did not match, or names the check whose cleanup did not end. |
+| `invalid` | `reset-failed` | The reset before the check did not complete within its 15 s; the message lists what did not match, or names the check whose cleanup did not end, or the ACE version that has no full heal for the reset (`INT-ACE-02`). |
 | `invalid` | `reload-failed` | The reload the check needed did not complete. |
 | `invalid` | `run-stopped` | The run was stopped by hand or by its runner ceiling ([Running a suite unattended](unattended-runs.md)). |
 | `invalid` | `unhealthy` | A machine's mission time or frame number stopped during the check while the machine still answered. |

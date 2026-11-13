@@ -9,7 +9,7 @@
       once, RST-05) and moves it out of any vehicle, so no deletion takes a player with it.
     - "restore" [ceiling, world]: deletes every entity this machine recorded since the baseline that is
       local here and not a player, crew first (P-06 steps 2 and 3); brings this machine's player unit back to its
-      baseline (step 4); and sets the date and weather of `world`, the server's baseline, here
+      baseline, with ACE's full heal when ACE medical is loaded (step 4, INT-ACE-02); and sets the date and weather of `world`, the server's baseline, here
       (step 5), so no machine waits for the server's to reach it.
     - "verify" [ceiling, world, players]: polls every frame until nothing recorded is left, the
       date is the baseline's to the minute, this machine's player is at its baseline and, on the
@@ -79,11 +79,21 @@ switch (_phase) do {
     case "restore": {
         _args params [["_ceiling", 15], "_world"];
         [skd_created] call _deleteLocal;
+        private _out = [];
         if (_hasPlayer) then {
             private _unit = player;
             _unit setUnitLoadout (_base get "loadout");
             _unit setDamage 0;
-            if (!isNil "ace_medical_treatment_fnc_fullHealLocal") then { [_unit] call ace_medical_treatment_fnc_fullHealLocal };
+            // ACE medical keeps its wounds, blood and pain in variables setDamage does not touch,
+            // so its own full heal runs where the unit is local (INT-ACE-02). ACE marks that
+            // function Public: No, so a version without it fails the reset with the version loaded.
+            if (isClass (configFile >> "CfgPatches" >> "ace_medical")) then {
+                if (isNil "ace_medical_treatment_fnc_fullHealLocal") then {
+                    _out pushBack format ["%1: ACE medical is loaded but has no ace_medical_treatment_fnc_fullHealLocal to heal the player with (ACE %2; Shakedown is checked against ACE 3.21.2)", skd_machine, getText (configFile >> "CfgPatches" >> "ace_main" >> "versionStr")];
+                } else {
+                    [_unit] call ace_medical_treatment_fnc_fullHealLocal;
+                };
+            };
             _unit setDir (_base get "direction");
             _unit setPosASL (_base get "position");
             _unit setVelocity [0, 0, 0];
@@ -97,7 +107,7 @@ switch (_phase) do {
         0 setFog (_world get "fog");
         0 setRain (_world get "rain");
         forceWeatherChange;
-        []
+        _out
     };
     case "verify": {
         _args params [["_ceiling", 15], "_world", ["_players", []]];
