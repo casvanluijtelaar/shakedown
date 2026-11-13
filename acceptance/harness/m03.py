@@ -470,9 +470,15 @@ def def_09(ctx):
     assert "ded" in ctx.sessions, "no dedicated session ran; run a ded check with this one"
     server = [m for m in ctx.sessions["ded"]["machines"] if m["name"] == "server"][0]
     lines = [l for p in sorted(Path(server["profile"]).glob("*.rpt")) for l in read_lines(p)]
-    bad = [l for l in lines if re.search(r"Object .* not found", l)]
+    # DEF-09 promises no such line for the objects a check creates. The body a killed p2 leaves is DEF-25,
+    # deferred: the checks that kill p2 log its net id, and a line naming one of those ids is not DEF-09's.
+    bodies = {m.group(1) for l in lines for m in [re.search(r"\[acc\] DEF-25 body (\d+:\d+)", l)] if m}
+    found = [l for l in lines if re.search(r"Object .* not found", l)]
+    body = [l for l in found if (m := re.search(r"Object (\d+:\d+) not found", l)) and m.group(1) in bodies]
+    bad = [l for l in found if l not in body]
     resets = sum(1 for l in lines if MARKER.search(l) and "#" in l and " start " in l)
-    ctx.log(f"DEF-09: {resets} check executions in the server's RPT, {len(bad)} Object not found lines")
+    ctx.log(f"DEF-09: {resets} check executions in the server's RPT, {len(bodies)} bodies of a killed p2, "
+            f"{len(body)} Object not found lines naming one of those bodies (DEF-25): {body}, {len(bad)} others")
     assert resets, "the dedicated session ran no check, so no reset was watched"
     assert not bad, f"the server's RPT holds {len(bad)} Object not found lines, such as {bad[0]!r}"
 

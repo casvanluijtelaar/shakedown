@@ -3,6 +3,8 @@
 
 private _p2 = ["p2"] call skd_fnc_player;
 acc_m02_p2start = getPosASL _p2;
+// The body p2 leaves keeps this net id; DEF-09's end check reads it from the server's RPT (DEF-25).
+diag_log text format ["[acc] DEF-25 body %1", netId _p2];
 
 ["kill p2", {
     ["p2", { player setDamage 1; true }] call skd_fnc_on;

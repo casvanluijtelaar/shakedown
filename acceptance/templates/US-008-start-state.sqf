@@ -92,6 +92,7 @@ private _mrap = ["create a unit, a vehicle and an object through the API, and ob
     acc_m02_rl_count = (missionNamespace getVariable ["acc_m02_rl_count", 0]) + 1;
     if (acc_m02_rl_count % 5 == 0) then {
         private _old = ["p2"] call skd_fnc_player;
+        diag_log text format ["[acc] DEF-25 body %1", netId _old];
         ["p2", { player setDamage 1; true }] call skd_fnc_on;
         ["server", { !alive (_this select 0) }, "the server sees p2's unit dead", 10, [_old]] call skd_fnc_waitUntil;
     } else {

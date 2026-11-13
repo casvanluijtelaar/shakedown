@@ -20,7 +20,7 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 | `harness/m00.py` | The checks of M0 and their batch. |
 | `harness/m01.py` | The checks of M1 and their batches. |
 | `harness/m02.py` | The checks of M2, their batches, and the `US-004` starts that fail. |
-| `harness/m03.py` | The checks of M3 and their batch, the reading of the Steam identity at run time, and the RPT reading of `INT-AR-07` that the `end` checks of `US-030`, `US-064`, `DEF-09` and `NFR-RL-05` use. |
+| `harness/m03.py` | The checks of M3 and their batch, the reading of the Steam identity at run time, and the RPT reading of `INT-AR-07` that the `end` checks of `US-030`, `US-064`, `DEF-09` and `NFR-RL-05` use. The `DEF-09` check leaves out an `Object ... not found` line naming a killed `p2`'s body, whose net id the checks that kill `p2` write to the server's RPT as `[acc] DEF-25 body <net id>` (`DEF-25`). |
 | `harness/mcp.py` | An MCP client over stdio, as Claude Code is one: it starts the server the project's `.mcp.json` declares, with the install folder on `PATH`, speaks newline-delimited JSON-RPC to it, keeps every progress notification with its time, cancels a call, and judges a tool result (`structured`, `tool_error`). Written here instead of taking an MCP SDK as a dependency. |
 | `run_mac.py` | The Mac half of M4: `US-046`'s third criterion with no game, through `harness/mcp.py`, which stops the server by its id with `taskkill` on Windows and by its process on macOS. |
 | `harness/m04.py` | The checks of M4 and their batches: the tools offline, the refused and slow starts, and the CLI and tool answers of the `ded` and `sp` sessions. |

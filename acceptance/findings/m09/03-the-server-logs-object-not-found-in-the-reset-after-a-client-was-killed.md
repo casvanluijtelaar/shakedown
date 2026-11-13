@@ -14,7 +14,8 @@ stories: [US-009]
 generated: { by: "claude-code/tester", at: 2026-11-13T02:05:00-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-13T05:35:00-08:00, note: "Deferred as DEF-25, outside M9: the body a dead player left is local to its client, which deletes it in the reset (RST-05, DEF-09) while its ragdoll is still awake, and about once in 40 kills an update for it reaches the server after the deletion; reproduced once in 40 kills with CBA, the fixture and arma-grappling-hook (Object 6:49 not found, message Type_467, the body of the check just reset), 0 in 32 with the fixture alone. DEF-09 holds for the objects a check creates; no spec promise changes. The named checks are not run: no framework change." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-13T05:53:05-08:00 }
 ---
 
 # The server logs Object not found in the reset after a check killed p2
