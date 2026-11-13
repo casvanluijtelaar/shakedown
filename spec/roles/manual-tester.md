@@ -16,4 +16,4 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 
 **What they understand.** The game as a player does, and the mod's user stories. Not SQF, not the framework: a situation is described to them in what they will see and where to look.
 
-The manual tester's requirement, `MAN-01` (`CR-52`), is a `should`. Their stories are written when a milestone after the MVP takes it up.
+The manual tester's requirement, `MAN-01` (`CR-52`), is a `should`. Their stories are in [stories/manual-tester/](../stories/manual-tester/).
