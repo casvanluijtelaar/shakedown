@@ -7,12 +7,15 @@ description: "With the project in acceptance\\shakedown\\ and mods.agh.path = '.
 status: draft
 raised_by: test
 for: developer
-checks: []
+checks:
+  - 'US-001 US-006 CFG-01 m10-1 a project in acceptance\shakedown whose mod path is ..\..\build\@skd_fixture starts a dedicated session with two clients through run --setup, the mod loads on every machine, its version is recorded, and no game command line holds ..'
+  - 'US-001 US-006 CFG-01 m10-1 the same project starts a singleplayer session through run --setup, the mod loads on p1 and no game command line holds ..'
 stories: [US-001, US-006]
 generated: { by: "claude-code/tester", at: 2026-11-13T07:10:46-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-13T08:14:00-08:00, note: "Fixed: every path of shakedown.toml is resolved to one without . or .. before it reaches the game, so a relative mods.<name>.path may climb out of the project folder (spec/contract/cli.md, docs/project-file.md, docs/porting-a-suite.md). The test cfg_01_m10_1_a_relative_path_that_climbs_out_of_the_project_folder_holds_no_dot_dot and the game tests cfg_01_rst_01_dm_14_m10_findings_in_singleplayer and _on_a_dedicated_server, whose fixture path is ..\\..\\shakedown\\fixtures\\@skd_fixture, prove it." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-13T09:20:00-08:00 }
 ---
 
 # A relative `mods.<name>.path` with `..` makes the game exit at start

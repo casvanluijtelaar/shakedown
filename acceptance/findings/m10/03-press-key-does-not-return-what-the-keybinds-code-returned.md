@@ -7,12 +7,14 @@ description: "skd_fnc_pressKey returns true once the keybind's code ran, so a ch
 status: draft
 raised_by: test
 for: developer
-checks: []
+checks:
+  - "US-021 ACT-02 m10-3 the way docs/check-api.md gives to read what a keybind's code returned runs the fixture's signal down code once and reads false from arma-grappling-hook's let go off a rope"
 stories: [US-021]
 generated: { by: "claude-code/tester", at: 2026-11-13T07:10:46-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-13T08:14:00-08:00, note: "Deferred as DEF-26, outside the MVP: the port reaches the same keybind code through CBA_fnc_getKeybind with skd_fnc_on, and docs/check-api.md now shows that way to read whether a key was consumed; returning the code's value is a change to the check API contract and ACT-02 left for when a second mod needs it. No framework change." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-13T09:20:00-08:00 }
 ---
 
 # `skd_fnc_pressKey` does not return what the keybind's code returned, so a check cannot assert that a key passes through to the game

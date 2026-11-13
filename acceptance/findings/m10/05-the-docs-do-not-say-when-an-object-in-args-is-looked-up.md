@@ -7,12 +7,14 @@ description: "skd_fnc_on sent at once after skd_fnc_create on a dedicated sessio
 status: draft
 raised_by: test
 for: developer
-checks: []
+checks:
+  - "US-013 DM-14 m10-5 on a dedicated session each of 20 crates waited for on every client right after skd_fnc_create is found there in place within the 10 s ceiling, and skd_fnc_on then reads it there, not objNull"
 stories: [US-013]
 generated: { by: "claude-code/tester", at: 2026-11-13T07:10:46-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-13T08:14:00-08:00, note: "Fixed and documented: it was objNull. skd_fnc_on looks an object in args up once, when its code starts, so on a client that does not know the tower yet the code held objNull for the whole 10 s, and getPosASL of objNull is [0,0,0], the map origin. A wait and a polled assertion now look each object up again before every evaluation, so the documented skd_fnc_waitUntil finds the object as soon as it arrives, where it looked it up once too and passed by timing (DM-14, spec/contract/check-api.md, docs/dedicated-sessions.md with a table of which function looks an object up when, docs/check-api.md). The game test cfg_01_rst_01_dm_14_m10_findings_on_a_dedicated_server proves it: 20 crates, each waited for on every machine at once after skd_fnc_create, then read with skd_fnc_on." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-13T09:20:00-08:00 }
 ---
 
 # The docs do not say how an object in `args` is looked up on a machine that has not got it in place yet; inside `skd_fnc_on` a just-created object never came right within 10 s

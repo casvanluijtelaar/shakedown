@@ -12,7 +12,8 @@ stories: [US-011]
 generated: { by: "claude-code/tester", at: 2026-11-13T07:10:46-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-13T08:14:00-08:00, note: "Answered in the docs and deferred as DEF-27: docs/porting-a-suite.md says plainly that each check carries its own copy of the helpers it uses, as local code values kept identical across files; a library folder compiled once per session on every machine is DEF-27, after the MVP. No framework change." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-13T09:20:00-08:00 }
 ---
 
 # No way to share helper code between checks, and the porting page does not say what to do with an old suite's shared library

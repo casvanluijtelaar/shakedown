@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07, m08, m09  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import AFTER_SESSION, BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"

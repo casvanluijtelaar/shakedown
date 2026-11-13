@@ -29,12 +29,14 @@ The harness follows the last section of `spec/07-tech-stack.md`: the checks that
 | `harness/m07.py` | The checks of M7 and their batch, once in the `rld7` session (a dedicated server with two clients) and once in the `rld7sp` session (singleplayer): a run during which a reload and a reset are asked, beside the same run with none, and the staged `fn_version.sqf` changed to `"2"` and reloaded, with a reset and a second reload asked during it, then the three checks tagged `m07-demo` run by their tag, and the change put back. It writes the staged copy of `@skd_fixture` and both setups into the project and puts the installed file back after each session (`FIX-03`). |
 | `harness/m08.py` | The checks of M8: per repeat, with no session running, in projects of their own (`walk` with `dedicated-2`, `ceil` with `sp`), the full run, its Ctrl+C stop, the ceiling run, and `session stop` and `session_stop` with the ports and mission copies around them; and the `sp` batch, which stops three checks by Ctrl+C, Ctrl+Break, `run stop` and `run_stop` and runs the eight ceiling checks by command and by tool. |
 | `harness/m09.py` | The checks of M9: per repeat, with no session running, in the project `m09` of its own (setups `ded`, a dedicated server with two clients, and `sp`, each loading `@skd_fixture` alone), four dedicated sessions that each lose `p2` (suspended by its id, crashed by `skdfx_fnc_crash` while a check waits on it, crashed just after an assertion failed, and ended with `taskkill /F`) and one singleplayer session (the three outcomes, the held clock, a cleanup that never ends, a reload of the broken session and a reset that fails). |
+| `harness/m10.py` | The checks of M10: per repeat, with no session running, arma-grappling-hook's ported M00 checks copied into `m10port` with a `.mcp.json`, run by `run --setup` of `dedicated-cba`, `sp-cba` and `sp-cba-ace` while the game processes are listed every 2 s, then by the agent tools per setup with the edit loop of `NFR-PF-01` and, in `sp-cba`, a copy of `CTL-01-hold` changed to fail and looked into with `inspect`; m10-1's project `m10rel` with a mod path that climbs out of it; and the batches of m10-2, m10-3 and m10-5 in the `ded` and `cba` sessions. |
 | `harness/console_signal.py` | Runs one `shakedown` command in a hidden console of its own and sends it Ctrl+C (to the console) or Ctrl+Break (to its process group) when the harness writes a go file. |
 | `harness/win.py` | The Windows calls M5 needs, through `ctypes`: suspend and resume a process by id, its creation time and environment block, the process tree with command lines from `Win32_Process`, and a job object with kill-on-close, with or without breakaway. |
-| `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `m06/` for M6's checks, `m07/` for M7's, `m08/` for M8's, `agh/` for the M1, M2 and M3 demos against arma-grappling-hook. |
+| `checks/` | The SQF checks: one folder per story, `m01/` for M1's requirements, `sel/` for the selection, `m06/` for M6's checks, `m07/` for M7's, `m08/` for M8's, `m10/` for the findings of M10, `agh/` for the M1, M2 and M3 demos against arma-grappling-hook. |
 | `templates/` | SQF checks written into the project in numbered copies. |
 | `walk/` | The three checks of M8's walk-away suite, copied into the `walk` project. |
 | `m09/` | The SQF checks of M9, copied into the `m09` project. |
+| `m10/` | The SQF check of m10-1, copied into the `m10rel` project. |
 
 ## Checks
 
@@ -147,3 +149,10 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - `inspect`, `exec`, `logs` and `errors` answered in under 0.1 s during a check.
 - The full suite of every milestone with M9 takes 50 minutes.
 
+## What the M10 round learned
+
+- A round of three of the M10 parts takes about 50 minutes: per repeat the three `run --setup` of the ported suite (`dedicated-cba` 90 to 97 s, `sp-cba` 189 to 190 s, `sp-cba-ace` 121 to 124 s), the agent's three sessions with the edit loop and the diagnosis (about 8 minutes), a wait of about 60 s for the runner to exit, and m10-1's two runs (48 to 51 s and 28 s).
+- The ported suite's own `shakedown.toml` gives absolute mod paths, so a copy of its `checks/` and that file in the work folder runs the same builds; the copy adds the `.mcp.json` the ported project does not have.
+- A ported check edited and run at once in a ready session reached its outcome 2.0 to 2.6 s after the edit, in singleplayer and on the dedicated session.
+- On a dedicated session with two clients and a headless client, a crate waited for on each client right after `skd_fnc_create` was there in place within 0.1 s.
+- The full suite of every milestone with M10 takes about 75 minutes.

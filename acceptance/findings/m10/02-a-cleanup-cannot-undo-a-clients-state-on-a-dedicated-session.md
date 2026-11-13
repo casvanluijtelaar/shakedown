@@ -7,12 +7,16 @@ description: "A cleanup runs on the lead machine only, which is the server on a 
 status: draft
 raised_by: test
 for: developer
-checks: []
+checks:
+  - "US-008 RST-01 m10-2 on a dedicated session a cleanup that names p1 runs on p1: after a check that made p1 unhurtable, set a variable there and failed, the next check finds p1 damageable and the variable gone"
+  - "US-008 RST-01 m10-2 the control on a dedicated session: a cleanup naming no machine runs on the server, so p1 keeps the allowDamage and variable the check set through the reset, and a later check's cleanup naming p1 puts them back"
+  - "US-008 RST-01 m10-2 in singleplayer a cleanup that names p1 undoes p1's allowDamage and variable after a check that failed"
 stories: [US-008]
 generated: { by: "claude-code/tester", at: 2026-11-13T07:10:46-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-13T08:14:00-08:00, note: "Fixed: skd_fnc_cleanup takes a third argument, the machine it runs on (default the lead), and the reset runs each machine's cleanups on that machine, so a check undoes a client's allowDamage, action or variable even when it fails first (spec/contract/check-api.md, P-06 step 1, docs/check-api.md, docs/dedicated-sessions.md, docs/porting-a-suite.md). The game tests cfg_01_rst_01_dm_14_m10_findings_in_singleplayer and _on_a_dedicated_server prove it: a check that sets player allowDamage false on p1, names a cleanup for p1 and fails is followed by one that finds p1 damageable." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-13T09:20:00-08:00 }
 ---
 
 # A cleanup runs on the lead machine only, so on a dedicated session it cannot undo what a check did on a client; the docs tell a check to use one for exactly that
