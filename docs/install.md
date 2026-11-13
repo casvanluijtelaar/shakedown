@@ -15,6 +15,18 @@ status: draft
 
 `list`, `status`, `guide`, `version` and `shakedown mcp` work on macOS and Linux with no game, so an AI agent on a Mac can read checks and the contract (`NFR-PT-02`); the MCP server answers `status`, `list_checks` and `guide` there. Starting a session needs Windows.
 
+## When a session does not start
+
+Before it starts any game process, `session start` checks that `arma3_x64.exe` (and for a dedicated setup `arma3server_x64.exe`) is in the `game` folder, that a `steam.exe` of the current user runs, that every mod folder of the setup exists, that the installed `@shakedown` holds its PBO and its extension, and, for a dedicated setup, that the five ports from `base_port` are free (`SES-03`). When one fails, the start is refused with exit code 4 (the tools: `precondition-failed`) and a message that names everything missing:
+
+```
+The session cannot start; missing: a running Steam client of this user (start Steam and log in). Provide what is missing and start the session again.
+```
+
+A game process that exits with code 53 during the start, which the game does when Steam is not running or not logged in, fails the start with `Steam is not running or not logged in (p1 exited with code 53)` (`INT-STM-01`).
+
+A start can also fail on the machine itself: the game logs `Error 20 reading file` on one of its own base-game PBOs and ends with `Application terminated intentionally` a few seconds after it starts. The failed start's reason holds the last RPT lines that name the file. It is a fault of the machine, not of the framework or the mod, and a second start works.
+
 ## Build on macOS or Linux
 
 A Mac or Linux machine needs only the `shakedown` binary: the addon and the fixtures load in a game it cannot start. It needs the Rust toolchain (1.99 or later) and neither HEMTT nor the game. From the repository root:
