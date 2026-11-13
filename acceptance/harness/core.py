@@ -78,8 +78,8 @@ class Context:
         self.failed_starts = []      # the Session JSON of every start the "start" checks made fail
 
     def project_ids(self):
-        """The id of every check file in the generated project's checks folder."""
-        root = self.project / "checks"
+        """The id of every check file in the generated project's tests folder."""
+        root = self.project / "tests"
         return sorted(p.relative_to(root).with_suffix("").as_posix() for p in root.rglob("*.sqf"))
 
     def run(self, ids, ceiling=600, tags=()):

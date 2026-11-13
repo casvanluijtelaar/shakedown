@@ -3,7 +3,7 @@ ported M00 checks, and the checks of the findings m10-1, m10-2, m10-3 and m10-5.
 
 The ported suite is read from arma-grappling-hook's `acceptance/shakedown/` (default: the worktree of branch
 `shakedown/m10`, or the `SHAKEDOWN_AGH_SUITE` variable) and copied into `m10port` in the work folder, so nothing is
-written into that repository: its `shakedown.toml` and `checks/` as they are, and a `.mcp.json` as
+written into that repository: its `shakedown.toml` and `tests/` as they are, and a `.mcp.json` as
 docs/agent-tools.md gives it. The mod paths of that file are absolute, so the copy loads the same builds.
 
 Per repeat (`--repeat`), with no session running before each part:
@@ -39,8 +39,8 @@ from .m08 import game_folder, mission_copies, ports_held, steam_running
 from .mcp import Mcp, structured
 
 ACC = Path(__file__).resolve().parent.parent
-SUITE = Path(os.environ.get("SHAKEDOWN_AGH_SUITE", r"C:\Users\Shadow\Documents\arma-grappling-hook\.worktrees"
-                            r"\shakedown-m10\acceptance\shakedown"))
+SUITE = Path(os.environ.get("SHAKEDOWN_AGH_SUITE", r"C:\Users\Shadow\Documents\arma-grappling-hook"
+                            r"\acceptance\shakedown"))
 ORDER = ["dedicated-cba", "sp-cba", "sp-cba-ace"]
 # plan/milestones/m10.md, exit criterion 7: the checks each setup runs.
 EXPECTED = {
@@ -74,7 +74,7 @@ def port_project(ctx):
     project = ctx.work / "m10port"
     if project.exists():
         shutil.rmtree(project)
-    shutil.copytree(SUITE / "checks", project / "checks")
+    shutil.copytree(SUITE / "tests", project / "tests")
     shutil.copy2(SUITE / "shakedown.toml", project / "shakedown.toml")
     (project / ".mcp.json").write_text(json.dumps(
         {"mcpServers": {"shakedown": {"command": "shakedown", "args": ["mcp"], "timeout": 70000}}}, indent=2),
@@ -235,7 +235,7 @@ def wait_run(mcp, run_id, ceiling=RUN_CEILING):
 
 def edit_loop(ctx, project, sh, setup):
     """NFR-PF-01: edit a ported check and run it at once in the ready session; the time from the edit to its outcome."""
-    path = project / "checks" / f"{EDIT}.sqf"
+    path = project / "tests" / f"{EDIT}.sqf"
     original = path.read_text(encoding="utf-8")
     name = f"edited {setup} repeat {getattr(ctx, 'repeat_n', 1)}"
     text = original.replace("under Grappling hooks\n", f"under Grappling hooks ({name})\n", 1)
@@ -256,12 +256,12 @@ def edit_loop(ctx, project, sh, setup):
 
 def diagnose(ctx, project, mcp):
     """One ported check changed to fail, run through run_start, and looked into with run_result, inspect and logs."""
-    original = (project / "checks" / "CTL-01-hold.sqf").read_text(encoding="utf-8")
+    original = (project / "tests" / "CTL-01-hold.sqf").read_text(encoding="utf-8")
     wrong = original.replace(
         '"<", _z1 - 0.5, "p1 climbs down 0.5 m while the key is held"',
         '">", _z1 + 0.5, "p1 climbs up 0.5 m while climb down is held (changed on purpose)"', 1)
     assert wrong != original, "the diagnosis could not change CTL-01-hold's climb down assertion"
-    path = project / "checks" / f"{DIAG}.sqf"
+    path = project / "tests" / f"{DIAG}.sqf"
     path.write_text(wrong, encoding="utf-8")
     try:
         started = structured(mcp.call("run_start", {"ids": [DIAG]})[0])
@@ -348,7 +348,7 @@ def rel_project(ctx):
     if root.exists():
         shutil.rmtree(root)
     project = root / "acceptance" / "shakedown"
-    shutil.copytree(ACC / "m10", project / "checks")
+    shutil.copytree(ACC / "m10", project / "tests")
     shutil.copytree(ctx.install / "fixtures" / "@skd_fixture", root / "build" / "@skd_fixture")
     (project / "shakedown.toml").write_text(
         f"game = '{game}'\n\n[mods.fixture]\npath = '..\\..\\build\\@skd_fixture'\npatch = \"skdfx_main\"\n\n"
@@ -383,7 +383,7 @@ def bad_checks(result):
 
 def headers(project):
     out = {}
-    for f in sorted((project / "checks").glob("*.sqf")):
+    for f in sorted((project / "tests").glob("*.sqf")):
         h = {}
         for line in f.read_text(encoding="utf-8").splitlines():
             m = re.match(r"\s*//\s*@(\w+)\s+(.*)", line)
@@ -538,7 +538,7 @@ def ec2(ctx):
     project, sh = port_project(ctx)
     files = sorted(p.relative_to(SUITE).as_posix() for p in SUITE.rglob("*")
                    if p.is_file() and ".shakedown" not in p.parts)
-    other = [f for f in files if not (f == "shakedown.toml" or (f.startswith("checks/") and f.endswith(".sqf")))]
+    other = [f for f in files if not (f == "shakedown.toml" or (f.startswith("tests/") and f.endswith(".sqf")))]
     assert not other, f"the ported project holds files other than shakedown.toml and SQF checks: {other}"
     answer = sh("list", "--json", ceiling=60)
     listed = answer.json()["checks"]

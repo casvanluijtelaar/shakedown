@@ -67,7 +67,7 @@ def own_project(ctx):
     project = ctx.work / "m09"
     if project.exists():
         shutil.rmtree(project)
-    shutil.copytree(ACC / "m09", project / "checks")
+    shutil.copytree(ACC / "m09", project / "tests")
     (project / "shakedown.toml").write_text(
         f"game = '{game}'\n\n[mods.fixture]\npath = '{game / '@skd_fixture'}'\npatch = \"skdfx_main\"\n\n"
         "[setups.ded]\nmode = \"dedicated\"\nclients = 2\nheadless = 0\nmods = [\"fixture\"]\n\n"

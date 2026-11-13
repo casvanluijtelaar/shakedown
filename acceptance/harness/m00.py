@@ -54,7 +54,7 @@ def check_error(ex, *parts):
 
 
 def set_syntax(project, fixed):
-    path = project / "checks" / (SYNTAX + ".sqf")
+    path = project / "tests" / (SYNTAX + ".sqf")
     lines = path.read_text(encoding="utf-8").split("\n")
     lines[SYNTAX_LINE - 1] = SYNTAX_FIXED if fixed else SYNTAX_BROKEN
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -300,9 +300,9 @@ def res_01(ctx):
 @check("CFG-02 the project gains only .shakedown with a .gitignore that ignores everything", "session", [STEPS_ONLY])
 def cfg_02(ctx):
     entries = sorted(p.name for p in ctx.project.iterdir())
-    # The harness writes .mcp.json, checks, shakedown.toml and stage (M6's staged fixture sources);
+    # The harness writes .mcp.json, shakedown.toml, stage (M6's staged fixture sources) and tests;
     # the framework adds only .shakedown.
-    assert entries == [".mcp.json", ".shakedown", "checks", "shakedown.toml", "stage"], f"the project folder holds {entries}"
+    assert entries == [".mcp.json", ".shakedown", "shakedown.toml", "stage", "tests"], f"the project folder holds {entries}"
     ignore = (ctx.project / ".shakedown" / ".gitignore").read_text(encoding="utf-8").split()
     assert "*" in ignore, f".shakedown/.gitignore holds {ignore}, which does not ignore everything"
 

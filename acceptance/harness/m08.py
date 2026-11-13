@@ -58,7 +58,7 @@ def write_ceiling_checks(folder, setups=None):
 
 def project_files(project):
     """The eight ceiling checks in the generated project, for the sp session."""
-    write_ceiling_checks(Path(project) / "checks" / "m08", setups="sp")
+    write_ceiling_checks(Path(project) / "tests" / "m08", setups="sp")
 
 
 # ================================================================ helpers
@@ -287,7 +287,7 @@ def own_project(ctx, name):
     project = ctx.work / name
     if project.exists():
         shutil.rmtree(project)
-    checks = project / "checks"
+    checks = project / "tests"
     if name == "walk":
         shutil.copytree(ACC / "walk", checks)
         setup = "[setups.dedicated-2]\nmode = \"dedicated\"\nclients = 2\nheadless = 0\nmods = [\"fixture\"]\n"

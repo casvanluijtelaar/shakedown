@@ -188,7 +188,7 @@ def m06_batch(ctx, checks):
     if not any(c.name.split(" ")[0] in ("US-011", "US-012", "US-040", "US-055", "US-056", "US-057", "NFR-PF-02")
                for c in checks):
         return
-    edit = ctx.project / "checks" / "m06" / "US-040-edit.sqf"
+    edit = ctx.project / "tests" / "m06" / "US-040-edit.sqf"
     original_check = edit.read_bytes()
     with Mcp(ctx.project, ctx.install, ctx.log) as m:
         step(ctx, "us040", lambda: us040(ctx, m, edit, original_check))

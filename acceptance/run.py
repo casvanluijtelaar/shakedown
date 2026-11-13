@@ -31,7 +31,7 @@ def find_exe(install):
 
 
 def make_project(work, game, install, cba, agh):
-    """The project: checks/ copied, the numbered copies of the templates, a .mcp.json, and five setups.
+    """The project: checks/ copied into tests/, the numbered copies of the templates, a .mcp.json, and five setups.
 
     sp loads @skd_fixture alone, so it is a setup without CBA; cba loads CBA, both fixtures and
     arma-grappling-hook's built mod, as fixture-mod.md and the M1 demo say. ded is a dedicated
@@ -43,17 +43,17 @@ def make_project(work, game, install, cba, agh):
     one docs/agent-tools.md gives.
     """
     project = work / "project"
-    shutil.copytree(HERE / "checks", project / "checks")
+    shutil.copytree(HERE / "checks", project / "tests")
     template = (HERE / "templates" / "NFR-RL-02-start-state.sqf").read_text(encoding="utf-8")
     for n in range(1, 21):
-        (project / "checks" / "m01" / f"NFR-RL-02-start-state-{n:02}.sqf").write_text(
+        (project / "tests" / "m01" / f"NFR-RL-02-start-state-{n:02}.sqf").write_text(
             template.replace("{N}", f"{n:02}"), encoding="utf-8")
     template = (HERE / "templates" / "US-008-start-state.sqf").read_text(encoding="utf-8")
-    (project / "checks" / "us008").mkdir(exist_ok=True)
+    (project / "tests" / "us008").mkdir(exist_ok=True)
     for n in range(1, 22):
         name = (f"US-008 NFR-RL-02 check {n:02} of 20 sees the start state on every machine, then changes the scene"
                 if n <= 20 else "US-008 the check after the 20th sees the start state on every machine")
-        (project / "checks" / "us008" / f"US-008-start-state-{n:02}.sqf").write_text(
+        (project / "tests" / "us008" / f"US-008-start-state-{n:02}.sqf").write_text(
             template.replace("{NAME}", name).replace("{CHANGE}", "true" if n <= 20 else "false"), encoding="utf-8")
     fixture = Path(game) / "@skd_fixture"
     fixture_cba = Path(install) / "fixtures" / "@skd_fixture_cba"

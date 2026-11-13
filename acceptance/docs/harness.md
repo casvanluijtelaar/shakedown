@@ -152,7 +152,7 @@ A failed assertion fails only its own check; the others are still judged. A harn
 ## What the M10 round learned
 
 - A round of three of the M10 parts takes about 50 minutes: per repeat the three `run --setup` of the ported suite (`dedicated-cba` 90 to 97 s, `sp-cba` 189 to 190 s, `sp-cba-ace` 121 to 124 s), the agent's three sessions with the edit loop and the diagnosis (about 8 minutes), a wait of about 60 s for the runner to exit, and m10-1's two runs (48 to 51 s and 28 s).
-- The ported suite's own `shakedown.toml` gives absolute mod paths, so a copy of its `checks/` and that file in the work folder runs the same builds; the copy adds the `.mcp.json` the ported project does not have.
+- The ported suite's own `shakedown.toml` gives absolute mod paths, so a copy of its `tests/` and that file in the work folder runs the same builds; the copy adds the `.mcp.json` the ported project does not have.
 - A ported check edited and run at once in a ready session reached its outcome 2.0 to 2.6 s after the edit, in singleplayer and on the dedicated session.
 - On a dedicated session with two clients and a headless client, a crate waited for on each client right after `skd_fnc_create` was there in place within 0.1 s.
 - The full suite of every milestone with M10 takes about 75 minutes.

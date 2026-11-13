@@ -299,8 +299,8 @@ def side_project(ctx, name, toml):
     root = ctx.work / name
     if root.exists():
         shutil.rmtree(root)
-    (root / "checks" / "sel").mkdir(parents=True)
-    shutil.copy(ctx.project / "checks" / "sel" / "RUN-01-a.sqf", root / "checks" / "sel" / "RUN-01-a.sqf")
+    (root / "tests" / "sel").mkdir(parents=True)
+    shutil.copy(ctx.project / "tests" / "sel" / "RUN-01-a.sqf", root / "tests" / "sel" / "RUN-01-a.sqf")
     (root / "shakedown.toml").write_text(toml, encoding="utf-8")
     shutil.copy(ctx.project / ".mcp.json", root / ".mcp.json")
     return root
@@ -318,12 +318,13 @@ def bad_projects(ctx):
     game = game_line(ctx)
     return [
         ("unknown key", f"{game}\ncolour = \"red\"\n\n{SP_SETUP}", "colour", 2),
-        ("missing game", f"checks = \"checks\"\n\n{SP_SETUP}", "game", None),
+        ("checks key", f"{game}\nchecks = \"tests\"\n\n{SP_SETUP}", "checks", 2),
+        ("missing game", f"tests = \"tests\"\n\n{SP_SETUP}", "game", None),
         ("clients two", f"{game}\n\n[setups.ded]\nmode = \"dedicated\"\nclients = \"two\"\nmods = []\n", "clients", 5),
     ]
 
 
-@check("US-006 CFG-01 a project file with an unknown key, no game or clients = \"two\" makes session start, run and list exit 3 naming the key and its line, and the tools return config-error", "start")
+@check("US-006 CFG-01 a project file with an unknown key, a checks key, no game or clients = \"two\" makes session start, run and list exit 3 naming the key and its line, and the tools return config-error", "start")
 def us006_bad_file(ctx):
     before = driver.game_pids()
     for i, (what, toml, key, line) in enumerate(bad_projects(ctx)):

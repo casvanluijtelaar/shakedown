@@ -39,11 +39,11 @@ def make_project(work):
     """The example of docs/project-file.md, whose game folder does not exist on a Mac, two checks, and the .mcp.json."""
     project = work / "project"
     for cid, body in CHECKS.items():
-        f = project / "checks" / f"{cid}.sqf"
+        f = project / "tests" / f"{cid}.sqf"
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(body, encoding="utf-8")
     (project / "shakedown.toml").write_text(
-        f"game = '{GAME}'\nchecks = \"checks\"\n\n"
+        f"game = '{GAME}'\ntests = \"tests\"\n\n"
         "[mods.cba]\npath = 'C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\107410\\450814997'\n"
         "patch = \"cba_main\"\n\n"
         "[setups.sp]\nmode = \"singleplayer\"\nmods = [\"cba\"]\n\n"
