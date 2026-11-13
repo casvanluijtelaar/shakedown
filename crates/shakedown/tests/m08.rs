@@ -57,7 +57,7 @@ const CLEANUP: &str = r#"[{
 fn project(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m08-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     let toml = format!(
         r#"game = '{GAME}'
 base_port = {BASE_PORT}
@@ -108,7 +108,7 @@ mods = ["fixture"]
         ));
     }
     for (id, text) in checks {
-        std::fs::write(dir.join("checks").join(format!("{id}.sqf")), text).unwrap();
+        std::fs::write(dir.join("tests").join(format!("{id}.sqf")), text).unwrap();
     }
     dir
 }
@@ -563,7 +563,7 @@ fn us_033_us_034_us_036_walk_away_on_a_dedicated_session() {
         .filter(|n| !n.starts_with("run-"))
         .collect();
     written.sort();
-    assert_eq!(written, [".shakedown", "checks", "shakedown.toml"]);
+    assert_eq!(written, [".shakedown", "shakedown.toml", "tests"]);
     drop(watch);
 
     // US-034 with --setup on a dedicated session.

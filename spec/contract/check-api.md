@@ -12,7 +12,7 @@ A check is SQF. It needs no build step, no `#include`, no macro and no other lan
 
 ## The check file
 
-A check is one file with the extension `.sqf` anywhere under the project's checks folder (default `checks/`). Its **check id** is its path relative to that folder, with `/` as separator and without `.sqf`: `checks/rope/US-012-hook-holds.sqf` has the id `rope/US-012-hook-holds`.
+A check is one file with the extension `.sqf` anywhere under the project's tests folder (the project file's `tests`, default `tests/`). Its **check id** is its path relative to that folder, with `/` as separator and without `.sqf`: `tests/rope/US-012-hook-holds.sqf` has the id `rope/US-012-hook-holds`.
 
 The file starts with a header: one or more lines of the form `// @key value`, before any other line except blank lines. The header ends at the first line that is not a header line. A UTF-8 byte order mark before the first line, as some Windows editors write, is skipped.
 

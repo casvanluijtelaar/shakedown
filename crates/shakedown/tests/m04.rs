@@ -40,7 +40,7 @@ fn cli_json(dir: &Path, args: &[&str]) -> (i32, Value, String) {
 fn project(name: &str, checks: &[(&str, &str)]) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m04-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     let toml = format!(
         r#"game = '{GAME}'
 
@@ -75,7 +75,7 @@ start_timeout = 30
     );
     std::fs::write(dir.join("shakedown.toml"), toml).unwrap();
     for (id, text) in checks {
-        std::fs::write(dir.join("checks").join(format!("{id}.sqf")), text).unwrap();
+        std::fs::write(dir.join("tests").join(format!("{id}.sqf")), text).unwrap();
     }
     dir
 }

@@ -43,7 +43,7 @@ rebuild = 'cd /d C:\dev\arma-grappling-hook && hemtt build'
 
 A mod with no `rebuild` is still reloaded: the processes stop and start, and they read whatever build is there. The framework builds nothing itself.
 
-A file outside every watched folder and the checks folder is refused with exit code 3, naming the watched folders.
+A file outside every watched folder and the tests folder is refused with exit code 3, naming the watched folders.
 
 ## Running a reload
 

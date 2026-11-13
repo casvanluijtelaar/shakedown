@@ -279,7 +279,7 @@
     },
     {
       "name": "reload",
-      "description": "Reloads changed mod code into the running session: the files given (paths relative to the project, under a mod's watched source or the checks folder), or with none what changed under the watched sources since the session was last ready. A changed check needs nothing; any other change restarts every game process, running each mod's rebuild from shakedown.toml while none runs. Reports the level applied, each file with its level and reason, the machines it reached and the time taken. On a broken session it restarts the game, which brings every machine back. Returns when done, or after 50 s with state applying; follow it with status.",
+      "description": "Reloads changed mod code into the running session: the files given (paths relative to the project, under a mod's watched source or the tests folder), or with none what changed under the watched sources since the session was last ready. A changed check needs nothing; any other change restarts every game process, running each mod's rebuild from shakedown.toml while none runs. Reports the level applied, each file with its level and reason, the machines it reached and the time taken. On a broken session it restarts the game, which brings every machine back. Returns when done, or after 50 s with state applying; follow it with status.",
       "inputSchema": {
         "type": "object", "additionalProperties": false,
         "properties": {"files": {"type": "array", "items": {"type": "string"}}}

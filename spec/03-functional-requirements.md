@@ -14,7 +14,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 ## Project configuration
 
-- **CFG-01** (must) A project is configured by one `shakedown.toml` file at its root, with the keys the CLI contract lists: the game folder, the checks folder, the server's base port, each mod (its folder, and for a watched mod its `source` folder and its game `prefix`), and the setups (mode, clients, headless clients, mods, world, spawn point, start ceiling). Every command reads it fresh. An unknown key, a missing required key or a wrong type is refused with the key's name and line (`CR-01`, `CR-41`).
+- **CFG-01** (must) A project is configured by one `shakedown.toml` file at its root, with the keys the CLI contract lists: the game folder, the tests folder that holds the checks, the server's base port, each mod (its folder, and for a watched mod its `source` folder and its game `prefix`), and the setups (mode, clients, headless clients, mods, world, spawn point, start ceiling). Every command reads it fresh. An unknown key, a missing required key or a wrong type is refused with the key's name and line (`CR-01`, `CR-41`).
 - **CFG-02** (must) The framework writes nothing into the project except the `.shakedown/` folder, which it creates with a `.gitignore` that ignores everything in it, so session and run folders stay out of git (`CR-51`, `CR-24`; gap H8).
 
 ## Sessions
@@ -143,7 +143,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 
 ## Check API
 
-- **API-01** (must) A check is one `.sqf` file under the checks folder whose first lines are a header of `// @key value` lines: `@check` (the name, required, starting with the story or requirement ID it proves), `@tags`, `@setups` (setups the project file declares), `@timeout` (seconds, default 120) and `@reset` (`in-place` or `mission`, default `in-place`), as the check API contract gives. The rest of the file is the body (`CR-50`, `CR-40`).
+- **API-01** (must) A check is one `.sqf` file under the tests folder whose first lines are a header of `// @key value` lines: `@check` (the name, required, starting with the story or requirement ID it proves), `@tags`, `@setups` (setups the project file declares), `@timeout` (seconds, default 120) and `@reset` (`in-place` or `mission`, default `in-place`), as the check API contract gives. The rest of the file is the body (`CR-50`, `CR-40`).
 - **API-02** (must) The body runs scheduled on the lead machine, as SQF compiled with `compile`, so a check needs no build step and is reloaded on every run (`CR-50`, `CR-03`).
 - **API-03** (must) The check API offers, as SQF functions with the prefix `skd_fnc_`: steps; running code on one machine and on a group; waits; immediate and polled assertions on one machine and on several; agreement across machines; expected errors; creating objects and units, placing units, setting time and weather; using an action; pressing a keybind; cleanups; evidence; ending a check as `fail` or `invalid` by hand; and the session's machines and setup. Names, arguments and results are in the check API contract (`CR-50`, `CR-10`, `CR-11`, `CR-12`, `CR-20`, `CR-22`, `CR-23`).
 - **API-04** (must) The check API is plain SQF functions: a check needs no `#include`, no macros and no language but SQF (`CR-50`).

@@ -58,7 +58,7 @@ Used by `exec`, by every check API call that names another machine, and by the r
 
 Triggered by `run` (command line) or `run_start` (MCP).
 
-1. **client**: resolves the selection (check ids, tags) against the checks folder and refuses if it matches nothing, listing what exists. With `--setup` and no session running, it starts one (`P-02`) and stops it after the run (`P-10`), so the run leaves nothing running (`RUN-04`).
+1. **client**: resolves the selection (check ids, tags) against the tests folder and refuses if it matches nothing, listing what exists. With `--setup` and no session running, it starts one (`P-02`) and stops it after the run (`P-10`), so the run leaves nothing running (`RUN-04`).
 2. **runner**: refuses if the session is not `ready`, saying its state. Otherwise creates the run id and the run folder and marks the session `running`.
 3. **runner**: for each selected check in the selection's order, a check given more than once each time it is given (`RUN-03`), and for each repeat, executes the check (`P-05`). Checks whose `@setups` header excludes the session's setup are not executed and are listed as `not-run` with reason `setup`.
 4. **runner**: after the last check, or when the run is stopped, cuts each machine's log for the run's time span into the run folder, redacted (`LOG-02`), writes the result file (`RES-01`), and marks the session `ready` (or leaves it `broken`).

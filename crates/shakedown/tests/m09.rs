@@ -40,7 +40,7 @@ const PASS: &str = r#"["one is one", { [1, "==", 1, "one"] call skd_fnc_expect }
 fn project(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m09-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     let toml = format!(
         r#"game = '{GAME}'
 
@@ -108,7 +108,7 @@ mods = ["fixture"]
         ),
     ];
     for (id, text) in checks {
-        std::fs::write(dir.join("checks").join(format!("{id}.sqf")), text).unwrap();
+        std::fs::write(dir.join("tests").join(format!("{id}.sqf")), text).unwrap();
     }
     dir
 }

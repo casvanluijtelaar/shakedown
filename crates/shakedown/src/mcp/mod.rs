@@ -515,7 +515,7 @@ impl Server {
     /// stops it at its end (`RUN-04`).
     async fn run_start(&self, a: Selection) -> Result<Value, CliError> {
         let project = self.project()?;
-        let all = checks::discover(&project.checks)?;
+        let all = checks::discover(&project.tests)?;
         let selected = checks::select(&all, &a.ids, &a.tags)?;
         let spec = a.setup.as_deref().map(|s| ops::spec(&project, s)).transpose()?;
         let (running, run_id) = blocking(|| {

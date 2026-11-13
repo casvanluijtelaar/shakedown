@@ -24,7 +24,7 @@ A change to a shared helper is one edit per copy, and nothing tells the author t
 
 ## Options
 
-1. A library folder in the project, such as `checks/_lib/` or a `lib` key in `shakedown.toml`: every `.sqf` file in it is compiled once per session on every machine, after the mission starts and after each reload, into a variable named after the file, and `list` skips it. A compile error in it ends every check `fail` / `check-error` naming the file and line.
+1. A library folder in the project, such as `tests/_lib/` or a `lib` key in `shakedown.toml`: every `.sqf` file in it is compiled once per session on every machine, after the mission starts and after each reload, into a variable named after the file, and `list` skips it. A compile error in it ends every check `fail` / `check-error` naming the file and line.
 2. A header key, `// @uses <file>`, that prepends the named file's text to the body before it is sent, so line numbers of the body shift by a known amount the runner subtracts.
 3. Leave the copies, as documented.
 

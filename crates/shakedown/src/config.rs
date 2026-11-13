@@ -16,7 +16,8 @@ pub const FILE: &str = "shakedown.toml";
 pub struct Project {
     pub root: PathBuf,
     pub game: PathBuf,
-    pub checks: PathBuf,
+    /// The folder of the check files, the key `tests`.
+    pub tests: PathBuf,
     pub base_port: u16,
     pub mods: BTreeMap<String, Mod>,
     pub setups: BTreeMap<String, Setup>,
@@ -67,7 +68,7 @@ impl Mode {
 #[serde(deny_unknown_fields)]
 struct RawProject {
     game: Spanned<String>,
-    checks: Option<Spanned<String>>,
+    tests: Option<Spanned<String>>,
     base_port: Option<Spanned<i64>>,
     #[serde(default)]
     mods: BTreeMap<Spanned<String>, RawMod>,
@@ -298,7 +299,7 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
     Ok(Project {
         root: root.to_path_buf(),
         game: resolve(raw.game.get_ref()),
-        checks: resolve(raw.checks.as_ref().map(|c| c.get_ref().as_str()).unwrap_or("checks")),
+        tests: resolve(raw.tests.as_ref().map(|c| c.get_ref().as_str()).unwrap_or("tests")),
         base_port,
         mods,
         setups,
@@ -329,7 +330,7 @@ mod tests {
 
     const GOOD: &str = r#"
 game = 'C:\Games\Arma 3'
-checks = "checks"
+tests = "tests"
 
 [mods.cba]
 path = 'C:\mods\cba'
@@ -354,7 +355,7 @@ mods = ["cba"]
         assert_eq!(sp.spawn, [100.0, 100.0]);
         assert_eq!(sp.start_timeout, 180);
         assert_eq!(p.base_port, 2402);
-        assert_eq!(p.checks, root().join("checks"));
+        assert_eq!(p.tests, root().join("tests"));
         assert_eq!(p.mods["cba"].patch.as_deref(), Some("cba_main"));
     }
 
@@ -386,9 +387,27 @@ mods = ["cba"]
 
     #[test]
     fn cfg_01_a_wrong_type_is_refused_with_its_line() {
-        let text = GOOD.replace("checks = \"checks\"", "checks = 5");
+        let text = GOOD.replace("tests = \"tests\"", "tests = 5");
         let e = parse(&root(), &text).unwrap_err();
         assert!(e.message.contains("line 3"), "{}", e.message);
+    }
+
+    #[test]
+    fn cfg_01_the_tests_folder_defaults_to_tests() {
+        let p = parse(&root(), &GOOD.replace("tests = \"tests\"\n", "")).unwrap();
+        assert_eq!(p.tests, root().join("tests"));
+    }
+
+    #[test]
+    fn cfg_01_a_checks_key_is_refused_naming_tests() {
+        let text = GOOD.replace("tests = \"tests\"", "checks = \"tests\"");
+        let e = parse(&root(), &text).unwrap_err();
+        assert_eq!(e.code, 3);
+        assert!(
+            e.message.contains("`checks`") && e.message.contains("`tests`") && e.message.contains("line 3"),
+            "{}",
+            e.message
+        );
     }
 
     #[test]

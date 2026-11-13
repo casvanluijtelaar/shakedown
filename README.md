@@ -51,7 +51,7 @@ A project is a folder that holds a `shakedown.toml`. Put it in your mod's reposi
 
 ```toml
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'
-checks = "tests"
+tests = "tests"
 
 [mods.mymod]
 path = 'C:\path\to\mymod\.hemttout\build'

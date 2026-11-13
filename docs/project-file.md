@@ -13,7 +13,7 @@ A project is a folder with a `shakedown.toml` file. Every command finds it from 
 
 ```toml
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'
-checks = "checks"
+tests = "tests"
 
 [mods.cba]
 path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997'
@@ -37,7 +37,7 @@ A project with no mod declares `mods = []` in its setup and no `[mods.*]` table;
 | Key | Needed | Meaning |
 |---|---|---|
 | `game` | yes | The Arma 3 folder, the one that holds `arma3_x64.exe`. |
-| `checks` | no, default `checks` | The folder of the check files. |
+| `tests` | no, default `tests` | The folder of the check files. |
 | `base_port` | no, default 2402 | A dedicated server's game port, 1024 to 65530; it and the next four ports must be free. |
 | `mods.<name>.path` | yes, for each mod | The mod's folder, such as a Workshop folder or a `@mod` folder. |
 | `mods.<name>.patch` | no | A `CfgPatches` class of the mod; the result file records its `versionStr` as the game loaded it. |
@@ -60,6 +60,12 @@ An unknown key, a missing key, a value of the wrong type or out of range, or a s
 
 ```
 shakedown.toml, line 12: setups.sp.start_timeout must be a whole number from 30 to 1800, got 5.
+```
+
+A file that names the check folder with `checks` is refused the same way, as an unknown key; the key is `tests`:
+
+```
+shakedown.toml, line 2: unknown field `checks`, expected one of `game`, `tests`, `base_port`, `mods`, `setups`. Fix the key as contract/cli.md describes the project file.
 ```
 
 A setup name the file does not declare is refused with the setups it does declare.

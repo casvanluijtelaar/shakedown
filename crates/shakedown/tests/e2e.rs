@@ -46,11 +46,11 @@ fn cmd(project: &Path, args: &[&str]) -> (i32, Value) {
 fn project(name: &str, checks: &[(&str, &str)]) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-e2e-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     let toml = std::fs::read_to_string(repo().join("e2e").join("shakedown.toml")).unwrap();
     std::fs::write(dir.join("shakedown.toml"), toml).unwrap();
     for (id, text) in checks {
-        let path = dir.join("checks").join(format!("{id}.sqf"));
+        let path = dir.join("tests").join(format!("{id}.sqf"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, text).unwrap();
     }
@@ -246,7 +246,7 @@ fn us_037_us_038_checks_in_one_session() {
     assert_eq!(c["evidence"]["failed_step"], serde_json::json!(["fails on purpose"]));
 
     // US-038 4: fixed in the file, the same check passes with no reload, on the same machine start.
-    std::fs::write(dir.join("checks/b/US-038-syntax-error.sqf"), SYNTAX_FIXED).unwrap();
+    std::fs::write(dir.join("tests/b/US-038-syntax-error.sqf"), SYNTAX_FIXED).unwrap();
     let (code, run) = cmd(&dir, &["run", "b/US-038-syntax-error"]);
     assert_eq!(code, 0, "{run}");
     let result = validate(Path::new(run["result_file"].as_str().unwrap()));

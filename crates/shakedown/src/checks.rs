@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::CliError;
 
-/// A check file found under the checks folder.
+/// A check file found under the tests folder.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CheckRef {
     pub id: String,
@@ -47,13 +47,13 @@ pub fn discover(dir: &Path) -> Result<Vec<CheckRef>, CliError> {
     let mut out = Vec::new();
     if !dir.is_dir() {
         return Err(CliError::wrong(format!(
-            "The checks folder {} does not exist. Create it, or set `checks` in shakedown.toml.",
+            "The tests folder {} does not exist. Create it, or set `tests` in shakedown.toml.",
             dir.display()
         ))
         .tag("config-error"));
     }
     walk(dir, dir, &mut out)
-        .map_err(|e| CliError::framework(format!("Cannot read the checks folder {}: {e}.", dir.display())))?;
+        .map_err(|e| CliError::framework(format!("Cannot read the tests folder {}: {e}.", dir.display())))?;
     out.sort_by(|a, b| a.id.cmp(&b.id));
     Ok(out)
 }
@@ -298,10 +298,10 @@ pub fn read_listed(check: &CheckRef, declared: Option<&[String]>) -> Listed {
 pub fn select(all: &[CheckRef], ids: &[String], tags: &[String]) -> Result<Vec<CheckRef>, CliError> {
     if ids.is_empty() && tags.is_empty() {
         if all.is_empty() {
-            return Err(CliError::wrong(
-                "The checks folder holds no check. Add a .sqf file with a `// @check` header.",
-            )
-            .tag("unknown-check"));
+            return Err(
+                CliError::wrong("The tests folder holds no check. Add a .sqf file with a `// @check` header.")
+                    .tag("unknown-check"),
+            );
         }
         return Ok(all.to_vec());
     }

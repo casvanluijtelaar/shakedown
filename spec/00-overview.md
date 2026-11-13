@@ -62,14 +62,14 @@ Each word below means this and only this in the spec, the contract, the docs and
 
 | Word | Meaning |
 |---|---|
-| **Project** | A folder with a `shakedown.toml` file: the mod repository that uses Shakedown. It names the game, the mods, the setups and the checks folder. |
+| **Project** | A folder with a `shakedown.toml` file: the mod repository that uses Shakedown. It names the game, the mods, the setups and the tests folder, which holds the checks. |
 | **Setup** | A named, declared shape of a session in the project file: its mode (`singleplayer` or `dedicated`), the number of game clients and headless clients, the mods loaded and the world. Examples: `sp`, `dedicated-2`. |
 | **Session** | The set of game processes started for one setup and kept running while many checks run against it, with the one long-running session mission they play. A session has an id, a token and a folder. At most one session runs on the machine at a time. |
 | **Session mission** | The mission the runner generates for a session. It places the playable units and headless client slots of the setup, loads the in-game agent, and runs until the session stops or restarts it. |
 | **Machine** | One game process of a session, named by its role: `server`, `p1` to `pN` for game clients, `hc1` to `hcN` for headless clients. A singleplayer session has one machine, `p1`, which `server` also names. A machine's name is also its profile name (`-name`). |
 | **Lead machine** | The machine a check's body runs on: `server` on a dedicated session, `p1` in singleplayer. |
-| **Check** | One SQF file in the project's checks folder with a header that names it and its tags. Its body runs on the lead machine and ends with one outcome. A check proves one promise, named with the story or requirement ID it proves. |
-| **Check id** | A check's file path relative to the checks folder, with `/` as separator and without the `.sqf` extension, such as `rope/US-012-hook-holds`. |
+| **Check** | One SQF file in the project's tests folder with a header that names it and its tags. Its body runs on the lead machine and ends with one outcome. A check proves one promise, named with the story or requirement ID it proves. |
+| **Check id** | A check's file path relative to the tests folder, with `/` as separator and without the `.sqf` extension, such as `rope/US-012-hook-holds`. |
 | **Step** | A named, timed part of a check, made with `skd_fnc_step`. Steps nest. Every error, wait and assertion is recorded against the innermost step that was running. |
 | **Tag** | A word in a check's header used to select it, such as a story ID (`US-012`), a finding ID (`m01-3`) or `smoke`. |
 | **Run** | One execution of a selected list of checks against one session, started by one command or tool call. A run has an id and writes one result file. A session serves many runs. |

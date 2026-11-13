@@ -51,7 +51,7 @@ fn cmd(dir: &Path, args: &[&str]) -> (i32, Value, String) {
 fn project(name: &str, checks: &[(&str, String)]) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m06-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     let fx = install().join("fixtures");
     let stage = dir.join(STAGE);
     copy_tree(&fx.join(r"skdfx_cba\addons"), &stage);
@@ -100,7 +100,7 @@ mods = ["cba", "fixture", "fixture-cba"]
     );
     std::fs::write(dir.join("shakedown.toml"), toml).unwrap();
     for (id, text) in checks {
-        std::fs::write(dir.join("checks").join(format!("{id}.sqf")), text).unwrap();
+        std::fs::write(dir.join("tests").join(format!("{id}.sqf")), text).unwrap();
     }
     dir
 }
@@ -593,7 +593,7 @@ fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
     let start = machines(&dir)[0].1;
 
     // US-040 2: a reload naming only the check file is level none.
-    let file = dir.join("checks").join("edit.sqf");
+    let file = dir.join("tests").join("edit.sqf");
     let (code, r, _) = cmd(&dir, &["reload", file.to_str().unwrap()]);
     assert_eq!(code, 0, "{r}");
     assert_eq!((&r["state"], &r["level"]), (&json!("done"), &json!("none")));
@@ -622,7 +622,7 @@ fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
 
     // The reload tool over MCP: the check file, by its path relative to the project.
     let mut mcp = Mcp::start(&exe(), &dir, &[]);
-    let a = mcp.call("reload", json!({"files": ["checks/edit.sqf"]}));
+    let a = mcp.call("reload", json!({"files": ["tests/edit.sqf"]}));
     let d = a.data();
     assert_eq!((&d["state"], &d["level"]), (&json!("done"), &json!("none")), "{d}");
 

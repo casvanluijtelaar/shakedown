@@ -7,7 +7,7 @@ status: draft
 
 # Writing and running a check
 
-A check is one `.sqf` file under the project's checks folder. Its contract is [spec/contract/check-api.md](../spec/contract/check-api.md); this page covers the file and running it in a session, [The check API by example](check-api.md) shows every function a check can call, and [Dedicated sessions](dedicated-sessions.md) covers the server, clients and headless clients.
+A check is one `.sqf` file under the project's tests folder, `tests` unless `shakedown.toml` names another with the key `tests`. Its contract is [spec/contract/check-api.md](../spec/contract/check-api.md); this page covers the file and running it in a session, [The check API by example](check-api.md) shows every function a check can call, and [Dedicated sessions](dedicated-sessions.md) covers the server, clients and headless clients.
 
 ## A check
 
@@ -30,7 +30,7 @@ private _answer = ["ask p1 for a value", {
 ```
 
 - **The header** is the first lines of the form `// @key value`. `@check` is required: the story or requirement ID the check proves, such as `US-012` or `NFR-PF-02`, then a short sentence. `@tags`, `@setups` (setups of the project file, separated by spaces), `@timeout` (seconds, default 120) and `@reset` (`in-place`, the default, or `mission` for a check that starts in a restarted mission, [Reloading and the mission restart](reloading.md#a-check-that-needs-a-fresh-mission)) are optional. A file saved with a UTF-8 byte order mark reads the same as one without.
-- **The check id** is the file's path under the checks folder without `.sqf`: `checks/rope/US-012-hook.sqf` is `rope/US-012-hook`.
+- **The check id** is the file's path under the tests folder without `.sqf`: `tests/rope/US-012-hook.sqf` is `rope/US-012-hook`.
 - **The body** is the rest of the file. It runs on the lead machine, `p1` in singleplayer and the server on a dedicated session, as plain SQF: no `#include`, no macro. Comments of both kinds may stand anywhere. The server has no player, so a check that runs in both names a player's unit with `["p1"] call skd_fnc_player`, not `player`.
 - **Keep long data out of string literals.** The game stands still while it compiles the body, and a long literal compiles slowly: about half a second for 100 KB.
 

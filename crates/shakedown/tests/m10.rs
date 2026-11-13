@@ -48,7 +48,7 @@ const STATE: &str = r#"private _u = _this select 0;
 fn project(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m10-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     let toml = format!(
         r#"game = '{GAME}'
 
@@ -99,8 +99,8 @@ mods = ["cba", "ace"]
 }} forEach ((call skd_fnc_machines) select {{ (_x select [0, 1]) == "p" }});
 "#
     );
-    std::fs::write(dir.join("checks").join("wound.sqf"), wound).unwrap();
-    std::fs::write(dir.join("checks").join("healed.sqf"), healed).unwrap();
+    std::fs::write(dir.join("tests").join("wound.sqf"), wound).unwrap();
+    std::fs::write(dir.join("tests").join("healed.sqf"), healed).unwrap();
     dir
 }
 
@@ -227,7 +227,7 @@ fn findings_project() -> PathBuf {
         .join("skd-m10")
         .join(format!("findings-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     std::fs::write(
         dir.join("shakedown.toml"),
         format!(
@@ -255,7 +255,7 @@ mods = ["fixture"]
         ("b-back", CLEANUP_BACK),
         ("c-created", JUST_CREATED),
     ] {
-        std::fs::write(dir.join("checks").join(format!("{name}.sqf")), text).unwrap();
+        std::fs::write(dir.join("tests").join(format!("{name}.sqf")), text).unwrap();
     }
     dir
 }
@@ -322,7 +322,7 @@ fn spk_14_an_actions_effect_reaches_every_machine_within_the_default_wait_ceilin
         .join("skd-m10")
         .join(format!("spk14-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     std::fs::write(
         dir.join("shakedown.toml"),
         format!(
@@ -342,7 +342,7 @@ mods = ["fixture"]
     )
     .unwrap();
     std::fs::write(
-        dir.join("checks").join("act.sqf"),
+        dir.join("tests").join("act.sqf"),
         r#"// @check SPK-14 an action's effect reaches every machine of a dedicated session
 private _c = ["build", {
     ["p1", AGLToASL [100, 100, 0], 0] call skd_fnc_place;

@@ -322,10 +322,10 @@ impl Runner {
             }),
             Request::Reload {
                 files,
-                checks,
+                tests,
                 rebuild,
                 wait_s,
-            } => reload::reload(self, files, checks, rebuild, wait_s)
+            } => reload::reload(self, files, tests, rebuild, wait_s)
                 .await
                 .map(|value| Event::Value { value }),
             Request::RunStop { run_id } => run::stop(self, run_id).await.map(|value| Event::Value { value }),

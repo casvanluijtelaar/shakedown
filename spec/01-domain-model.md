@@ -27,11 +27,11 @@ Run     1──1 ResultFile
 
 | Entity | Attributes | Lives |
 |---|---|---|
-| **Project** | Root folder; the `shakedown.toml` file; the checks folder (default `checks/`); the `.shakedown/` folder. | As long as the repository. |
+| **Project** | Root folder; the `shakedown.toml` file; the tests folder, which holds the check files (default `tests/`); the `.shakedown/` folder. | As long as the repository. |
 | **Setup** | Name; mode (`singleplayer` or `dedicated`); `clients` (game clients, 1 in singleplayer); `headless` (headless clients, 0 in singleplayer); `mods` (ordered list of mod folders); `world` (default `VR`). | In the project file. |
 | **Session** | Id (`s-` plus a UTC timestamp `YYYYMMDD-HHMMSS`); setup; token; state; session folder; game port; start time; the machines; the mission start count; the reset baseline. | From `session start` to `session stop`. |
 | **Machine** | Name (`server`, `pN`, `hcN`); kind (`server`, `client`, `headless`); start number (1 for the first start of that role in a session); process id and process start time; profile folder; state; last answer time; health flag and the clocks of its last heartbeat (`HLT-02`); loaded versions (game build, each mod's `CfgPatches` version). | One per start of a role. |
-| **Check** | Id; name; tags; setups (all when not given); timeout (default 120 s); reset mode (`in-place` or `mission`); source text. | In the checks folder. Read fresh for every execution. |
+| **Check** | Id; name; tags; setups (all when not given); timeout (default 120 s); reset mode (`in-place` or `mission`); source text. | In the tests folder. Read fresh for every execution. |
 | **Run** | Id (`r-` plus a UTC timestamp and a counter); session; selection (ids, tags); repeat count; state; start and end time; run folder. | From start to its result file. |
 | **CheckExecution** | Check id; repeat index; state; outcome; reason; start and end time; steps; script errors; evidence; reload state of the code it ran on. | Inside a run. |
 | **Step** | Path (the titles from the outermost step in), title, machine it ran on, start and end time on the wall clock and on each clock of `OBS-05`, state (`passed`, `failed`, `running` when the check ended inside it), error. | Inside a check execution. |

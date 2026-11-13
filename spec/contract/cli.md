@@ -16,7 +16,7 @@ The project is the nearest folder, from the current folder upward, that holds `s
 
 ```toml
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'   # required
-checks = "checks"      # default "checks"
+tests = "tests"        # default "tests": the folder of the check files
 base_port = 2402       # default 2402; the server uses it and the next four
 
 [mods.cba]
@@ -47,7 +47,7 @@ start_timeout = 180    # default 180 seconds (SES-04)
 | Key | Type | Required | Meaning |
 |---|---|---|---|
 | `game` | path | yes | The Arma 3 installation folder. |
-| `checks` | path | no | The checks folder. |
+| `tests` | path | no | The tests folder, which holds the check files. A file that has a `checks` key is refused as an unknown key, naming `tests` among the keys it expects. |
 | `base_port` | integer 1024-65530 | no | The server's game port. |
 | `mods.<name>.path` | path | yes | The mod's folder, as `-mod` takes it. |
 | `mods.<name>.patch` | string | no | The `CfgPatches` class whose `versionStr` each machine reports. |
@@ -84,7 +84,7 @@ Without `--json`, output is short lines of text for a person; its wording is not
 | `shakedown run [<id>...] [--tag <tag>]... [--setup <name>]` | Runs the selection against the session and returns when the run ends, printing one line per check execution as it ends. An id given more than once runs that check once per time it is given, in the order given (`RUN-03`); the line of its second and later executions carries `#<repeat>` right after the check id, before the duration. With `--setup` and no session, starts one and stops it after (`RUN-04`). With `--setup` naming another setup than the running session's, refuses. | `run_start`, then `run_status` and `run_result` |
 | `shakedown run stop` | Stops the active run and returns once its result file is written, printing the run's status (`RUN-05`). With no run active, exit 4. `run` with the one word `stop` and no other option is always this command, never a check named `stop`; such a check runs with `--tag` or beside another id. | `run_stop` |
 | `shakedown reset` | Resets the session (`RST-03`). Refused, exit 4, while a run, a reload or a reset is in progress, naming it; for a reload, its id and level; for a run, its id, its progress and `shakedown run stop` (`RLD-01`). | `reset` |
-| `shakedown reload [<file>...]` | Reloads changed mod code (`RLD-01`). Files are paths under a watched `source` or the checks folder, relative to the current folder; with none, the changed files are found. A changed check is level `none`; any other file is level `game-restart`, which stops every game process, runs each setup mod's `rebuild` and starts them again. Prints the level applied, each file with its level and reason, the machines reached and the time. On a `broken` session it restarts the game. Refused, exit 4, while a run, a reload or a reset is in progress, naming it; for a reload, its id and level; for a run, its id, its progress and `shakedown run stop`. A reload that ended `failed` exits 4 naming the level, the machine and why. | `reload` |
+| `shakedown reload [<file>...]` | Reloads changed mod code (`RLD-01`). Files are paths under a watched `source` or the tests folder, relative to the current folder; with none, the changed files are found. A changed check is level `none`; any other file is level `game-restart`, which stops every game process, runs each setup mod's `rebuild` and starts them again. Prints the level applied, each file with its level and reason, the machines reached and the time. On a `broken` session it restarts the game. Refused, exit 4, while a run, a reload or a reset is in progress, naming it; for a reload, its id and level; for a run, its id, its progress and `shakedown run stop`. A reload that ended `failed` exits 4 naming the level, the machine and why. | `reload` |
 | `shakedown exec --machine <m> (--code <sqf> \| --file <path>) [--args <json>] [--ceiling <s>]` | Runs SQF on a machine or a group and prints the value and any script errors it raised (`CTL-01`, `CTL-05`). `--ceiling` default 10, above 0, at most 600. | `exec` |
 | `shakedown wait --machine <m> --condition <sqf> [--description <text>] [--args <json>] [--ceiling <s>]` | Waits for a condition on a machine (`OBS-01`). | `wait_until` |
 | `shakedown expect --machine <m> --value <sqf> --op <op> --expected <json> [--args <json>] [--ceiling <s>]` | Tries an assertion live, as `skd_fnc_expectOn` would, without a check (`OBS-06`). | `expect` |

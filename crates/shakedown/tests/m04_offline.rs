@@ -26,11 +26,11 @@ impl Place {
         let _ = std::fs::remove_dir_all(&root);
         let dir = root.join("project");
         let home = root.join("home");
-        std::fs::create_dir_all(dir.join("checks")).unwrap();
+        std::fs::create_dir_all(dir.join("tests")).unwrap();
         std::fs::create_dir_all(&home).unwrap();
         std::fs::write(dir.join("shakedown.toml"), toml).unwrap();
         for (id, text) in checks {
-            std::fs::write(dir.join("checks").join(format!("{id}.sqf")), text).unwrap();
+            std::fs::write(dir.join("tests").join(format!("{id}.sqf")), text).unwrap();
         }
         Place { dir, home }
     }

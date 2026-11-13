@@ -56,7 +56,7 @@ fn cmd(project: &Path, args: &[&str]) -> (i32, Value) {
 fn project(name: &str, checks: &[(String, String)]) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m03-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     let toml = format!(
         r#"game = '{GAME}'
 
@@ -73,7 +73,7 @@ mods = ["fixture"]
     );
     std::fs::write(dir.join("shakedown.toml"), toml).unwrap();
     for (id, text) in checks {
-        std::fs::write(dir.join("checks").join(format!("{id}.sqf")), text).unwrap();
+        std::fs::write(dir.join("tests").join(format!("{id}.sqf")), text).unwrap();
     }
     dir
 }

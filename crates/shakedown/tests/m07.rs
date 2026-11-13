@@ -74,7 +74,7 @@ fn check(name: &str, header: &str, body: &str) -> String {
 fn project(name: &str, machines: usize) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m07-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("checks")).unwrap();
+    std::fs::create_dir_all(dir.join("tests")).unwrap();
     let fx = install().join("fixtures");
     let stage = dir.join(STAGE);
     copy_tree(&fx.join(r"skdfx\addons"), &stage);
@@ -152,7 +152,7 @@ mods = ["fixture"]
         ),
     ];
     for (id, text) in checks {
-        std::fs::write(dir.join("checks").join(format!("{id}.sqf")), text).unwrap();
+        std::fs::write(dir.join("tests").join(format!("{id}.sqf")), text).unwrap();
     }
     dir
 }

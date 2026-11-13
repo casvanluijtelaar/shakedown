@@ -85,25 +85,25 @@ pub enum Place {
 }
 
 /// Places a file by the folders it is under; an error names the watched folders.
-pub fn place(path: &Path, checks: &Path, sources: &[(String, PathBuf, String)]) -> Result<Place, CliError> {
+pub fn place(path: &Path, tests: &Path, sources: &[(String, PathBuf, String)]) -> Result<Place, CliError> {
     for (name, dir, _) in sources {
         if below(path, dir).is_some() {
             return Ok(Place::Source { mod_name: name.clone() });
         }
     }
-    if below(path, checks).is_some() {
+    if below(path, tests).is_some() {
         return Ok(Place::Check);
     }
     let watched: Vec<String> = sources.iter().map(|(_, d, _)| d.display().to_string()).collect();
     Err(CliError::wrong(format!(
-        "{} is not under a watched source folder or the checks folder. Give a file under {}{}.",
+        "{} is not under a watched source folder or the tests folder. Give a file under {}{}.",
         path.display(),
         if watched.is_empty() {
             "a mod's `source` (no mod of this setup sets one in shakedown.toml)".to_string()
         } else {
             watched.join(" or ")
         },
-        format_args!(", or under {}", checks.display())
+        format_args!(", or under {}", tests.display())
     ))
     .tag("bad-arguments"))
 }
@@ -141,7 +141,7 @@ pub fn classify(path: &Path, place: &Place, is_new_or_deleted: bool, rebuilt: bo
 pub async fn reload(
     runner: &Arc<Runner>,
     files: Vec<PathBuf>,
-    checks: PathBuf,
+    tests: PathBuf,
     rebuild: Rebuild,
     wait_s: Option<f64>,
 ) -> Result<Value, CliError> {
@@ -194,7 +194,7 @@ pub async fn reload(
     let in_now: std::collections::HashSet<String> = now.keys().map(|p| lower(p)).collect();
     let mut places = Vec::new();
     for p in &paths {
-        let place = place(p, &checks, &sources)?;
+        let place = place(p, &tests, &sources)?;
         let known = in_before.contains(&lower(p)) || in_now.contains(&lower(p));
         if matches!(place, Place::Source { .. }) && !known && !p.exists() {
             return Err(CliError::wrong(format!(
@@ -373,9 +373,9 @@ mod tests {
 
     #[test]
     fn us_040_rld_02_a_check_file_is_level_none() {
-        let checks = Path::new(r"C:\p\checks");
-        let p = Path::new(r"C:\p\checks\smoke.sqf");
-        let place = place(p, checks, &sources()).unwrap();
+        let tests = Path::new(r"C:\p\tests");
+        let p = Path::new(r"C:\p\tests\smoke.sqf");
+        let place = place(p, tests, &sources()).unwrap();
         assert_eq!(place, Place::Check);
         assert_eq!(classify(p, &place, false, true), ("none", CHECK.into()));
     }
@@ -383,7 +383,7 @@ mod tests {
     #[test]
     fn us_056_rld_06_a_new_sqf_needs_a_rebuild_and_a_game_restart() {
         let p = Path::new(r"C:\i\fixtures\skdfx\addons\main\functions\fn_new.sqf");
-        let place = place(p, Path::new(r"C:\p\checks"), &sources()).unwrap();
+        let place = place(p, Path::new(r"C:\p\tests"), &sources()).unwrap();
         assert_eq!(
             place,
             Place::Source {
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn us_056_rld_02_config_is_a_game_restart() {
         let p = Path::new(r"C:\i\fixtures\skdfx\addons\main\config.cpp");
-        let place = place(p, Path::new(r"C:\p\checks"), &sources()).unwrap();
+        let place = place(p, Path::new(r"C:\p\tests"), &sources()).unwrap();
         let (level, reason) = classify(p, &place, false, false);
         assert_eq!(level, "game-restart");
         assert!(reason.contains("Config is read at game start"));
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn us_055_rld_02_every_changed_sqf_is_a_game_restart_that_runs_the_rebuild() {
         let p = Path::new(r"C:\i\fixtures\skdfx\addons\main\functions\fn_version.sqf");
-        let place = place(p, Path::new(r"C:\p\checks"), &sources()).unwrap();
+        let place = place(p, Path::new(r"C:\p\tests"), &sources()).unwrap();
         let (level, reason) = classify(p, &place, false, false);
         assert_eq!(level, "game-restart");
         assert!(
@@ -426,7 +426,7 @@ mod tests {
 
     #[test]
     fn rld_01_a_file_outside_every_watched_folder_is_refused_naming_them() {
-        let e = place(Path::new(r"C:\elsewhere\x.sqf"), Path::new(r"C:\p\checks"), &sources()).unwrap_err();
+        let e = place(Path::new(r"C:\elsewhere\x.sqf"), Path::new(r"C:\p\tests"), &sources()).unwrap_err();
         assert_eq!(e.code, 3);
         assert!(e.message.contains(r"C:\i\fixtures\skdfx\addons"), "{}", e.message);
     }

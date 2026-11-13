@@ -4,7 +4,7 @@
 # the M6 demo, reload watches the mod's addons folder, and a game-restart reload runs its own
 # `hemtt build` while no game process runs (RLD-06, docs/reloading.md).
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'
-checks = "checks"
+tests = "tests"
 
 [mods.cba]
 path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997'

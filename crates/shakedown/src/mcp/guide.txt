@@ -1,7 +1,7 @@
 Shakedown runs automated checks of an Arma 3 mod inside the running game, in singleplayer or on a dedicated server with game clients and headless clients.
 
 THE PROJECT
-The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under checks/; a check's id is its path there without .sqf.
+The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under the tests folder (shakedown.toml's tests, default tests/); a check's id is its path there without .sqf.
 
 START A SESSION
 1. status: is a runner up, does a session run? It works with no game.
@@ -26,10 +26,10 @@ ASK THE RUNNING GAME
 - logs {"machine": "p1", "check_id": "...", "grep": "Error", "last": 50}: a machine's log lines.
 - errors {"machine": "p1"}: script errors caught in the session, in checks and outside.
 - reset: puts the session back to its start state; every check starts with one anyway.
-- reload {"files": ["checks/x.sqf"]}: reloads changed files, or with none what changed under the mods' watched source folders, and says the level each needed and why. On a broken session it restarts the game, which brings every machine back.
+- reload {"files": ["tests/x.sqf"]}: reloads changed files, or with none what changed under the mods' watched source folders, and says the level each needed and why. On a broken session it restarts the game, which brings every machine back.
 
 WRITE A CHECK
-A check is a file checks/<id>.sqf. Its header is comment lines:
+A check is a file tests/<id>.sqf. Its header is comment lines:
   // @check US-019 The crate opens with the mod's action
   // @tags US-019 crate
   // @setups sp            (optional: only these setups)

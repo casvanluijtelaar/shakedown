@@ -115,7 +115,7 @@ pub fn reload_request(project: &config::Project, files: &[PathBuf], wait_s: Opti
     };
     Ok(Request::Reload {
         files,
-        checks: project.checks.clone(),
+        tests: project.tests.clone(),
         rebuild,
         wait_s,
     })
@@ -123,7 +123,7 @@ pub fn reload_request(project: &config::Project, files: &[PathBuf], wait_s: Opti
 
 /// `list` (`RUN-02`): each selected check once, from the files, with no runner.
 pub fn list(project: &config::Project, ids: &[String], tags: &[String]) -> Result<Value, CliError> {
-    let all = checks::discover(&project.checks)?;
+    let all = checks::discover(&project.tests)?;
     let mut selected = checks::select(&all, ids, tags)?;
     let mut seen = Vec::new();
     selected.retain(|c| {

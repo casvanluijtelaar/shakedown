@@ -49,7 +49,8 @@ pub enum Request {
     /// done, or after `wait_s` with state `applying`.
     Reload {
         files: Vec<PathBuf>,
-        checks: PathBuf,
+        /// The tests folder, the project file's `tests`.
+        tests: PathBuf,
         #[serde(default)]
         rebuild: Rebuild,
         wait_s: Option<f64>,
