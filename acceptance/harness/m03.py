@@ -473,6 +473,7 @@ def def_09(ctx):
     bad = [l for l in lines if re.search(r"Object .* not found", l)]
     resets = sum(1 for l in lines if MARKER.search(l) and "#" in l and " start " in l)
     ctx.log(f"DEF-09: {resets} check executions in the server's RPT, {len(bad)} Object not found lines")
+    assert resets, "the dedicated session ran no check, so no reset was watched"
     assert not bad, f"the server's RPT holds {len(bad)} Object not found lines, such as {bad[0]!r}"
 
 
