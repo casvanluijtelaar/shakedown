@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360" role="img" aria-label="Shakedown: test automation for Arma 3 mods">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161b17"/>
+      <stop offset="1" stop-color="#0d100e"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0d100e" stop-opacity="0.92"/>
+      <stop offset="0.55" stop-color="#0d100e" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#0d100e" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#2a332b" stroke-width="1"/>
+    </pattern>
+    <clipPath id="frame"><rect width="1280" height="360" rx="14"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#frame)">
+    <rect width="1280" height="360" fill="url(#bg)"/>
+    <rect width="1280" height="360" fill="url(#grid)" opacity="0.55"/>
+
+    <!-- Map contour lines -->
+    <g fill="none" stroke="#5c6b4a" stroke-width="1.4" opacity="0.5">
+      <path d="M640 380C700 300 800 290 880 230S1010 90 1120 100 1260 40 1300 -10"/>
+      <path d="M720 380C770 320 850 315 925 262S1040 140 1135 148 1265 95 1300 60"/>
+      <path d="M800 380C840 340 905 335 965 295S1065 195 1150 198 1270 150 1300 125"/>
+      <path d="M890 380C920 356 965 350 1010 325S1090 252 1165 250 1275 208 1300 190"/>
+      <path d="M990 380C1010 366 1040 360 1070 345S1125 305 1185 300 1280 268 1300 255"/>
+      <path d="M560 380C630 270 750 262 835 195S975 35 1100 48 1240 -5 1270 -20"/>
+      <path d="M480 380C560 240 700 232 790 160S940 -10 1060 0"/>
+    </g>
+    <!-- Grid reference marks -->
+    <g fill="#5c6b4a" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" opacity="0.8">
+      <text x="1206" y="352">024</text>
+      <text x="1126" y="352">022</text>
+      <text x="1046" y="352">020</text>
+      <text x="1250" y="216">061</text>
+      <text x="1250" y="136">063</text>
+      <text x="1250" y="56">065</text>
+    </g>
+
+    <rect width="1280" height="360" fill="url(#fade)"/>
+
+    <!-- Wordmark -->
+    <g transform="translate(72 0)">
+      <g transform="translate(0 92)">
+        <rect width="56" height="56" rx="10" fill="#a3c644"/>
+        <path d="M15 29l9 9 17-20" fill="none" stroke="#11150f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="76" y="140" fill="#eef2e6" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="62" font-weight="700" letter-spacing="5">SHAKEDOWN</text>
+      <text x="2" y="192" fill="#b9c2ab" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26">Test automation for Arma 3 mods</text>
+      <text x="2" y="228" fill="#7f8a72" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18">Checks in SQF, run inside a live game. Singleplayer and dedicated server.</text>
+    </g>
+
+    <!-- Result panel -->
+    <g transform="translate(792 86)" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">
+      <rect width="416" height="188" rx="10" fill="#11150f" fill-opacity="0.9" stroke="#2f3a2c"/>
+      <circle cx="22" cy="20" r="5" fill="#3a4636"/>
+      <circle cx="40" cy="20" r="5" fill="#3a4636"/>
+      <circle cx="58" cy="20" r="5" fill="#3a4636"/>
+      <text x="22" y="62" fill="#7f8a72">&gt; shakedown run --setup dedicated</text>
+      <text x="22" y="94"><tspan fill="#a3c644">pass</tspan><tspan fill="#d5dccb" x="102">smoke</tspan><tspan fill="#7f8a72" x="316">(0.4 s)</tspan></text>
+      <text x="22" y="120"><tspan fill="#a3c644">pass</tspan><tspan fill="#d5dccb" x="102">hook-attach</tspan><tspan fill="#7f8a72" x="316">(2.1 s)</tspan></text>
+      <text x="22" y="146"><tspan fill="#e0694f">fail</tspan><tspan fill="#d5dccb" x="102">rope-sync</tspan><tspan fill="#7f8a72" x="316">(5.0 s)</tspan></text>
+      <text x="22" y="172" fill="#7f8a72">2 passed, 1 failed, 0 invalid</text>
+    </g>
+  </g>
+</svg>

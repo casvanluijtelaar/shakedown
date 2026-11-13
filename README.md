@@ -1,15 +1,32 @@
-# Shakedown
+<p align="center">
+    <img src=".github/assets/banner.svg" alt="Shakedown: test automation for Arma 3 mods" width="100%">
+</p>
 
-Shakedown is Playwright for Arma 3: a test automation framework for Arma 3 addons and mods. You write checks in SQF, and Shakedown runs them inside a live game, in singleplayer or on a dedicated server with game clients and headless clients, all on one Windows machine.
+<p align="center">
+    <img src="https://img.shields.io/badge/Version-0.1.0--dev-blue.svg?style=flat-square" alt="Version 0.1.0, in development">
+    <img src="https://img.shields.io/badge/Arma%203-2.22+-a3c644.svg?style=flat-square" alt="Arma 3 2.22 or later">
+    <img src="https://img.shields.io/badge/Platform-Windows-lightgrey.svg?style=flat-square" alt="Windows">
+    <img src="https://img.shields.io/badge/Built%20with-Rust%20%2B%20SQF-orange.svg?style=flat-square" alt="Built with Rust and SQF">
+</p>
 
-- **One session, many checks.** The game starts once. Before every check the session is reset in place, in under a second, to the state its mission started in.
-- **Every machine by name.** A check builds a scene, makes a player act through the mod's own actions and CBA keybinds, waits for the outcome and asserts it on the server, `p1`, `p2` or every machine at once.
-- **A verdict that explains itself.** Every check ends `pass`, `fail` or `invalid`, with a reason. `fail` is the mod's or the check's fault. `invalid` means the environment failed, such as a crashed client. Script errors are traced to their machine and step. Each machine's log lines are kept with the check, and every run writes one result file.
-- **An AI agent can drive it.** `shakedown mcp` gives an agent such as Claude Code every command as a tool, with the same JSON as the command line.
+<p align="center">
+    <sup><strong><a href="#quickstart">Quickstart</a> | <a href="docs/index.md">Documentation</a> | <a href="spec/contract/index.md">Check API and command line</a></strong></sup>
+</p>
 
-> **Release state.** Shakedown 0.1.0 is in development: phase 1, the MVP. The repository is private, and nothing is published yet: there is no release download, no package and no public wiki. You install it by building it from this repository.
+**Shakedown** is Playwright for Arma 3. You write checks in SQF, and Shakedown runs them inside a live game and tells you which passed.
 
-## What you need
+## Features
+
+- **Singleplayer and dedicated server.** The same check runs in both, with game clients and headless clients, all on one Windows machine.
+- **Fast.** The game starts once. Every check gets a fresh session, reset in place in under a second.
+- **Multiplayer-aware.** Act as a player through the mod's own actions and CBA keybinds, and assert on the server, `p1`, `p2` or every machine at once.
+- **Clear verdicts.** Each check ends `pass`, `fail` or `invalid`, with a reason, its script errors and each machine's log lines.
+- **Agent-ready.** `shakedown mcp` gives an AI agent such as Claude Code every command as a tool.
+
+> [!NOTE]
+> Shakedown 0.1.0 is in development and nothing is published yet. You install it by building it from this repository.
+
+## Requirements
 
 - 64-bit Windows 10 or 11, with Arma 3 2.22 or later on the stable branch, installed by Steam.
 - The Steam client running and logged in to an account that owns Arma 3. Without it the game exits at once.
@@ -107,27 +124,8 @@ pass    smoke  (0.0 s)
 
 The exit code is 0 when every check passed, 1 when a check failed, and 2 when none failed and one was `invalid` or the run was stopped. Each run folder under `.shakedown\runs\` holds `result.json`, with each check's outcome, reason, steps, script errors and evidence, and each machine's log lines for the run and for each check. Add `--json` to any command for one JSON document on stdout. Git ignores everything in `.shakedown\`.
 
-## Learn more
+## Documentation
 
-- **The wiki** covers every feature for mod authors: the project file, setups, the whole check API, running checks, results, reloading, the agent tools and troubleshooting.
-- **[docs/](docs/index.md)** says how the built framework works, page by page.
+- **[docs/](docs/index.md)** covers every feature: the project file, sessions, writing and running checks, results, reloading and the agent tools.
 - **[spec/contract/](spec/contract/index.md)** is the public interface: the check API, the command line, the agent tools and the result file.
-
-## How it's built
-
-Shakedown is built with agentic engineering, following the Eidra agentic engineering guide. The specification, the user stories and the contract in this repository are the source. Language models write the code, the tests and the documentation against them, milestone by milestone. A framework developer builds each milestone. A test developer then checks the result against the stories without reading the code, and writes findings for the developer to fix. The work is MVP first and local first: everything that starts the game runs on a Windows test machine, and GitHub Actions runs only the gates that need no game.
-
-| Folder | What it holds |
-|---|---|
-| `research/` | What is known about the domain, each claim traced to a source. |
-| `spec/` | The client requirements, the specification, the contract, the roles and the user stories. |
-| `plan/` | The implementation plan, one concept per milestone, and deferred work. |
-| `docs/` | How the built framework works, and a report per finished milestone. |
-| `acceptance/` | The acceptance suite, its findings and its coverage, owned by the test developer. |
-| `crates/`, `addon/`, `fixtures/`, `e2e/` | The runner and command line, the extension, the in-game addon, the fixture mods and the end-to-end projects. |
-| `coordinator/` | The playbook a coordinator session loads to drive the loop. |
-| `tools/` | The install script and the OKF bundle check. |
-
-Every markdown document in the bundles is an Open Knowledge Format (OKF v0.2) concept, so `python3 tools/okf_check.py` can read the state of the project from the files. It needs Python 3.9+ and PyYAML, and CI runs it on every push. [CLAUDE.md](CLAUDE.md) is the map for agent sessions and holds the working rules. A coordinator session can drive the loop. Start it with:
-
-> You are the coordinator for this repository. Read CLAUDE.md and coordinator/playbook.md in full, and follow the playbook.
+- **[CLAUDE.md](CLAUDE.md)** is the map of this repository and how it is worked on.
