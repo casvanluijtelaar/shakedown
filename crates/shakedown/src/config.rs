@@ -360,11 +360,19 @@ mods = ["cba"]
 
     #[test]
     fn cfg_01_m10_1_a_relative_path_that_climbs_out_of_the_project_folder_holds_no_dot_dot() {
-        let root = PathBuf::from(r"C:\repo\acceptance\shakedown");
-        let text = GOOD.replace(r"C:\mods\cba", r"..\..\.hemttout\.\build");
+        // `/` separates on every system, `\` only on Windows, where the game runs.
+        let repo = std::env::temp_dir().join("repo");
+        let root = repo.join("acceptance").join("shakedown");
+        let built = repo.join(".hemttout").join("build");
+        let text = GOOD.replace(r"C:\mods\cba", "../../.hemttout/./build");
         let p = parse(&root, &text).unwrap();
-        assert_eq!(p.mods["cba"].path, PathBuf::from(r"C:\repo\.hemttout\build"));
-        assert_eq!(lexical(Path::new(r"a\..\..\b")), PathBuf::from(r"..\b"));
+        assert_eq!(p.mods["cba"].path, built);
+        assert_eq!(lexical(Path::new("a/../../b")), Path::new("..").join("b"));
+        if cfg!(windows) {
+            let text = GOOD.replace(r"C:\mods\cba", r"..\..\.hemttout\.\build");
+            let p = parse(&root, &text).unwrap();
+            assert_eq!(p.mods["cba"].path, built);
+        }
     }
 
     #[test]

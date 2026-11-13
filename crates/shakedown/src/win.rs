@@ -569,7 +569,7 @@ mod imp {
         fn sec_02_a_private_file_grants_the_current_user_only() {
             use windows::Win32::Foundation::{HLOCAL, LocalFree};
             use windows::Win32::Security::Authorization::{
-                ConvertSecurityDescriptorToStringSecurityDescriptorW, SDDL_REVISION_1,
+                ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
             };
             use windows::Win32::Security::{DACL_SECURITY_INFORMATION, GetFileSecurityW, PSECURITY_DESCRIPTOR};
 
@@ -598,6 +598,40 @@ mod imp {
                 }
                 .as_bool()
             );
+            let sddl = dacl_text(sd);
+            std::fs::remove_dir_all(&dir).unwrap();
+
+            // Protected (P), one rule: full control (FA) for the current user, nothing inherited.
+            // The expected access list is built from the user's SID and written out the same way,
+            // because SDDL text names some accounts by an alias, such as `LA` for the built-in
+            // Administrator, instead of by their SID.
+            let expected = format!("D:P(A;;FA;;;{})", current_user_sid().unwrap());
+            let expected: Vec<u16> = expected.encode_utf16().chain(std::iter::once(0)).collect();
+            let mut want = PSECURITY_DESCRIPTOR::default();
+            unsafe {
+                ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                    PCWSTR(expected.as_ptr()),
+                    SDDL_REVISION_1,
+                    &mut want,
+                    None,
+                )
+            }
+            .unwrap();
+            let expected = dacl_text(want);
+            unsafe {
+                LocalFree(Some(HLOCAL(want.0)));
+            }
+            assert_eq!(sddl, expected);
+        }
+
+        /// The access list of a security descriptor as SDDL text.
+        fn dacl_text(sd: windows::Win32::Security::PSECURITY_DESCRIPTOR) -> String {
+            use windows::Win32::Foundation::{HLOCAL, LocalFree};
+            use windows::Win32::Security::Authorization::{
+                ConvertSecurityDescriptorToStringSecurityDescriptorW, SDDL_REVISION_1,
+            };
+            use windows::Win32::Security::DACL_SECURITY_INFORMATION;
+
             let mut text = PWSTR::null();
             unsafe {
                 ConvertSecurityDescriptorToStringSecurityDescriptorW(
@@ -613,9 +647,7 @@ mod imp {
             unsafe {
                 LocalFree(Some(HLOCAL(text.0.cast())));
             }
-            std::fs::remove_dir_all(&dir).unwrap();
-            // Protected (P), one rule: full control (FA) for the current user, nothing inherited.
-            assert_eq!(sddl, format!("D:P(A;;FA;;;{})", current_user_sid().unwrap()));
+            sddl
         }
 
         #[test]
