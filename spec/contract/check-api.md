@@ -160,4 +160,4 @@ Any script error on any machine whose text contains `text` (case-insensitive), f
 
 ## Not in this contract yet
 
-ACE interaction actions (`ACT-04`), event recording and waits on events (`EVT-01`), real key input (`ACT-05`), repeats (`OUT-02`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file when a milestone takes them up.
+Joining and leaving (`MCH-01`), the helper library (`API-06`), event recording and waits on events (`EVT-01`), handing over to a manual tester (`MAN-01`), ACE interaction actions (`ACT-04`), real key input (`ACT-05`), repeats (`OUT-02`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.

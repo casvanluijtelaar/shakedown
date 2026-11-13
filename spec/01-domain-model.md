@@ -28,7 +28,7 @@ Run     1──1 ResultFile
 | Entity | Attributes | Lives |
 |---|---|---|
 | **Project** | Root folder; the `shakedown.toml` file; the tests folder, which holds the check files (default `tests/`); the `.shakedown/` folder. | As long as the repository. |
-| **Setup** | Name; mode (`singleplayer` or `dedicated`); `clients` (game clients, 1 in singleplayer); `headless` (headless clients, 0 in singleplayer); `mods` (ordered list of mod folders); `world` (default `VR`). | In the project file. |
+| **Setup** | Name; mode (`singleplayer` or `dedicated`); `clients` (game clients, 1 in singleplayer); `headless` (headless clients, 0 in singleplayer); `late` (game clients the session does not start, which a check makes join, 0 by default, `MCH-01`); `mods` (ordered list of mod folders); `world` (default `VR`). | In the project file. |
 | **Session** | Id (`s-` plus a UTC timestamp `YYYYMMDD-HHMMSS`); setup; token; state; session folder; game port; start time; the machines; the mission start count; the reset baseline. | From `session start` to `session stop`. |
 | **Machine** | Name (`server`, `pN`, `hcN`); kind (`server`, `client`, `headless`); start number (1 for the first start of that role in a session); process id and process start time; profile folder; state; last answer time; health flag and the clocks of its last heartbeat (`HLT-02`); loaded versions (game build, each mod's `CfgPatches` version). | One per start of a role. |
 | **Check** | Id; name; tags; setups (all when not given); timeout (default 120 s); reset mode (`in-place` or `mission`); source text. | In the tests folder. Read fresh for every execution. |
@@ -81,9 +81,9 @@ launched ──▶ connected ──▶ ready ──▶ stopped
 | `connected` | The extension connected and showed the session token. The session mission has not reported in. |
 | `ready` | The in-game agent answered the runner's hello in the session mission, and on a dedicated session the server reports the client at client state 10 (`BRIEFING READ`) or later. |
 | `lost` | The process exited without being asked, or the machine did not answer an order within its runner ceiling, or its heartbeat did not come for 10 s (`HLT-02`). Records the wall-clock time, the exit code and any crash dump found in its profile folder. |
-| `stopped` | The process ended after the runner asked it to. |
+| `stopped` | The process ended after the runner asked it to, including a client a check made leave (`MCH-01`). |
 
-A `game-restart` reload or a `mission` reset on a dedicated session replaces a machine with a new start of the same role (start number plus one). The old machine ends `stopped`.
+A `game-restart` reload or a `mission` reset on a dedicated session replaces a machine with a new start of the same role (start number plus one). The old machine ends `stopped`. A client that joins again after it left is a new start of its role too (`MCH-01`).
 
 ### Run
 
