@@ -84,6 +84,16 @@ addMissionEventHandler ["EntityRespawned", {
     if (!isNull _old) then { skd_created pushBack _old };
 }];
 
+// On a dedicated server, every user that leaves is reported to the runner by its profile name,
+// which is its machine name, so a leave returns once the server has seen it go (MCH-01). The
+// Steam ID the event also gives stays here.
+if (isServer && { isMultiplayer }) then {
+    addMissionEventHandler ["PlayerDisconnected", {
+        params ["_id", "_uid", "_name"];
+        [createHashMapFromArray [["kind", "disconnected"], ["machine", skd_machine], ["name", _name]]] call skd_fnc_send;
+    }];
+};
+
 // Orders a machine routed to another through the runner (P-03): their answers, the polls this
 // machine asked others for, and the polls it runs for another machine.
 skd_routes = createHashMap;

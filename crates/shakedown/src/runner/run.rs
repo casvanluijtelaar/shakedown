@@ -543,9 +543,17 @@ async fn execute_check(
     }
     // P-05 step 3 for reset mode `mission` (RST-06): the mission restart comes before the start
     // marker and the context, which a mission restart clears.
-    if header.reset == "mission"
-        && let Err((machine, message)) = session.mission_restart(runner, &|_| {}).await
-    {
+    // The machines the session started with come back before the mission restart, which
+    // restarts the machines the session has (MCH-01).
+    let restart = if header.reset == "mission" {
+        match session.restore_machines(runner).await {
+            Ok(()) => session.mission_restart(runner, &|_| {}).await,
+            Err(message) => Err((session.lead().to_string(), message)),
+        }
+    } else {
+        Ok(())
+    };
+    if let Err((machine, message)) = restart {
         session.release();
         session.set_broken(
             &machine,
@@ -850,6 +858,8 @@ async fn prepare_and_execute(
         "source": checks::body_source(text.as_ref().map(String::as_str).unwrap_or_default()),
         "timeout": header.timeout_s,
         "machines": session.machine_names(),
+        // The default ceiling of skd_fnc_join (MCH-01).
+        "start_timeout": setup.start_timeout,
         "mode": setup.mode.as_str(),
         "setup": {
             "name": setup.name,
@@ -921,6 +931,9 @@ pub const RESET_CEILING_S: f64 = 15.0;
 /// `restore` and `verify` on every machine at once, each phase waiting for every machine. Returns
 /// how long it took, or what did not match when it failed or a machine did not answer.
 pub async fn reset(runner: &Runner, session: &Arc<Session>) -> Result<f64, String> {
+    // First the machines the session started with, within the start ceiling; the reset in
+    // place after it keeps its own ceiling (MCH-01).
+    session.restore_machines(runner).await?;
     let clock = Instant::now();
     let lead = session.lead();
     let left = || (RESET_CEILING_S - clock.elapsed().as_secs_f64()).max(0.1);

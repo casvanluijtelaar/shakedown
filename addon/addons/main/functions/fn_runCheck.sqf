@@ -3,7 +3,8 @@
     spawns it, waits for it to end or for its timeout, and sends the end report.
 
     Arguments: [order] - HashMap with "id", "check_id", "source", "timeout", and the session's
-    "machines", "mode" and "setup" for the context functions (check API, "Context").
+    "machines", "mode" and "setup" for the context functions (check API, "Context"), and its
+    "start_timeout", the default ceiling of skd_fnc_join.
 */
 params ["_order"];
 private _timeout = _order getOrDefault ["timeout", 120];
@@ -18,6 +19,7 @@ skd_check = createHashMapFromArray [
     ["machines", _order getOrDefault ["machines", [skd_machine]]],
     ["mode", _order getOrDefault ["mode", "singleplayer"]],
     ["setup", _order getOrDefault ["setup", createHashMap]],
+    ["startTimeout", _order getOrDefault ["start_timeout", 180]],
     ["done", false]
 ];
 

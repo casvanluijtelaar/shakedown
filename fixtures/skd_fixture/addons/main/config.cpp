@@ -10,8 +10,8 @@ class CfgPatches {
         requiredVersion = 2.18;
         requiredAddons[] = {"A3_Functions_F", "A3_Weapons_F"};
         version = 0.0;
-        versionStr = "0.0.5";
-        versionAr[] = {0, 0, 5};
+        versionStr = "0.0.6";
+        versionAr[] = {0, 0, 6};
     };
 };
 

@@ -22,6 +22,8 @@ use crate::paths;
 use crate::win::{self, Child, Job};
 use crate::wire::SetupSpec;
 
+pub mod join;
+
 /// How often a wait polls a process or a state.
 const POLL: Duration = Duration::from_millis(200);
 /// How long a stop waits for each process to end (`P-10` step 2).
@@ -269,6 +271,9 @@ struct Inner {
     /// Every script error the handlers sent in this session, inside a check or not, the newest
     /// last, for `errors` and `inspect` (`ERR-05`, `INS-01`).
     history: Vec<Value>,
+    /// Each `PlayerDisconnected` the server's agent reported: the user's profile name and when
+    /// it came (`MCH-01`).
+    disconnects: Vec<(String, Instant)>,
 }
 
 /// The most script errors a session keeps for `errors`.
@@ -633,7 +638,7 @@ impl Session {
     /// Serves one machine's extension connection until it closes.
     pub(crate) async fn extension(
         self: Arc<Self>,
-        runner: &Runner,
+        runner: &Arc<Runner>,
         machine: String,
         mut lines: Lines<BufReader<OwnedReadHalf>>,
         mut write: OwnedWriteHalf,
@@ -677,7 +682,7 @@ impl Session {
         });
         while let Ok(Some(line)) = lines.next_line().await {
             match serde_json::from_str::<Value>(&line) {
-                Ok(message) => self.message(&machine, start, message),
+                Ok(message) => self.message(runner, &machine, start, message),
                 Err(e) => runner.log(&format!("{} {machine}: unreadable message: {e}", self.id)),
             }
         }
@@ -702,7 +707,7 @@ impl Session {
         runner.log(&format!("{} {machine}: extension disconnected", self.id));
     }
 
-    fn message(self: &Arc<Self>, machine: &str, start: u32, message: Value) {
+    fn message(self: &Arc<Self>, runner: &Arc<Runner>, machine: &str, start: u32, message: Value) {
         let kind = message["kind"].as_str().unwrap_or_default().to_string();
         let mut inner = self.inner.lock().unwrap();
         if !inner.machines.iter().any(|m| m.name == machine && m.start == start) {
@@ -761,6 +766,19 @@ impl Session {
                     inner.history.remove(0);
                 }
                 inner.errors.push(message);
+            }
+            // The server saw a user leave (MCH-01).
+            "disconnected" => {
+                Session::disconnected(&mut inner, message["name"].as_str().unwrap_or_default());
+            }
+            // The lead asks for a join or a leave in a check (MCH-01).
+            "join" | "leave" => {
+                drop(inner);
+                let me = Arc::clone(self);
+                let runner = Arc::clone(runner);
+                let from = machine.to_string();
+                tokio::spawn(async move { me.machine_request(runner, from, message).await });
+                return;
             }
             // A machine asks the runner to send an order to another (P-03 step 1).
             "route" => {
@@ -1062,14 +1080,15 @@ impl Session {
         super::record::remove_session(&self.id);
         // Every RPT of the session's machines, redacted once nothing writes it any more (LOG-02).
         let redactor = runner.redactor();
-        let profiles: Vec<PathBuf> = self
-            .inner
-            .lock()
-            .unwrap()
-            .machines
-            .iter()
-            .map(|m| m.profile.clone())
-            .collect();
+        let profiles: Vec<PathBuf> = {
+            let inner = self.inner.lock().unwrap();
+            inner
+                .machines
+                .iter()
+                .chain(inner.retired.iter().map(|(m, _)| m))
+                .map(|m| m.profile.clone())
+                .collect()
+        };
         for profile in profiles {
             for entry in std::fs::read_dir(&profile).into_iter().flatten().flatten() {
                 let path = entry.path();
@@ -1271,8 +1290,10 @@ pub async fn start(
     let io =
         |e: std::io::Error| CliError::framework(format!("Cannot write the session folder {}: {e}.", folder.display()));
     let mission_name = mission::folder_name(&id, &spec.setup.world);
-    let sqm = mission::mission_sqm(spec.setup.clients, spec.setup.headless, spec.setup.spawn);
-    let ext = mission::description_ext(spec.setup.clients + spec.setup.headless);
+    // A late client needs a slot of its own in the mission and on the server (MCH-01).
+    let players = spec.setup.clients + spec.setup.late;
+    let sqm = mission::mission_sqm(players, spec.setup.headless, spec.setup.spawn);
+    let ext = mission::description_ext(players + spec.setup.headless);
     let token = paths::token("skd_s_");
     std::fs::create_dir_all(&folder).map_err(io)?;
     super::record::add_session(&id, &folder);
@@ -1321,6 +1342,7 @@ pub async fn start(
             refs: HashMap::new(),
             errors: Vec::new(),
             history: Vec::new(),
+            disconnects: Vec::new(),
         }),
         changed: Notify::new(),
         orders: AtomicU64::new(0),
@@ -1344,7 +1366,7 @@ pub async fn start(
                 &spec.setup.world,
                 &session.password(),
                 &session.command_password(),
-                spec.setup.clients + spec.setup.headless,
+                spec.setup.clients + spec.setup.late + spec.setup.headless,
             ),
         )
         .map_err(io)?;
@@ -1522,7 +1544,11 @@ impl Session {
 
     /// Asks every machine for the version of each mod with a patch key, as it loaded it (RES-02).
     async fn versions(&self) {
-        let plan = machine_plan(&self.spec);
+        self.versions_of(&self.machine_names()).await;
+    }
+
+    /// Asks the named machines for the version of each mod with a patch key (RES-02).
+    async fn versions_of(&self, names: &[String]) {
         let patched: Vec<(String, String)> = self
             .spec
             .mods
@@ -1534,11 +1560,13 @@ impl Session {
         }
         let patches: Vec<&str> = patched.iter().map(|(_, p)| p.as_str()).collect();
         let source = r#"_this apply { private _c = configFile >> "CfgPatches" >> _x; if (isClass _c) then { getText (_c >> "versionStr") } else { nil } }"#;
-        for (name, _) in &plan {
+        for name in names {
             let answer = self.exec(name, source, json!(patches), ORDER_CEILING_S).await;
             let versions = answer.ok().map(|a| a["value"].clone()).unwrap_or(Value::Null);
             let mut inner = self.inner.lock().unwrap();
-            let m = inner.machines.iter_mut().find(|m| &m.name == name).unwrap();
+            let Some(m) = inner.machines.iter_mut().find(|m| &m.name == name) else {
+                continue;
+            };
             m.mods = patched
                 .iter()
                 .enumerate()
@@ -2353,6 +2381,7 @@ mod tests {
             refs: HashMap::new(),
             errors: vec![],
             history: vec![],
+            disconnects: vec![],
         };
         inner.machines[0].beats = beats(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
         assert!(

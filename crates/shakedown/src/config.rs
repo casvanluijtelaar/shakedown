@@ -42,6 +42,9 @@ pub struct Setup {
     pub mode: Mode,
     pub clients: u32,
     pub headless: u32,
+    /// Game clients the session does not start, which a check joins (`MCH-01`).
+    #[serde(default)]
+    pub late: u32,
     pub mods: Vec<String>,
     pub world: String,
     pub spawn: [f64; 2],
@@ -92,6 +95,7 @@ struct RawSetup {
     mode: Mode,
     clients: Option<Spanned<i64>>,
     headless: Option<Spanned<i64>>,
+    late: Option<Spanned<i64>>,
     mods: Spanned<Vec<Spanned<String>>>,
     world: Option<String>,
     spawn: Option<[f64; 2]>,
@@ -261,6 +265,7 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
         let single = s.mode == Mode::Singleplayer;
         let clients = ranged(&s.clients, "clients", 1, 8, 1)?;
         let headless = ranged(&s.headless, "headless", 0, 8, 0)?;
+        let late = ranged(&s.late, "late", 0, 8, 0)?;
         let start_timeout = ranged(&s.start_timeout, "start_timeout", 30, 1800, 180)?;
         for m in s.mods.get_ref() {
             if !mods.contains_key(m.get_ref()) {
@@ -288,6 +293,7 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
                 mode: s.mode,
                 clients: if single { 1 } else { clients as u32 },
                 headless: if single { 0 } else { headless as u32 },
+                late: if single { 0 } else { late as u32 },
                 mods: s.mods.into_inner().into_iter().map(Spanned::into_inner).collect(),
                 world: s.world.unwrap_or_else(|| "VR".into()),
                 spawn: s.spawn.unwrap_or([100.0, 100.0]),
@@ -374,6 +380,48 @@ mods = ["cba"]
             let p = parse(&root, &text).unwrap();
             assert_eq!(p.mods["cba"].path, built);
         }
+    }
+
+    #[test]
+    fn us_066_mch_01_cfg_01_late_clients_default_to_none_and_are_none_in_singleplayer() {
+        let text = format!(
+            "{GOOD}
+[setups.ded]
+mode = \"dedicated\"
+clients = 2
+late = 1
+mods = []
+"
+        );
+        let p = parse(&root(), &text).unwrap();
+        assert_eq!(p.setup("ded").unwrap().late, 1);
+        assert_eq!(p.setup("sp").unwrap().late, 0);
+        let sp = GOOD.replace(
+            "mods = [\"cba\"]",
+            "late = 2
+mods = [\"cba\"]",
+        );
+        assert_eq!(parse(&root(), &sp).unwrap().setup("sp").unwrap().late, 0);
+    }
+
+    #[test]
+    fn cfg_01_mch_01_a_late_count_out_of_range_is_refused_with_its_line() {
+        let text = format!(
+            "{GOOD}
+[setups.ded]
+mode = \"dedicated\"
+late = 9
+mods = []
+"
+        );
+        let e = parse(&root(), &text).unwrap_err();
+        assert_eq!(e.code, 3);
+        assert!(
+            e.message.contains("setups.ded.late") && e.message.contains("0 to 8"),
+            "{}",
+            e.message
+        );
+        assert!(e.message.contains("line 15"), "{}", e.message);
     }
 
     #[test]

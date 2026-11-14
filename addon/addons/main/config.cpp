@@ -57,6 +57,7 @@ class CfgFunctions {
             class cliExpect {};
             class inspect {};
             class typeName {};
+            class joinLeave {};
         };
         // The check API (spec/contract/check-api.md).
         class api {
@@ -80,6 +81,8 @@ class CfgFunctions {
             class setWeather {};
             class useAction {};
             class pressKey {};
+            class join {};
+            class leave {};
             class cleanup {};
             class evidence {};
             class fail {};
