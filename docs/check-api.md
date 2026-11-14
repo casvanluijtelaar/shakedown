@@ -1,7 +1,7 @@
 ---
 type: Documentation
 title: The check API by example
-description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, cleanups and ending a check - and what each does when it fails.
+description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, joining and leaving, cleanups and ending a check - and what each does when it fails.
 status: draft
 ---
 
@@ -120,6 +120,18 @@ private _passed = ["p1", {
 }] call skd_fnc_on;
 [_passed, "==", false, "off a rope the key passes on to the game"] call skd_fnc_expect;
 ```
+
+## Joining and leaving
+
+On a dedicated session a check makes a game client join late, leave and join again:
+
+```sqf
+["p3"] call skd_fnc_join;      // a late client (setup key late) starts and is ready
+["p2"] call skd_fnc_leave;     // p2 goes; the server's PlayerDisconnected has fired
+["p2", 120] call skd_fnc_join; // p2 comes back with start number 2, ceiling 120 s
+```
+
+Each is a step of its own, `join p3` or `leave p2`. In singleplayer either ends the check `fail` / `check-error`: `skd_fnc_leave: joining and leaving needs a dedicated session; ...`. [Dedicated sessions](dedicated-sessions.md#joining-late-leaving-and-joining-again) shows what each does, its failures and the reset that brings the clients back.
 
 ## Cleanups and ending a check
 

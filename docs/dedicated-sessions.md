@@ -1,7 +1,7 @@
 ---
 type: Documentation
 title: Dedicated sessions
-description: How to declare and start a dedicated server with game clients and headless clients on one machine, how a check names each machine and group, how code, waits and agreement reach other machines, what the reset does across machines, and how to see a session's machines with status.
+description: How to declare and start a dedicated server with game clients and headless clients on one machine, how a check names each machine and group, how code, waits and agreement reach other machines, how a check makes a client join late, leave and join again, what the reset does across machines, and how to see a session's machines with status.
 status: draft
 ---
 
@@ -16,6 +16,7 @@ A dedicated session is a dedicated server with game clients and headless clients
 mode = "dedicated"
 clients = 2            # game clients p1 and p2
 headless = 1           # headless client hc1
+late = 1               # a late game client p3, which a check joins (optional)
 mods = ["cba", "agh"]
 ```
 
@@ -113,11 +114,50 @@ Which functions look an object in `args` up, and when:
 
 So wait first, then act: `skd_fnc_on` sent at once after `skd_fnc_create` can get `objNull` on a client, and code that polls the object inside it then reads `objNull` until its ceiling. After the wait above, the client has the object, and a `skd_fnc_on` that follows gets it.
 
+## Joining late, leaving and joining again
+
+A setup's `late` clients are named after the clients it starts: `clients = 2` and `late = 1` give `p1` and `p2` at the start and the late `p3`, which no session start launches. A check makes a game client join, leave and join again; the contract is [Joining and leaving](../spec/contract/check-api.md#joining-and-leaving).
+
+```sqf
+// @check US-066 a client that joins late sees the crate the others see
+// @setups dedicated
+// @timeout 240
+
+private _crate = ["a crate with a flag on the server", {
+    private _c = ["skdfx_Crate", AGLToASL [120, 110, 0], 0] call skd_fnc_create;
+    ["server", { (_this select 0) setVariable ["flag", 7, true] }, [_c]] call skd_fnc_on;
+    _c
+}] call skd_fnc_step;
+
+["p3"] call skd_fnc_join;     // a step "join p3"; returns once p3 is ready
+
+["every machine agrees on the crate", {
+    ["all", { getPosASL (_this select 0) }, "the crate's position", 0.1, 30, [_crate]] call skd_fnc_expectAgree;
+    ["all", { (_this select 0) getVariable ["flag", -1] }, "the crate's flag", 0, 30, [_crate]] call skd_fnc_expectAgree;
+}] call skd_fnc_step;
+
+["p2"] call skd_fnc_leave;    // a step "leave p2"; returns once the server saw p2 go
+["p2"] call skd_fnc_join;     // p2 is back with start number 2 and a new unit
+```
+
+- **`skd_fnc_join`** starts a new process for the machine, with its own profile folder `machines\<name>-<start>`. A late client's first join is start 1; a client that left and joins again takes the next start number of its name. It returns once the client is ready, as a start's client is: its agent answers and the server sees it at client state 10. On the test machine a join takes about 30 s, so give the check an `@timeout` that leaves room for it; the join's own ceiling defaults to the setup's `start_timeout`, cut to the time the check has left. `status` lists the machine from its launch; `skd_fnc_machines`, `"all"` and `"clients"` include it once it is ready.
+- **`skd_fnc_leave`** has the server kick the client by its name, which the server takes at once, then ends the client's process, and returns once the server's `PlayerDisconnected` event has fired for it, which on the test machine is a fraction of a second. The machine is then gone from `status` and from `skd_fnc_machines`; its start ends `stopped` in the result file, not `lost`, so the check goes on and the session stays `ready`. Its unit goes as the mission removes a disconnected player's unit; a check that reads what the mod did about it reads it on the server or the clients that stay.
+- **A join that fails** is the environment's failure: a client that is not ready within the ceiling, or whose process exits during the join, ends the check `invalid` / `machine-lost` naming it, with its last 20 RPT lines in the evidence and, for an exit, its exit code. Its process is stopped and the session stays `ready` without it.
+- **A wrong machine** is the check's mistake: joining or leaving `server`, a headless client, a machine the setup does not name, a client already in or one already out, or anything in singleplayer, ends the check `fail` / `check-error` with the machines that can join and leave at that moment:
+
+  ```
+  skd_fnc_join: p1 is in the session already. The machines that can join now: p3; that can leave now: p1, p2.
+  ```
+
+Each join and leave is a step of the check, `join p3` or `leave p2`, with its start and duration in the result file, and the result file lists every start of a machine that took part, each with the mod versions it loaded.
+
 ## The reset across machines
 
 Before every check, and on `shakedown reset`, every machine is brought back to the state of the mission's start, in four phases the runner drives on every machine at once: the previous check's cleanups run, each on the machine it names (the server unless it names another); each client frees its player (alive again after a death, out of any vehicle); each machine deletes what was created on it since the start, restores its own player's loadout, health, position, direction and animation, and sets the server's start date and weather; then each machine checks the result, the server also every player's position as it sees it. On the test machine a reset after a check that changed everything takes about 0.75 s, and one with nothing to undo about 0.45 s.
 
 A player killed in a check respawns at once and is back at its start position for the next check; the body is deleted, and the client keeps its start number 1.
+
+Before those phases the reset brings the session back to the machines it started with: a late client that joined leaves, and a client that left joins again, which takes about as long as its join. A client that left and joined again in the check keeps that start. So every check starts with the setup's clients and no late one.
 
 ```
 shakedown reset

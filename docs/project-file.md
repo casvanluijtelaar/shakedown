@@ -47,12 +47,13 @@ A project with no mod declares `mods = []` in its setup and no `[mods.*]` table;
 | `setups.<name>.mode` | yes | `"singleplayer"` or `"dedicated"`. |
 | `setups.<name>.clients` | no, default 1 | A dedicated setup's game clients, `p1` to `pN`, 1 to 8. |
 | `setups.<name>.headless` | no, default 0 | A dedicated setup's headless clients, `hc1` to `hcN`, 0 to 8. |
+| `setups.<name>.late` | no, default 0 | A dedicated setup's late game clients, 0 to 8, named after its clients: `clients = 2` and `late = 1` make `p3` late. The session does not start them; a check joins one with `skd_fnc_join` ([Dedicated sessions](dedicated-sessions.md#joining-late-leaving-and-joining-again)). |
 | `setups.<name>.mods` | yes | The names of the mods to load, in load order. The framework's own addon is loaded after them. |
 | `setups.<name>.world` | no, default `"VR"` | The world the session mission is on. |
 | `setups.<name>.spawn` | no, default `[100, 100]` | Where `p1` starts; `pN` starts 10 m further east per N. |
 | `setups.<name>.start_timeout` | no, default 180 | Seconds from the first launch to the session being ready, 30 to 1800. A dedicated start of a server, two clients and a headless client takes about 45 s on the test machine. |
 
-A singleplayer setup always has one game client, `p1`, and no headless client; `clients` and `headless` are ignored for it. Single quotes keep backslashes in Windows paths as they are. A relative path is relative to the project folder, and may climb out of it: with the project in `acceptance\shakedown\` of the mod's repository, `path = '..\..\.hemttout\build'` names the repository's build. Shakedown resolves `.` and `..` before it starts the game, so a committed `shakedown.toml` needs no absolute path to the mod. Mod and setup names are letters, digits and `-`, starting with a letter.
+A singleplayer setup always has one game client, `p1`, and no headless client; `clients`, `headless` and `late` are ignored for it. Single quotes keep backslashes in Windows paths as they are. A relative path is relative to the project folder, and may climb out of it: with the project in `acceptance\shakedown\` of the mod's repository, `path = '..\..\.hemttout\build'` names the repository's build. Shakedown resolves `.` and `..` before it starts the game, so a committed `shakedown.toml` needs no absolute path to the mod. Mod and setup names are letters, digits and `-`, starting with a letter.
 
 ## Mistakes
 
