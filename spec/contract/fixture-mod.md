@@ -58,6 +58,11 @@ prefix = 'skdfx_cba\addons'
 
 `skdfx_flag` is `nil` at every mission start. `setFlagLater` gives a wait a target whose arrival time is known: a wait with a ceiling above `delay` sees the value; one below it does not.
 
+### A record of the players who left (`MCH-01`)
+
+- On a dedicated server, a `PlayerDisconnected` mission event handler appends the profile name of each player that leaves to the array `skdfx_disconnected` in `missionNamespace` and sets it public. A machine's profile name is its machine name (`DM-11`), so after `p2` leaves, `skdfx_disconnected` holds `"p2"`; a player who leaves twice is in it twice.
+- `skdfx_disconnected` is `[]` at every mission start, on every machine. Read it on the server, or on a client once it has replicated, with `missionNamespace getVariable ["skdfx_disconnected", []]`.
+
 ### A script error on demand (`ERR-01` to `ERR-04`)
 
 - `skdfx_fnc_throw`: `[] call skdfx_fnc_throw` raises one script error on the machine it runs on, whose text contains `_skdfx_undefined` (an undefined local variable used in an expression), from the file `\skdfx\addons\main\functions\fn_throw.sqf`. It then returns `nil`. Called with `spawn` the error is raised in spawned code; called through `remoteExec`, on the target. Called in unscheduled code, such as `isNil`, an event handler or `remoteExecCall`, it raises nothing, because the engine reports no undefined variable there (`SPK-07`).
@@ -130,4 +135,4 @@ rebuild = 'copy /y "<project>\stage\skdfx_cba\addons\main\functions\fnc_version.
 
 ## What the fixtures do not do
 
-Unless a test calls a function of [Failures on demand](#failures-on-demand-fix-01-fix-02), they change no time, weather or player state on their own, run no per-frame code, create nothing at mission start, and log nothing to the RPT except through the engine's own messages and the deliberate error of `skdfx_fnc_throw`. A reset therefore returns them to their start state, except `skdfx_openCount`, `skdfx_refusedCount` and `skdfx_flag`, which only a mission restart clears.
+Unless a test calls a function of [Failures on demand](#failures-on-demand-fix-01-fix-02), they change no time, weather or player state on their own, run no per-frame code, create nothing at mission start, and log nothing to the RPT except through the engine's own messages and the deliberate error of `skdfx_fnc_throw`. A reset therefore returns them to their start state, except `skdfx_openCount`, `skdfx_refusedCount`, `skdfx_flag` and `skdfx_disconnected`, which only a mission restart clears.

@@ -38,6 +38,7 @@ mods = ["cba", "agh"]  # mod names, loaded in this order, before the framework's
 mode = "dedicated"
 clients = 2            # game clients, default 1; always 1 in singleplayer
 headless = 0           # headless clients, default 0; always 0 in singleplayer
+late = 1               # late game clients, which a check joins, default 0; always 0 in singleplayer (MCH-01)
 mods = ["cba", "agh"]
 world = "VR"           # default "VR"
 spawn = [100, 100]     # default [100, 100]: where p1 starts; pN starts 10 m further east per N
@@ -57,6 +58,7 @@ start_timeout = 180    # default 180 seconds (SES-04)
 | `setups.<name>.mode` | `"singleplayer"` or `"dedicated"` | yes | |
 | `setups.<name>.clients` | integer 1-8 | no | |
 | `setups.<name>.headless` | integer 0-8 | no | |
+| `setups.<name>.late` | integer 0-8 | no | Game clients the session does not start, named after the clients it does: `clients = 2` and `late = 1` give `p1`, `p2` and the late `p3`, which a check starts with `skd_fnc_join` ([check-api.md](check-api.md#joining-and-leaving), `MCH-01`). |
 | `setups.<name>.mods` | array of mod names | yes | |
 | `setups.<name>.world` | string | no | The world's class name in `CfgWorlds`. |
 | `setups.<name>.spawn` | `[x, y]` | no | |

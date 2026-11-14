@@ -67,7 +67,7 @@ private _wall = ["place a wall in front of p1", {
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `skd_fnc_machines` | `[]` | Array of the session's machine names, in the order `server`, `p1`..`pN`, `hc1`..`hcN`. In singleplayer `["p1"]`. |
+| `skd_fnc_machines` | `[]` | Array of the names of the session's machines whose process runs, in the order `server`, `p1`..`pN`, `hc1`..`hcN`: a late client only once it has joined, a client that left not until it joins again. In singleplayer `["p1"]`. |
 | `skd_fnc_setup` | `[]` | HashMap with `"name"`, `"mode"` (`"singleplayer"` or `"dedicated"`), `"clients"`, `"headless"`, `"world"`. |
 | `skd_fnc_player` | `[machine]` | The unit the player of that machine controls, as the lead machine sees it: on a dedicated session the player whose name is the machine's name (`DM-11`). `objNull` for `server` on a dedicated session, for a headless client, and for a client with no unit. |
 
@@ -149,6 +149,23 @@ Any script error on any machine whose text contains `text` (case-insensitive), f
 
 `skd_fnc_useAction` matches the title after removing structured-text tags (`<...>`) from the action's title, exactly and case-sensitively. It waits on the acting machine until the action exists, its condition holds and the player is within its radius, then fires it there with `action ["User", target, id]` (`ACT-01`); the target travels by net id and is looked up every frame, so an object the server has just created is found once it reaches the acting machine. The condition is evaluated with `_target` the object carrying the action and `_this` the player; a radius of -1 is no limit. The engine itself runs an action fired that way whatever its condition and radius (`SPK-10`). `skd_fnc_pressKey` calls the code `CBA_fnc_getKeybind` returns with `[findDisplay 46, DIK, shift, ctrl, alt]` for the first bound key (`ACT-02`).
 
+## Joining and leaving
+
+On a dedicated session a check can make a game client join late, leave, and join again (`MCH-01`). The setup's `late` key names the late clients, which the session does not start ([cli.md](cli.md)): `clients = 2` and `late = 1` give `p1` and `p2` at the start and the late `p3`.
+
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_join` | `[machine, ceiling]` - `machine` a late client or a client that left; `ceiling` default the setup's `start_timeout`. | `true` once the machine is `ready` (`P-02` step 7). | `invalid` / `machine-lost` naming the machine when it is not `ready` within the ceiling, with its last 20 RPT lines in the evidence, or at once when its process exits during the join, with its exit code; its process is stopped and the session stays `ready` without it. |
+| `skd_fnc_leave` | `[machine, ceiling]` - `machine` a game client in the session; `ceiling` default 20, the server's disconnect timeout of 15 s plus 5. | `true` once the server's `PlayerDisconnected` event has fired for the machine. | `invalid` / `machine-lost` naming the machine when the event has not fired within the ceiling. |
+
+Each runs as a step of its own, titled `join <machine>` or `leave <machine>`, so the result file records when it started and how long it took.
+
+A join starts a new process for the machine, with its own profile folder and the next start number of its role: 1 for a late client's first join, 2 for a client of the start that joins again. `status` lists it from its launch. Once it is `ready` it has a unit of its own (`skd_fnc_player` gives it), it is in `skd_fnc_machines`, every function that takes a machine takes it, and the result file records the versions it loaded. A leave has the server kick the client, which drops it at once rather than after its disconnect timeout, and ends the client's process. The machine then leaves `skd_fnc_machines` and `status`, and its start ends `stopped`, not `lost`: no check is `invalid` for it and the session stays `ready`.
+
+Joining or leaving `server`, a headless client, a machine the setup does not name, a client already in the session or one already out ends the check `fail` / `check-error`, naming the machine and the machines that can join and leave at that moment. In singleplayer either function ends the check `fail` / `check-error` saying that joining and leaving needs a dedicated session.
+
+The reset before the next check first brings the session back to the machines it started with: a late client that joined leaves, and a client that left joins again, within the start ceiling (`RST-01`). A client that left and joined again in the check keeps that start.
+
 ## Ending a check and keeping evidence
 
 | Function | Arguments | Returns |
@@ -160,4 +177,4 @@ Any script error on any machine whose text contains `text` (case-insensitive), f
 
 ## Not in this contract yet
 
-Joining and leaving (`MCH-01`), the helper library (`API-06`), event recording and waits on events (`EVT-01`), handing over to a manual tester (`MAN-01`), ACE interaction actions (`ACT-04`), real key input (`ACT-05`), repeats (`OUT-02`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.
+The helper library (`API-06`), event recording and waits on events (`EVT-01`), handing over to a manual tester (`MAN-01`), ACE interaction actions (`ACT-04`), real key input (`ACT-05`), repeats (`OUT-02`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.
