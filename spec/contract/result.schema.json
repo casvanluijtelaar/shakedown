@@ -170,7 +170,7 @@
       "additionalProperties": false,
       "required": [
         "check_id", "name", "tags", "repeat", "outcome", "reason", "started_at", "ended_at", "duration_s",
-        "reload", "steps", "errors", "evidence"
+        "reload", "steps", "errors", "events", "evidence"
       ],
       "properties": {
         "check_id": { "$ref": "#/$defs/CheckId" },
@@ -185,6 +185,7 @@
         "reload": { "description": "partial after a mission-level reload of mod code (RLD-05).", "enum": ["full", "partial"] },
         "steps": { "type": "array", "items": { "$ref": "#/$defs/Step" } },
         "errors": { "type": "array", "items": { "$ref": "#/$defs/ScriptError" } },
+        "events": { "description": "Every event the check recorded (EVT-01).", "type": "array", "items": { "$ref": "#/$defs/RecordedEvent" } },
         "evidence": { "$ref": "#/$defs/Evidence" }
       },
       "allOf": [
@@ -223,6 +224,19 @@
         "step_path": { "type": "array", "items": { "type": "string" } },
         "source": { "enum": ["handler", "rpt"] },
         "expected": { "type": "boolean" },
+        "at": { "$ref": "#/$defs/Clocks" }
+      }
+    },
+    "RecordedEvent": {
+      "description": "An event a check recorded with skd_fnc_record, on one machine (EVT-01, OBS-05).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machine", "name", "kind", "args", "at"],
+      "properties": {
+        "machine": { "$ref": "#/$defs/MachineName" },
+        "name": { "type": "string" },
+        "kind": { "enum": ["cba", "mission"] },
+        "args": { "$ref": "#/$defs/Value" },
         "at": { "$ref": "#/$defs/Clocks" }
       }
     },

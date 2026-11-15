@@ -83,7 +83,7 @@ prefix = 'skdfx_cba\addons'
 
 - Registered on every machine with an interface, with `CBA_fnc_addKeybind`: mod name `skd_fixture`, action name `signal`, display name `Fixture signal`, default key F7 (DIK `65`) with no modifier, not a hold key.
 - Its down code adds 1 to `skdfx_signalDown` on the player's unit; its up code adds 1 to `skdfx_signalUp` on the player's unit. Both are set public, start at `0` on a unit that has never signalled, and are read with `unit getVariable ["skdfx_signalDown", 0]`.
-- Its down code also raises the CBA global event `skdfx_signalled` with `[unit]`, for event recording (`EVT-01`, after the MVP).
+- Its down code also raises the CBA global event `skdfx_signalled` with `[unit]`, for event recording (`EVT-01`). It is raised on the machine whose key went down and reaches every machine, the server too.
 
 ### A reload target, a final CBA function (`RLD-02`)
 

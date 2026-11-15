@@ -48,6 +48,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
   | Change | Level | Reason given |
   |---|---|---|
   | A check file | none | Checks are read fresh for every execution (`RLD-04`). |
+  | A file of the library folder | none | Every reload reads the library folder again and has every machine compile it (`API-06`). |
   | A `.sqf` file of a watched mod, whatever it defines (a `CfgFunctions` function, a CBA `PREP` function, code run at mission start) | `game-restart` | The game holds every mod file it has read and reads a changed one only in a new process (`SPK-08`). |
   | A new or deleted file | `game-restart` | File patching finds only files that exist in the built PBO; the mod must be rebuilt before this reload, or by its `rebuild` during it. |
   | Any other file (`config.cpp`, `.hpp`, `.h`, `.inc`, `.ext`, string tables, models, textures, sounds) | `game-restart` | Config is read at game start; the others are not reloaded by file patching. |
@@ -98,7 +99,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 - **OBS-05** (must) Every step record, script error and event carries the machine's name, the wall clock (`systemTimeUTC`), the machine's real time (`diag_tickTime`), its mission time (`time`) and its frame number (`diag_frameNo`) (`CR-23`, `CR-42`).
 - **OBS-06** (must) The check API reads one value on several machines and asserts that each meets an expectation, or that every machine agrees with the first one named (within a tolerance for numbers and positions), polled to the ceiling. On failure it reports the value of each machine (`CR-22`).
 - **OBS-07** (must) The check API has a wait that returns `true` or `false` at its ceiling instead of failing the check (`CR-20`).
-- **EVT-01** (should) Record a named mod (CBA) or engine event on each machine with the clocks of `OBS-05`, and wait for one with a ceiling (`CR-21`).
+- **EVT-01** (should) Record a named mod (CBA) or engine mission event on each machine with the clocks of `OBS-05`, and wait for one with a ceiling. Every handler a check's recording added is removed on every machine when the check ends, and the result file lists the events it recorded under the check (`CR-21`).
 
 ## Script errors
 
@@ -149,7 +150,7 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 - **API-03** (must) The check API offers, as SQF functions with the prefix `skd_fnc_`: steps; running code on one machine and on a group; waits; immediate and polled assertions on one machine and on several; agreement across machines; expected errors; creating objects and units, placing units, setting time and weather; using an action; pressing a keybind; cleanups; evidence; ending a check as `fail` or `invalid` by hand; and the session's machines and setup. Names, arguments and results are in the check API contract (`CR-50`, `CR-10`, `CR-11`, `CR-12`, `CR-20`, `CR-22`, `CR-23`).
 - **API-04** (must) The check API is plain SQF functions: a check needs no `#include`, no macros and no language but SQF (`CR-50`).
 - **API-05** (must) The framework's addon does not need CBA. It uses CBA only when a check presses a keybind and CBA is loaded (`CR-50`, `CR-12`).
-- **API-06** (should) Checks share helper code through a library folder, `tests/_lib/` by default or the project's `lib`: every `.sqf` file in it is compiled once on every machine after the mission starts and after each reload, and its value is stored in a global variable named `skd_lib_<file name>`, so the body of every check and code sent to any machine can call it. `list` and `run` never take a library file as a check. A library file that does not compile ends every check of the run `fail` / `check-error` with the file and line (`CR-50`; `DEF-27`).
+- **API-06** (should) Checks share helper code through a library folder, `tests/_lib/` by default or the project's `lib`: every `.sqf` file directly in it is compiled once on every machine after each mission start and after each reload, which reads the folder again, and its compiled code is stored in a global variable named `skd_lib_<file name>`, so the body of every check and code sent to any machine can call it with `call skd_lib_<file name>`. `list` and `run` never take a file under the library folder as a check. A library file that does not compile, or whose name is not letters, digits and `_`, ends every check of the run `fail` / `check-error` with the file and line (`CR-50`; `DEF-27`).
 
 ## Result file
 

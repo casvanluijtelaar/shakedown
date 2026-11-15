@@ -12,7 +12,7 @@ A check is SQF. It needs no build step, no `#include`, no macro and no other lan
 
 ## The check file
 
-A check is one file with the extension `.sqf` anywhere under the project's tests folder (the project file's `tests`, default `tests/`). Its **check id** is its path relative to that folder, with `/` as separator and without `.sqf`: `tests/rope/US-012-hook-holds.sqf` has the id `rope/US-012-hook-holds`.
+A check is one file with the extension `.sqf` anywhere under the project's tests folder (the project file's `tests`, default `tests/`), except under the library folder ([Shared helpers](#shared-helpers-the-library-folder)). Its **check id** is its path relative to that folder, with `/` as separator and without `.sqf`: `tests/rope/US-012-hook-holds.sqf` has the id `rope/US-012-hook-holds`.
 
 The file starts with a header: one or more lines of the form `// @key value`, before any other line except blank lines. The header ends at the first line that is not a header line. A UTF-8 byte order mark before the first line, as some Windows editors write, is skipped.
 
@@ -54,6 +54,31 @@ private _wall = ["place a wall in front of p1", {
     ] call skd_fnc_expectEach;
 }] call skd_fnc_step;
 ```
+
+## Shared helpers: the library folder
+
+Helper code that several checks use is written once, in the project's **library folder** (`API-06`): `_lib` inside the tests folder by default, `tests/_lib/`, or the folder the project file's `lib` key names ([cli.md](cli.md)). Every file with the extension `.sqf` directly in that folder is a library file; a subfolder of it is not read. `list` and `run` never take a file under the library folder as a check.
+
+Each library file is compiled on every machine of the session, after each mission start (the session's start, a mission restart, a game restart and a client's join) and after each `reload`, and the compiled code is stored in the global variable `skd_lib_<file name>`, the file name without `.sqf`: `tests/_lib/rope.sqf` becomes `skd_lib_rope`, and `call skd_lib_rope` runs the file and returns its value. The body of every check and the code sent to any machine can call it. A file name is letters, digits and `_`. The runner reads the library folder when the session starts and at each `reload`, so a changed library file reaches the game with `shakedown reload`, at level `none`, without a game restart; it is not read again before each check, as a check file is.
+
+A library file follows the rules of the body: no header, no preprocessor, comments turned into spaces with the line breaks kept. A file that holds its helpers as values returns them, such as a HashMap of code values, and a check takes them with `private _rope = call skd_lib_rope;`; a file that defines global variables when it is called defines them on the machine that calls it.
+
+```sqf
+// tests/_lib/rope.sqf
+createHashMapFromArray [
+    ["anchor", { params ["_pos"]; ["Land_Wall_IndCnc_4_F", _pos, 0] call skd_fnc_create }],
+    ["length", { params ["_rope"]; ropeLength _rope }]
+]
+```
+
+```sqf
+// @check US-012 A hook holds on the wall the library builds
+private _rope = call skd_lib_rope;
+private _wall = [AGLToASL [100, 110, 0]] call (_rope get "anchor");
+["p1", { count (call skd_lib_rope) }, "==", 2, "p1 has the library too"] call skd_fnc_expectOn;
+```
+
+A library file that does not compile, or whose name is not letters, digits and `_`, ends every check of every run `fail` / `check-error` before its body runs, naming the file, relative to the project folder, its line and the engine's message, until it is fixed and `shakedown reload` reads it again. The run goes on to its end.
 
 ## Rules for every function
 
@@ -166,6 +191,28 @@ Joining or leaving `server`, a headless client, a machine the setup does not nam
 
 The reset before the next check first brings the session back to the machines it started with: a late client that joined leaves, and a client that left joins again, within the start ceiling (`RST-01`). A client that left and joined again in the check keeps that start.
 
+## Recording events
+
+A check records the events a mod or the engine announces on chosen machines, reads them with the clocks of each, and waits for one, without handlers of its own (`EVT-01`). An event is a CBA event, raised with `CBA_fnc_localEvent`, `CBA_fnc_globalEvent`, `CBA_fnc_serverEvent` or another of CBA's event functions, or an engine mission event, such as `EntityKilled`, that `addMissionEventHandler` takes. Its name is matched without regard to case.
+
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_record` | `[machines, event, kind, ceiling]` - `event` String, the event's name; `kind` `"cba"` or `"mission"`, default `"cba"`; `ceiling` default 10. | `true` once every machine records the event. | `fail` / `check-error` when CBA is not loaded on a machine for a `"cba"` event, when the engine has no mission event of that name, or when the event is recorded there already as the other kind. |
+| `skd_fnc_events` | `[machine, event]` | Array of the events of that name recorded on the machine, oldest first, each a HashMap with `"args"`, the event's arguments as the machine received them, and `"at"`, its clocks (`OBS-05`) as a HashMap with `"utc"` (String), `"tick"`, `"time"` and `"frame"` (Numbers). | `fail` / `check-error` when the check does not record the event on that machine. |
+| `skd_fnc_waitEvent` | `[machine, event, ceiling, after]` - `ceiling` default 10; `after` the number of events of that name on the machine to pass over, default 0. | The arguments of the event number `after + 1` recorded on the machine, once it is recorded. | `fail` / `wait-ceiling` at the ceiling, naming the event and the machine and listing, for that machine and every other machine the check records an event on, how many events of each name it recorded; `evidence.observed` holds the same counts. `fail` / `check-error` when the check does not record the event on that machine. |
+
+Recording starts when `skd_fnc_record` returns on each machine and ends with the check: every handler the check's recording added is removed on every machine when the check ends, whatever its outcome, so the next check records nothing until it records again. Recording an event already recorded on a machine keeps what it recorded. `skd_fnc_waitEvent` returns at once when the event it waits for was recorded before the call, so a check that triggers the event and then waits for it does not miss it; to wait for the next event after those it has seen, it passes their count as `after`. Objects in the arguments travel by net id (`DM-13`, `DM-14`), so an object the lead does not know arrives as `objNull`. The result file lists every event recorded during the check, on every machine, under the check ([result-file.md](result-file.md)).
+
+```sqf
+// @check US-072 p2 hears the signal p1 gives
+// @setups dedicated-2
+["all", "skdfx_signalled"] call skd_fnc_record;
+["p1", "skd_fixture", "signal"] call skd_fnc_pressKey;
+private _args = ["p2", "skdfx_signalled", 10] call skd_fnc_waitEvent;
+[_args select 0, "==", ["p1"] call skd_fnc_player, "the signal names p1's unit"] call skd_fnc_expect;
+[count (["server", "skdfx_signalled"] call skd_fnc_events), "==", 1, "the server heard it once"] call skd_fnc_expect;
+```
+
 ## Ending a check and keeping evidence
 
 | Function | Arguments | Returns |
@@ -177,4 +224,4 @@ The reset before the next check first brings the session back to the machines it
 
 ## Not in this contract yet
 
-The helper library (`API-06`), event recording and waits on events (`EVT-01`), handing over to a manual tester (`MAN-01`), ACE interaction actions (`ACT-04`), real key input (`ACT-05`), repeats (`OUT-02`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.
+Handing over to a manual tester (`MAN-01`), ACE interaction actions (`ACT-04`), real key input (`ACT-05`), repeats (`OUT-02`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.
