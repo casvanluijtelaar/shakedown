@@ -38,7 +38,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | M11 | [Late joiners](milestones/m11.md) | arma-grappling-hook's `US-009-1-freed` and `MP-01-drawn` run with their late-joiner cases, `p3` joining after the rope is up, with the PowerShell suite's verdicts. |
 | M12 | [Shared helpers and mod events](milestones/m12.md) | arma-grappling-hook's rope checks run with the rope kit in the library folder and their event lists from recorded events. |
 | M13 | [Every setup, repeated](milestones/m13.md) | `run --each-setup --repeat 5` runs arma-grappling-hook's suite in all three setups and shows `US-064-1`'s spread in `sp-cba-ace`. |
-| M14 | [Reload without a game restart](milestones/m14.md) | A changed arma-grappling-hook function reaches a running dedicated session without a game restart, the rerun check's verdict under 30 s from the save; built only if `SPK-19`, run as a research round beside M11, passes. |
+| M14 | [Reload without a game restart](milestones/m14.md) | A changed arma-grappling-hook function reaches a running session by a mission restart, the rerun check's verdict under 30 s from the save in singleplayer, and every machine of a dedicated session with the server kept, as `SPK-19` found. |
 | M15 | [Hand over to the manual tester](milestones/m15.md) | A check puts `p1` on a rope 10 m up and hands over, with three things to look for in `p1`'s window, and the session stays up. |
 | M16 | [A start that explains itself](milestones/m16.md) | Every gap of a start named at once, a wrong ACE version refused, a hung client failing the start within the connect ceiling, its reason kept. |
 | M17 | [ACE interaction and real keys](milestones/m17.md) | `p1` gets on a rope through ACE interaction, and a real let-go key sent to `p1`'s window in the background takes it off. |
@@ -77,7 +77,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | `SPK-06` | M5 | No. |
 | `SPK-07` | M3 | Yes: on a machine kind where the handler is silent, errors come from the RPT, attributed by time. |
 | `SPK-08` | M6 | Yes, if a changed file does not reach a running machine: every `.sqf` change is level `game-restart` (`RLD-02`, `P-08`, `US-054`, `US-055`, `US-057`, `FIX-03`). Its measurement sets `NFR-PF-02`. |
-| `SPK-09` | M14, if `SPK-19` lets a changed file reach a running game | No: mod code keeps no level A, as `SPK-08` left it. |
+| `SPK-09` | With `DEF-32`, if it is taken up | No: mod code keeps no level inside the mission, and a changed `.sqf` reloads by a mission restart (`SPK-19`). |
 | `SPK-10` | M1 | No. |
 | `SPK-11` | M17 | `ACT-05`, a `should`, is dropped. |
 | `SPK-12` | M1 | Yes: in singleplayer a net id in a result is the agent's own id (`DM-13`). |
@@ -87,7 +87,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | `SPK-16` | M9 | The fixture contract's crash changes; the stories hold. |
 | `SPK-17` | M9 | Yes: `FIX-02` is dropped, and `US-059` is accepted by the owner cutting the Shadow stream. |
 | `SPK-18` | M11 | Only if a client cannot rejoin under its name: rejoining waits, and `MCH-01` and `US-067` say so. Without a clean leave, a leave ends the process; the promise holds. |
-| `SPK-19` | A research round beside M11, ahead of M14 | Yes: M14 builds nothing, every mod `.sqf` stays level `game-restart`, and `DEF-21`'s third option goes to the owner. |
+| `SPK-19` | A research round beside M11, ahead of M14; passed (research `31-spike-reload-release.md`) | Yes: M14 builds nothing, every mod `.sqf` stays level `game-restart`, and `DEF-21`'s third option goes to the owner. |
 | `SPK-20` | M16 | Yes: `SES-10`'s connect ceiling is dropped and `DEF-28` stays open; the reason in `session.json` holds. |
 | `SPK-21` | M17 | No: the framework runs the ACE action's condition and statement itself. |
 | `SPK-22` | M18 | Yes: frame rate and answer time show in `status` and flag no check. |
@@ -100,7 +100,7 @@ A requirement of the PRD is complete in the milestone that delivers the last sto
 |---|---|---|---|
 | `CR-01` | Start a session once, run many checks | M5 | Singleplayer in M0 and M1, dedicated in M2; surviving its client in M5. |
 | `CR-02` | Reset between checks | M9 | In place in M1 and M2, by mission restart in M6; a reset that cannot complete in M9. |
-| `CR-03` | Reload at the lowest level | M7 | Game restart in M6; inside the mission and by a mission restart in M14, if `SPK-19` finds a way round the game's hold on the files it read (`DEF-21`). |
+| `CR-03` | Reload at the lowest level | M7 | Game restart in M6; a changed `.sqf` by a mission restart in M14, the game made to let go of the file (`SPK-19`, `DEF-21`); inside the mission waits with `DEF-32`. |
 | `CR-05` | Stop every process a run started | M8 | Job object in M0, recovery after the runner dies in M5. |
 | `CR-10` | Run code on a chosen machine | M4 | Inside a check from M1, across machines in M2, `exec` in M4. |
 | `CR-11` | Build a scene | M2 | Singleplayer in M1. |

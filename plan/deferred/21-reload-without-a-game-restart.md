@@ -1,7 +1,7 @@
 ---
 type: Deferred
 title: "A changed mod file reaches a running game only through a game restart"
-description: "The game holds every loose mod file it has read, shared for reading only, until a time nothing tried controls, so every .sqf change reloads by a game restart; what makes the game let go of a file, and the two ways round the hold that research 27 did not run, are left to find."
+description: "The game holds every loose mod file it has read, shared for reading only, until it has read a few hundred MiB of other loose files, so every .sqf change reloads by a game restart; spike SPK-19 found that the framework can make every machine let go of the file and a mission restart then takes the change, which M14 builds."
 id: DEF-21
 state: planned
 milestone: M14
@@ -12,7 +12,7 @@ status: stable
 
 ## Summary
 
-Spike `SPK-08` found that Arma 3 2.22 opens every loose mod file it reads through file patching shared for reading only, so while a game process holds it the file can be neither written nor replaced, and every machine reads the content it holds, across a mission restart, until it lets go of the file. Once it lets go, a mission restart takes the change on every machine, kept processes included, and `BIS_fnc_recompile` takes it mid-mission in singleplayer (research `27-spikes-reload.md`). The round found no wait, flush or setting that makes the game let go every time.
+Spike `SPK-08` found that Arma 3 2.22 opens every loose mod file it reads through file patching shared for reading only. While a game process holds the file, it can be neither written nor replaced, and every machine reads the content it holds, across a mission restart, until it lets go of the file. Once it lets go, a mission restart takes the change on every machine, kept processes included (research `27-spikes-reload.md`). Spike `SPK-19` found what makes it let go: reading between 256 and 512 MiB of other loose files through file patching. The game keeps files by path, so one 8 MiB file reached through 80 junctions frees it. A changed `PREP` function of `@skd_fixture_cba` reached every machine through a mission restart, 10 of 10 on a dedicated session with two clients and 10 of 10 in singleplayer (research `31-spike-reload-release.md`).
 
 ## Current behaviour
 
@@ -20,19 +20,19 @@ Every change of mod code is level `game-restart` (`RLD-02`), made in one step: t
 
 ## The gap
 
-G2's loop for mod code (PRD `CR-03`: "inside the mission, by a mission restart within the session, or by a game restart") has only its last level. A dedicated session with two clients waits about a game start for every change of mod code, instead of a recompile in place or the mission restart of `SPK-08`'s plan.
+G2's loop for mod code (PRD `CR-03`: "inside the mission, by a mission restart within the session, or by a game restart") has only its last level. Each change of mod code costs a game start: about 27 s in singleplayer and 50 to 82 s on a dedicated session with two clients on the test machine.
 
 ## Options
 
-1. **Find what makes the game let go of a file.** The round saw a release follow reading thousands of other loose files more often than not (3 of 5 times), and once in singleplayer after a mission restart and lookups of missing paths, but never on a schedule. A probe of the game's file server cache (`FileServer MaxCacheSize` in the RPT), its handle count over time, and the engine commands that touch the file server would say whether a release can be forced. If it can, the levels `mission` and `mission-restart` of research `13-hot-reload.md` come back as `SPK-08` planned them.
-2. **ACE3's layout.** ACE3's guide sets the mod folder and the file patching root as one folder, reached through two links (`hemtt dev` links `.hemttout/dev/addons` back to the project and the game folder to the build). Research 27 ran the fixtures through one junction to a copy and did not run this layout. If the game lets go of files read through it, or the developer's editor can save through it, the levels come back for mods built that way.
-3. **Staging plus text injection at a mission restart.** As Neefay's harness does for mission functions, the framework would read the changed file on the host, preprocess it there (the mod's `#include` and macros), and send the text; the framework's addon would set the function before every mod's `preInit` compiles it at a mission restart, so the game's file server never reads the changed file. It needs a preprocessor in the framework and code that runs before CBA's `PREP`, and reaches a final function only at a mission restart.
+1. **Make the game let go of the file, then restart the mission.** `SPK-19` ran it and it passed. Every machine reads the framework's release files (640 MiB through 80 junction paths, 5 to 10 s), the runner checks the changed files are free, runs the mod's `rebuild`, and restarts the mission. In singleplayer a reload took 9.7 to 14.3 s. On a dedicated session it took 54.4 to 57.7 s, as long as a game restart, because the mission restart starts new clients. It keeps the server's process.
+2. **ACE3's layout**, the mod folder and the file patching root as one folder reached through two links. Not run, since option 1 passed.
+3. **Staging and text injection at a mission restart.** The framework would read and preprocess the changed file on the host and set the function before every mod's `preInit` compiles it. Option 1 made this unneeded: it existed only to get past the hold, and it needs the same mission restart for a final function, so it would cost the same client start on a dedicated session.
 
 ## Recommendation
 
-Option 1 first, as a bounded spike: it is the cheapest and, if it works, it restores the planned levels without new machinery. Option 2 next, since it costs one game run. Option 3 only if both fail and the game restart's time proves too slow in use.
+Option 1, built by M14. It reaches the level `mission-restart` that `CR-03` asks for, in both modes, with no new machinery beyond a folder of junctions and one step before the mission restart. The dedicated session's remaining distance from 30 s is `DEF-32`.
 
 ## Acceptance criteria
 
-- A spike in `research/` says, for each option it ran, whether a changed `.sqf` of `@skd_fixture_cba` reaches every machine of a dedicated session with two clients without a game restart, 10 of 10.
-- If one does, `RLD-02`, `P-08`, `NFR-PF-01`, `NFR-PF-02`, `US-054`, `US-055` and `FIX-03` are edited to the level it allows, and M14 builds against it.
+- A spike in `research/` says, for each option it ran, whether a changed `.sqf` of `@skd_fixture_cba` reaches every machine of a dedicated session with two clients without a game restart, 10 of 10. Done: research `31-spike-reload-release.md`, option 1, 10 of 10.
+- `RLD-02`, `P-08`, `NFR-PF-01`, `NFR-PF-02`, `US-054`, `US-055` and `FIX-03` are edited to the level `mission-restart`, and M14 builds against it.
