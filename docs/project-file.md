@@ -40,6 +40,7 @@ A project with no mod declares `mods = []` in its setup and no `[mods.*]` table;
 | `tests` | no, default `tests` | The folder of the check files. |
 | `lib` | no, default `_lib` in the tests folder | The library folder: each `.sqf` file directly in it is compiled on every machine into `skd_lib_<file name>`, for helpers checks share ([Helpers from the library folder](check-api.md#helpers-from-the-library-folder)). No file under it is a check. A folder that does not exist is an empty library. |
 | `base_port` | no, default 2402 | A dedicated server's game port, 1024 to 65530; it and the next four ports must be free. |
+| `slow_step` | no, default 10 | Seconds a step may take before the result file and the run's lines flag it `slow`, a number above 0 such as `15` or `2.5` ([Every setup, repeats and slow steps](every-setup-and-repeats.md#slow-steps-and-slow-checks)). |
 | `mods.<name>.path` | yes, for each mod | The mod's folder, such as a Workshop folder or a `@mod` folder. |
 | `mods.<name>.patch` | no | A `CfgPatches` class of the mod; the result file records its `versionStr` as the game loaded it. |
 | `mods.<name>.source` | no | The folder of your own files of the mod, the one holding its addon folders, which `reload` watches ([Reloading](reloading.md)). |
@@ -67,7 +68,7 @@ shakedown.toml, line 12: setups.sp.start_timeout must be a whole number from 30 
 A file that names the check folder with `checks` is refused the same way, as an unknown key; the key is `tests`:
 
 ```
-shakedown.toml, line 2: unknown field `checks`, expected one of `game`, `tests`, `base_port`, `mods`, `setups`. Fix the key as contract/cli.md describes the project file.
+shakedown.toml, line 2: unknown field `checks`, expected one of `game`, `tests`, `lib`, `base_port`, `slow_step`, `mods`, `setups`. Fix the key as contract/cli.md describes the project file.
 ```
 
 A setup name the file does not declare is refused with the setups it does declare.

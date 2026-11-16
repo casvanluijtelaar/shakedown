@@ -33,7 +33,7 @@ The demo project `e2e/grappling-hook` has such a `.mcp.json`: start Claude Code 
 | `session_start` | `shakedown session start --setup <name>` | Starts a session; returns when it is `ready` or `failed`, or after 50 s with state `starting`. |
 | `session_stop` | `shakedown session stop` | Stops the session, or clears a failed start. |
 | `list_checks` | `shakedown list` | The checks a selection takes, from the files, with no runner. |
-| `run_start` | `shakedown run` | Starts a run and returns its `run_id` at once. |
+| `run_start` | `shakedown run` | Starts a run and returns its `run_id` at once. `repeat` runs each check that many times in a row; `each_setup` runs the selection in every setup a selected check names, as `run --each-setup` does ([Every setup, repeats and slow steps](every-setup-and-repeats.md)). |
 | `run_status` | - | A run's progress and outcomes so far; with `wait_s` it waits for the next check to end. |
 | `run_result` | `shakedown run --json` | The result of a run that ended: the same JSON `run --json` prints. |
 | `run_stop` | `shakedown run stop` | Stops a run and returns its status, state `stopped`, once its result file is written ([Running a suite unattended](unattended-runs.md)). |
@@ -108,7 +108,7 @@ Machines are named server, p1..pN (game clients) and hc1..hcN (headless clients)
 
 RUN CHECKS
 1. list_checks {"tags": ["US-019"]} shows which checks a selection takes, without the game.
-2. run_start {"ids": [...]} or {"tags": [...]} returns a run_id at once. ids run in the order given; an id given twice runs twice. With "setup" and no session, the run starts one and stops it at its end.
+2. run_start {"ids": [...]} or {"tags": [...]} returns a run_id at once. ids run in the order given; an id given twice runs twice. With "setup" and no session, the run starts one and stops it at its end. "repeat": n runs each check n times in a row, and run_result then has repeats: each check's summary, pass, fail, flaky (both came up) or invalid, with the count of each outcome. With "each_setup": true and no session, it runs the selection in every setup a selected check names, one session after the other: run_id is then a handle for all of them, run_status names the setup it is in, and run_result has a runs entry per setup.
 3. run_status {"run_id": "...", "wait_s": 50} returns as soon as a check ends, with each outcome so far. Call it again until state is finished, or stopped: a run stops at its runner ceiling (the sum of its checks' @timeout plus 60 s) or by run_stop {"run_id": "..."}; the check it was on is then invalid with reason run-stopped and the rest are in not_run.
 4. run_result {"run_id": "..."}: the summary, each check's outcome, reason and failed step, and result_file, the full result as JSON.
 

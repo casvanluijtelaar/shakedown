@@ -7,7 +7,7 @@ status: stable
 
 # Running a suite unattended
 
-One command runs every check of a setup and leaves nothing behind, whatever happens to the run (`RUN-04`, `RUN-05`, `RUN-06`, `STP-02`).
+One command runs every check of a setup and leaves nothing behind, whatever happens to the run (`RUN-04`, `RUN-05`, `RUN-06`, `STP-02`). To run a suite in every setup its checks name, with one command, see [Every setup, repeats and slow steps](every-setup-and-repeats.md).
 
 ## One command, then walk away
 
