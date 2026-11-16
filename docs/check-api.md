@@ -1,7 +1,7 @@
 ---
 type: Documentation
 title: The check API by example
-description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, joining and leaving, cleanups and ending a check - and what each does when it fails.
+description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, joining and leaving, recorded events, helpers shared from the library folder, cleanups and ending a check - and what each does when it fails.
 status: draft
 ---
 
@@ -132,6 +132,51 @@ On a dedicated session a check makes a game client join late, leave and join aga
 ```
 
 Each is a step of its own, `join p3` or `leave p2`. In singleplayer either ends the check `fail` / `check-error`: `skd_fnc_leave: joining and leaving needs a dedicated session; ...`. [Dedicated sessions](dedicated-sessions.md#joining-late-leaving-and-joining-again) shows what each does, its failures and the reset that brings the clients back.
+
+## Recording the mod's events
+
+A check records a CBA event, or an engine mission event, on the machines it names, and then reads what each machine received or waits for one, with no event handler of its own:
+
+```sqf
+["all", "skdfx_signalled"] call skd_fnc_record;              // a CBA event, on every machine
+["server", "EntityKilled", "mission"] call skd_fnc_record;   // a mission event, on the server
+["p1", "skd_fixture", "signal"] call skd_fnc_pressKey;       // the fixture's keybind raises skdfx_signalled
+private _args = ["p1", "skdfx_signalled", 5] call skd_fnc_waitEvent;   // its arguments, [unit]
+private _all = ["p1", "skdfx_signalled"] call skd_fnc_events;
+// each: createHashMap with "args" and "at", at holding "utc", "tick", "time" and "frame"
+[count _all, "==", 1, "one signal on p1"] call skd_fnc_expect;
+```
+
+`skd_fnc_waitEvent` returns at once when the event came before the call, so trigger first and wait after. Its fourth argument, `after`, passes over that many events: `["p1", "skdfx_signalled", 5, 1] call skd_fnc_waitEvent` waits for the second. Names match without regard to case.
+
+When the event does not come, the check ends `fail` / `wait-ceiling` with what did arrive, on the machine waited on and on every other machine the check records on:
+
+```
+skd_fnc_waitEvent: no event skdfx_signalled came on p2 within its ceiling of 3 s. Recorded events: p2: none; p1: 1 skdfx_signalled.
+```
+
+`evidence.observed` holds the same counts per machine. A wait or `skd_fnc_events` for an event the check does not record on that machine ends it `fail` / `check-error`: `skd_fnc_waitEvent: the check does not record the event skdfx_signalled on p2 (it records it on p1). Record it first with skd_fnc_record.` `skd_fnc_record` of a CBA event on a machine without CBA, or of a mission event the engine does not have, ends it `fail` / `check-error` too.
+
+The recording ends with the check: every handler it added is removed on every machine, whatever the outcome, so nothing is left for the next check. The result file lists every recorded event under the check, in `events`, with its machine, name, kind, arguments and clocks ([Script errors, logs and evidence](script-errors-and-logs.md)).
+
+## Helpers from the library folder
+
+Helper code that several checks share lives once in the library folder, `tests/_lib/` unless `shakedown.toml` sets `lib` ([The project file](project-file.md)). Each `.sqf` file directly in it is compiled on every machine when the session starts, after every mission restart, game restart and join, and after every `reload`, into `skd_lib_<file name>`. `list` and `run` never take it as a check.
+
+```sqf
+// tests/_lib/kit.sqf: returns its helpers
+createHashMapFromArray [
+    ["settle", { params ["_unit"]; waitUntil { vectorMagnitude velocity _unit < 0.1 }; true }]
+]
+```
+
+```sqf
+// a check
+private _kit = call skd_lib_kit;
+["p1", { [player] call ((call skd_lib_kit) get "settle") }] call skd_fnc_on;   // on p1 too
+```
+
+A changed library file reaches the game with `shakedown reload`, which lists it at level `none` and restarts nothing. A library file that does not compile ends every check `fail` / `check-error` before its body runs, until it is fixed and reloaded: `The library file tests/_lib/kit.sqf does not compile: Missing ;, at line 3. Fix it and run `shakedown reload`; until then every check fails.` A file name that is not letters, digits and `_` is the same mistake.
 
 ## Cleanups and ending a check
 

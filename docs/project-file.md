@@ -38,6 +38,7 @@ A project with no mod declares `mods = []` in its setup and no `[mods.*]` table;
 |---|---|---|
 | `game` | yes | The Arma 3 folder, the one that holds `arma3_x64.exe`. |
 | `tests` | no, default `tests` | The folder of the check files. |
+| `lib` | no, default `_lib` in the tests folder | The library folder: each `.sqf` file directly in it is compiled on every machine into `skd_lib_<file name>`, for helpers checks share ([Helpers from the library folder](check-api.md#helpers-from-the-library-folder)). No file under it is a check. A folder that does not exist is an empty library. |
 | `base_port` | no, default 2402 | A dedicated server's game port, 1024 to 65530; it and the next four ports must be free. |
 | `mods.<name>.path` | yes, for each mod | The mod's folder, such as a Workshop folder or a `@mod` folder. |
 | `mods.<name>.patch` | no | A `CfgPatches` class of the mod; the result file records its `versionStr` as the game loaded it. |

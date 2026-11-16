@@ -16,6 +16,7 @@ Every changed file is classified, and the highest level any file needs is the le
 | Change | Level | Reason the reload gives |
 |---|---|---|
 | A check file | `none` | Checks are read fresh for every execution. |
+| A file of the library folder | `none` | Every reload reads the library folder again and has every machine compile it. |
 | Any `.sqf` of a watched mod, whatever it defines | `game-restart` | The game holds every mod file it has read and reads a changed one only in a new process, so the game restarts. |
 | A new or deleted file | `game-restart` | File patching finds only files in the built PBO, so the mod must be rebuilt before this reload (or, when the mod has a `rebuild`, the game restarts after it). |
 | `config.cpp` and any other file (`.hpp`, `.h`, `.inc`, `.ext`, string tables, models, textures, sounds) | `game-restart` | Config is read at game start; the others are not reloaded by file patching. |

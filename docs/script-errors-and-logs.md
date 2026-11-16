@@ -112,6 +112,7 @@ A check that does not pass keeps in its result (`RES-03`, `OBS-04`):
 - `evidence.attached`: what the check attached with `skd_fnc_evidence`.
 - `evidence.logs`: each machine's lines for the check, kept for every outcome.
 - `errors`: every script error, expected or not.
+- `events`: every event the check recorded with `skd_fnc_record`, on every machine, with its arguments and clocks, kept for every outcome ([Recording the mod's events](check-api.md#recording-the-mods-events)).
 
 ## The Steam account stays out
 
