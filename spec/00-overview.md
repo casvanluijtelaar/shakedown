@@ -22,7 +22,7 @@ The product requirements are in [client-requirements.md](client-requirements.md)
 
 ## Goals
 
-The PRD's goals G1 to G4 hold as written, with the owner's answers in `research/02-gaps.md`: G2's 30 seconds applies to a changed check, which reloads inside the mission, in singleplayer and on a dedicated server. No change of mod code reloads inside the mission or by a mission restart, because the game holds every mod file it has read (spike `SPK-08`), so a change of mod code reloads by a game restart, whose target `NFR-PF-02` sets from `SPK-08`'s measurement.
+The PRD's goals G1 to G4 hold as written, with the owner's answers in `research/02-gaps.md`: G2's 30 seconds applies to a changed check, which reloads inside the mission, in singleplayer and on a dedicated server. No change of mod code reloads inside the mission. The game holds every mod file it has read (spike `SPK-08`) until it has read a few hundred MiB of other loose files (spike `SPK-19`), so a changed `.sqf` of a mod reloads by a mission restart after every machine has read the framework's release files, and a new file or a config change by a game restart. In singleplayer that mission restart keeps G2's 30 seconds for mod code; on a dedicated session it starts new clients and takes about as long as a game restart (`DEF-32`). `NFR-PF-02` sets the target of each.
 
 ## Scope
 

@@ -16,7 +16,7 @@ As a mod developer, I want to be told which machine did not take my change when 
 
 ## Acceptance criteria
 
-1. When `p2`'s process is ended during a `game-restart` reload of a changed `.sqf`, `reload` exits 4 with state `failed`, naming the step and `p2`; `status` shows the session `broken` with that reason.
+1. When `p2`'s process is ended during a reload of a changed `.sqf`, `reload` exits 4 with state `failed`, naming the step and `p2`; `status` shows the session `broken` with that reason.
 2. A run asked after it is refused with exit code 4, saying the session is broken and naming `shakedown reload`, so no check reaches a verdict on mixed code; then a `game-restart` reload brings every machine back `ready` with a new start number.
 
 ## Next to

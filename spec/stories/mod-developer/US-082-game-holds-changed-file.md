@@ -6,7 +6,7 @@ status: draft
 id: US-082
 role: mod-developer
 kind: system fail
-requirements: [RLD-02, RLD-03, P-08]
+requirements: [RLD-02, RLD-03, P-08, FIX-04]
 ---
 
 # US-082 The game still holds the changed file

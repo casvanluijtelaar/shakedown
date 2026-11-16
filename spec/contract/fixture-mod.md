@@ -75,7 +75,7 @@ prefix = 'skdfx_cba\addons'
   "1"
   ```
 
-- To test a reload, the installed copy of this file may be replaced as [Files a test may change](#files-a-test-may-change-fix-03) says. A change reaches the game through a `game-restart` reload, which starts every machine afresh on it.
+- To test a reload, the installed copy of this file may be replaced as [Files a test may change](#files-a-test-may-change-fix-03) says. A change reaches the game through a `mission-restart` reload, after which every machine recompiles the function, since the Functions Library compiles it once per game process (`RLD-02`), or through a `game-restart` reload, which starts every machine afresh on it.
 
 ## `@skd_fixture_cba`
 
@@ -87,7 +87,7 @@ prefix = 'skdfx_cba\addons'
 
 ### A reload target, a final CBA function (`RLD-02`)
 
-- `skdfx_cba_fnc_version` is defined with CBA's `PREP` from the file `skdfx_cba\addons\main\functions\fnc_version.sqf` (game path `\skdfx_cba\addons\main\functions\fnc_version.sqf`). It is final, as CBA compiles it; with CBA's cache off in the session mission (`INT-CBA-02`) CBA compiles it from its file at every mission start, and a change reaches it through a `game-restart` reload. As installed, the whole file is:
+- `skdfx_cba_fnc_version` is defined with CBA's `PREP` from the file `skdfx_cba\addons\main\functions\fnc_version.sqf` (game path `\skdfx_cba\addons\main\functions\fnc_version.sqf`). It is final, as CBA compiles it; with CBA's cache off in the session mission (`INT-CBA-02`) CBA compiles it from its file at every mission start, and a change reaches it through a `mission-restart` reload, or a `game-restart` reload. As installed, the whole file is:
 
   ```sqf
   "1"
@@ -95,7 +95,7 @@ prefix = 'skdfx_cba\addons'
 
 - It may be replaced in the installed copy as [Files a test may change](#files-a-test-may-change-fix-03) says.
 
-## Failures on demand (`FIX-01`, `FIX-02`)
+## Failures on demand (`FIX-01`, `FIX-02`, `FIX-04`)
 
 These give a test the failures of the environment it cannot otherwise cause at a known moment. Each is in `@skd_fixture` and works on every kind of machine unless it says otherwise.
 
@@ -105,24 +105,26 @@ These give a test the failures of the environment it cannot otherwise cause at a
 | `skdfx_fnc_exit` | `[delay, code] call skdfx_fnc_exit`, `delay` seconds of real time from 0 to 60, `code` a whole number from 1 to 2147483647. Returns `true` at once. After `delay`, the game process it ran on ends with exit code `code`, leaving no dump. |
 | `skdfx_fnc_holdClock` | `[seconds] call skdfx_fnc_holdClock`, `seconds` from 1 to 30. Singleplayer `p1` only. Returns `true` at once, then holds `time` still for `seconds` of real time while `diag_frameNo` keeps advancing and the machine keeps answering orders within their ceilings plus the grace of `OBS-03`; then `time` runs again at the real-time rate. It holds the clock by setting the engine's time acceleration (`setAccTime`) to 0, and sets it back to 1 when it ends, so a check that sets its own time acceleration loses it. Scheduled code goes on during the hold: a `waitUntil` on `diag_tickTime` ends when it should, and one on `time` waits. A hold under 10 s ends no order as lost. On any other machine, or in a dedicated session, it does nothing and returns `false` (`SPK-17`). |
 
+| `skdfx_fnc_holdFile` | `[path] call skdfx_fnc_holdFile`, `path` a file's path relative to the game folder, such as `skdfx_cba\addons\main\functions\fnc_version.sqf`. The fixture's extension opens the file for reading, shared for reading only, as the game holds a loose file it read, and keeps it open until the game process ends, so nothing can write the file meanwhile, and the Windows Restart Manager names that process as its holder. Returns `true` when the file was opened, and `false` when it does not exist or cannot be opened. Works on every kind of machine (`FIX-04`, `US-082`). |
+
 A delay lets a check place the failure between its own steps: `["p2", {[0.5] call skdfx_fnc_crash}] call skd_fnc_on` followed by an assertion that fails at once puts the assertion first; a crash with no delay followed by a wait puts the lost machine first (`DM-06`).
 
 A stall and an end from outside need no fixture. `status` gives each machine's process id and start time (`INS-04`). A process suspended by its id stops answering, which the runner sees as a stall (`P-07`); a process ended by its id exits unasked, which the runner sees as a crash with the exit code it was ended with (`P-09`); a dump written of the live process into its profile folder before it is ended is taken as its crash dump.
 
 ## Files a test may change (`FIX-03`)
 
-Only in the installed copy, never in `fixtures/`, and each put back as it was after the test. While a game process holds a fixture file it has read, the file can be neither written nor replaced (`SPK-08`), so a reload target is changed only while no game process of the session runs: by the mod's `rebuild` during a `game-restart` reload (`RLD-06`), or with no session running, and put back once the session has stopped:
+Only in the installed copy, never in `fixtures/`, and each put back as it was after the test. While a game process holds a fixture file it has read, the file can be neither written nor replaced (`SPK-08`), so a reload target is changed only while no game process holds it: by the mod's `rebuild` during a reload, after every game process has ended at level `game-restart` or once the reload has freed it at level `mission-restart` (`RLD-06`), or with no session running, and put back once the session has stopped:
 
 | File (in the installed copy) | A test may |
 |---|---|
-| `skdfx\addons\main\functions\fn_version.sqf` | Replace its whole content with another quoted string, such as `"2"`, while no game process runs. |
+| `skdfx\addons\main\functions\fn_version.sqf` | Replace its whole content with another quoted string, such as `"2"`, while no game process holds it. |
 | `skdfx_cba\addons\main\functions\fnc_version.sqf` | The same. |
 | `skdfx\addons\main\functions\fn_new.sqf` | Create it, with any SQF, and delete it after. It is in no built PBO, so file patching does not find it and a reload of it needs a rebuild and a game restart (`RLD-02`). |
 | Any other installed fixture file, such as `skdfx\addons\main\config.cpp` | Name it to `reload` without changing it. |
 
 No other fixture file is changed by a test.
 
-A test that reloads a target the way a mod developer does watches a staged copy of the fixture's sources, edits the target there, and gives the mod a `rebuild` that copies it into the installed copy; the reload finds the change in the staged copy and makes it while the processes are stopped:
+A test that reloads a target the way a mod developer does watches a staged copy of the fixture's sources, edits the target there, and gives the mod a `rebuild` that copies it into the installed copy; the reload finds the change in the staged copy and makes it while no game process holds the target:
 
 ```toml
 [mods.fixture-cba]

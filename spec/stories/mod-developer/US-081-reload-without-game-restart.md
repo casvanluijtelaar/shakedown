@@ -6,7 +6,7 @@ status: draft
 id: US-081
 role: mod-developer
 kind: feature
-requirements: [RLD-01, RLD-02, RLD-03, RLD-06, NFR-PF-01, NFR-PF-02]
+requirements: [RLD-01, RLD-02, RLD-03, RLD-06, RLD-07, NFR-PF-01, NFR-PF-02]
 ---
 
 # US-081 A changed function reaches a running session without a game restart

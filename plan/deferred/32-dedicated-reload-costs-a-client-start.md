@@ -16,7 +16,7 @@ Spike `SPK-19` found that the framework can make every machine let go of a chang
 
 ## Current behaviour
 
-On a dedicated session the mission restart ends every client and headless client and starts new ones once the server's mission has restarted (`P-08` step 3). It does so because a client kept across a mission change was left in a mission it never loaded about one change in two (research `10-prior-harness.md`, `14-sessions.md`). So the reload of a changed `.sqf` pays a client start: about 16 s for the server's mission restart, then about 28 s for the new clients, plus 5 to 10 s to free the file.
+On a dedicated session the mission restart ends every client and headless client and starts new ones once the server's mission has restarted (`P-08` step 4). It does so because a client kept across a mission change was left in a mission it never loaded about one change in two (research `10-prior-harness.md`, `14-sessions.md`). So the reload of a changed `.sqf` pays a client start: about 16 s for the server's mission restart, then about 28 s for the new clients, plus 5 to 10 s to free the file.
 
 ## The gap
 

@@ -57,7 +57,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 ## CBA
 
 - **INT-CBA-01** Shakedown is specified against CBA_A3 3.19.0. The framework does not depend on CBA (`API-05`). When CBA is loaded it uses `CBA_fnc_getKeybind`, which is public, to press a keybind (`ACT-02`). In CBA 3.19 it returns `[mod, action, display name, down code, up code, [DIK, [shift, ctrl, alt]], hold, hold delay, bound keys]`, where the last element lists every key bound to it; the framework presses the first. To name the keybinds that exist when one is not found (`ACT-03`), it reads the variable names of CBA's namespace `cba_keybinding_actions`, one per keybind as `<mod>$<action>` in lower case, the only use of a CBA internal; a CBA version that changes it changes only that message (`CR-12`).
-- **INT-CBA-02** The session mission turns CBA's function cache off through `CfgSettings` (`INT-AR-04`), so a CBA mod's `PREP` functions compile their files afresh at every mission start rather than from CBA's cache, and a new process after a game restart compiles the changed file (`RLD-02`) (`CR-03`; conflict C1).
+- **INT-CBA-02** The session mission turns CBA's function cache off through `CfgSettings` (`INT-AR-04`), so a CBA mod's `PREP` functions compile their files afresh at every mission start rather than from CBA's cache, and a mission restart or a new process after a game restart compiles the changed file (`RLD-02`) (`CR-03`; conflict C1).
 
 ## ACE3
 
@@ -67,7 +67,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 
 ## HEMTT
 
-- **INT-HEM-01** Shakedown is specified against HEMTT 1.23.1. The framework has no HEMTT step of its own: a watched mod is loaded from a build of the developer's files, such as `hemtt build` output, and the project file names the mod's folder, its `source` and `prefix`, and the `rebuild` a reload runs while no game process runs, such as `hemtt build` (`CR-03`; `RLD-06`). `hemtt dev` and `hemtt launch` link the game folder back to the developer's own files, which the game then holds, so the developer's editor cannot save them while a session runs (research `27-spikes-reload.md`).
+- **INT-HEM-01** Shakedown is specified against HEMTT 1.23.1. The framework has no HEMTT step of its own: a watched mod is loaded from a build of the developer's files, such as `hemtt build` output, and the project file names the mod's folder, its `source` and `prefix`, and the `rebuild` a reload runs while no game process holds the files it writes, such as `hemtt build` for a game restart or a copy of the changed files for a mission restart (`CR-03`; `RLD-06`). `hemtt dev` and `hemtt launch` link the game folder back to the developer's own files, which the game then holds, so the developer's editor cannot save them while a session runs (research `27-spikes-reload.md`).
 - **INT-HEM-02** The framework's own addon is built with HEMTT, as a development tool of this repository (`07-tech-stack.md`).
 
 ## Steam
