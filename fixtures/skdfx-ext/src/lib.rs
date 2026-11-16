@@ -10,7 +10,12 @@
 //! - `"skdfx" callExtension ["exit", [delay, code]]`: after `delay` seconds the process ends with
 //!   exit code `code`, through `TerminateProcess`, which runs no handler and leaves no dump.
 //!
-//! Each returns `true` at once, or `false` for an argument out of its range.
+//! - `"skdfx" callExtension ["hold", [path]]`: opens the file at `path`, relative to the game
+//!   folder, for reading, shared for reading only, and keeps it open until the process ends, as
+//!   the game holds a loose file it read (`FIX-04`), so a reload finds it still held.
+//!
+//! Each returns `true` at once, or `false` for an argument out of its range or a file it cannot
+//! open.
 
 use std::time::Duration;
 
@@ -29,6 +34,7 @@ fn init() -> Extension {
     Extension::build()
         .command("crash", crash)
         .command("exit", exit)
+        .command("hold", hold)
         .finish()
 }
 
@@ -58,6 +64,46 @@ fn exit(seconds: f64, code: String) -> bool {
         end(code);
     });
     true
+}
+
+/// The files `hold` keeps open until the process ends.
+static HELD: std::sync::Mutex<Vec<std::fs::File>> = std::sync::Mutex::new(Vec::new());
+
+/// The path arrives as text, quoted or not, relative to the folder of the game's executable.
+fn hold(path: String) -> bool {
+    let rel = path.trim().trim_matches('"');
+    if rel.is_empty() {
+        return false;
+    }
+    let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|e| e.parent().map(|p| p.to_path_buf()))
+    else {
+        return false;
+    };
+    match open_shared_read(&dir.join(rel)) {
+        Some(file) => {
+            HELD.lock().unwrap_or_else(|e| e.into_inner()).push(file);
+            true
+        }
+        None => false,
+    }
+}
+
+#[cfg(windows)]
+fn open_shared_read(path: &std::path::Path) -> Option<std::fs::File> {
+    use std::os::windows::fs::OpenOptionsExt;
+    const FILE_SHARE_READ: u32 = 1;
+    std::fs::OpenOptions::new()
+        .read(true)
+        .share_mode(FILE_SHARE_READ)
+        .open(path)
+        .ok()
+}
+
+#[cfg(not(windows))]
+fn open_shared_read(path: &std::path::Path) -> Option<std::fs::File> {
+    std::fs::File::open(path).ok()
 }
 
 /// An exit code from 1 to 2147483647, written as a whole number, quoted or not.
@@ -112,6 +158,24 @@ mod tests {
         assert!(exit_code("1.5").is_none());
         assert!(!exit(1.0, "0".into()));
         assert!(!exit(-1.0, "3".into()));
+    }
+
+    /// `FIX-04`: a file that is not there is refused, and one that is, is held open for reading
+    /// only, so it cannot be opened for writing.
+    #[test]
+    fn fix_04_hold_keeps_a_file_open_for_reading_only() {
+        assert!(!hold(String::new()));
+        assert!(!hold("\"skd-no-such-file-here.sqf\"".into()));
+        let dir = std::env::current_exe().unwrap().parent().unwrap().to_path_buf();
+        let name = format!("skd-hold-{}.sqf", std::process::id());
+        std::fs::write(dir.join(&name), "\"1\"").unwrap();
+        assert!(hold(format!("\"{name}\"")));
+        let write = std::fs::OpenOptions::new().write(true).open(dir.join(&name));
+        #[cfg(windows)]
+        assert!(write.is_err(), "the held file was opened for writing");
+        drop(write);
+        HELD.lock().unwrap().clear();
+        let _ = std::fs::remove_file(dir.join(&name));
     }
 
     /// `FIX-01`: the extension answers its two calls through the engine's interface.

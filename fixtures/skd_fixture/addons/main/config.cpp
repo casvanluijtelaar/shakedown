@@ -29,6 +29,7 @@ class CfgFunctions {
             class crash {};
             class exit {};
             class holdClock {};
+            class holdFile {};
             // The reload target inside the mission (contract "A reload target inside the mission").
             class version {};
         };
