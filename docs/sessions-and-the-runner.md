@@ -93,7 +93,7 @@ The way out is one of two:
 
 ## Only the local user controls the session
 
-The runner and the extension in each game process talk only over `127.0.0.1` (`SEC-01`, `NFR-SC-01`); `netstat -ano` shows every socket of the runner, and every connection of a game process to it, on `127.0.0.1`.
+The runner and the extension in each game process talk only over `127.0.0.1` (`SEC-01`, `NFR-SC-01`); `netstat -ano` shows every socket of the runner, and every connection of a game process to it, on `127.0.0.1`. Nothing in `shakedown.exe` or the framework's tests listens on another address, so Windows Firewall never asks about them. The free-port check of a dedicated start reads the system's UDP table and binds nothing.
 
 Every client presents the runner token from `runner.json` on each connection, and every game process's extension presents its session token, which the runner passes to the process in its environment only, never on a command line (`SEC-02`). Neither token appears on any process's command line, in the result file, in a log the framework writes or in any command or tool output (`NFR-SC-03`). Both have a fixed form, `skd_r_` or `skd_s_` followed by 64 lowercase hexadecimal digits (`SEC-06`), so a search for `skd_[rs]_[0-9a-f]{64}` finds a leak; `runner.json` is the one file that holds the runner token. Its access list is protected, so it takes nothing from its folder, and grants the current user alone: no other account or group, the Administrators group included, can read it (`SEC-02`, `INT-WIN-03`).
 

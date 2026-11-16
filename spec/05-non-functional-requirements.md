@@ -29,7 +29,7 @@ Each requirement has an ID of the form `NFR-<area>-nn` and says how it is measur
 
 ## Security
 
-- **NFR-SC-01** (must) Nothing the framework opens listens on an address other than `127.0.0.1`, verified with `netstat` during a session (`CR-60`).
+- **NFR-SC-01** (must) Every socket the framework opens to listen, in `shakedown.exe`, in the extension and in the framework's own tests and helpers, binds `127.0.0.1` only, and no part of the framework binds another address even for a moment, to probe a port: a port is checked free by reading the system's socket tables, not by binding it. Windows Firewall asks about a program only when it listens on an address other than loopback, so `shakedown.exe` and the test binaries raise no firewall prompt. Verified with `netstat` during a session and with the system's socket tables. The game ports of a dedicated session are opened by the game's own `arma3server_x64.exe` and `arma3_x64.exe` and are the game's, outside this rule (`CR-60`).
 - **NFR-SC-02** (must) An order sent to the runner or an extension without the right token, or from a process the runner did not start, runs no code and is logged (`CR-60`).
 - **NFR-SC-03** (must) No token appears on any process's command line, in the result file, in a log the framework writes, or in tool output, verified by searching each of them for the token pattern of `SEC-06` during and after a session (`CR-60`).
 

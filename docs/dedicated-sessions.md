@@ -20,7 +20,7 @@ late = 1               # a late game client p3, which a check joins (optional)
 mods = ["cba", "agh"]
 ```
 
-The server uses `base_port` (default 2402) and the next four ports; the start refuses when one is held. A dedicated session loads the framework's addon through the link `<game>\@shakedown`, because a dedicated server and a headless client load an extension only from inside the game folder; the start makes that link when it is missing and points it at the installed `@shakedown` when it points elsewhere. A mod with an extension of its own must also be inside the game folder for the server and headless clients, as `@skd_fixture` is through its link `<game>\@skd_fixture`.
+The server uses `base_port` (default 2402) and the next four ports; the start refuses when one is held, which it reads from the system's UDP table without binding the ports. Those ports are the game's own: `arma3server_x64.exe` and `arma3_x64.exe` open them, so Windows Firewall asks about the game's executables once, the first time the game is run, and never about `shakedown.exe`. A dedicated session loads the framework's addon through the link `<game>\@shakedown`, because a dedicated server and a headless client load an extension only from inside the game folder; the start makes that link when it is missing and points it at the installed `@shakedown` when it points elsewhere. A mod with an extension of its own must also be inside the game folder for the server and headless clients, as `@skd_fixture` is through its link `<game>\@skd_fixture`.
 
 ## Starting and stopping
 

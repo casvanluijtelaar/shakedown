@@ -16,7 +16,7 @@ As a test author, I want to know that only I can run code in my test session and
 
 ## Acceptance criteria
 
-1. During a session, `netstat` shows every socket the runner and the game processes' extensions opened for Shakedown bound to `127.0.0.1` only.
+1. During a session, `netstat` shows every socket the runner and the game processes' extensions opened for Shakedown bound to `127.0.0.1` only, and no process of `shakedown.exe` listening on any other address, so Windows Firewall asks nothing about it.
 2. Every `exec` from the command line, from MCP and from a check appears in the session folder's `audit.jsonl` with its time, its source (command line, MCP or the check id), its target machine and its code.
 3. No session token or runner token appears in any process's command line, in the result file, in a log the framework writes or in any tool output.
 
