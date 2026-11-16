@@ -32,13 +32,19 @@ enum Command {
         #[arg(long = "tag")]
         tags: Vec<String>,
     },
-    /// Runs the selection against the session; with --setup and no session, starts one and stops it after (RUN-04). `run stop` stops the active run (RUN-05).
+    /// Runs the selection against the session; with --setup and no session, starts one and stops it after (RUN-04); with --each-setup, once per setup a selected check names (RUN-07); --repeat runs each check n times (OUT-02). `run stop` stops the active run (RUN-05).
     Run {
         ids: Vec<String>,
         #[arg(long = "tag")]
         tags: Vec<String>,
         #[arg(long)]
         setup: Option<String>,
+        /// With no session running, runs the selection in each setup a selected check names, one session after the other (RUN-07).
+        #[arg(long, conflicts_with = "setup")]
+        each_setup: bool,
+        /// Runs each selected check this many times in a row, 1 to 100 (OUT-02).
+        #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u32).range(1..=100))]
+        repeat: u32,
     },
     /// Starts or stops the session.
     Session {
@@ -288,10 +294,27 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
             Ok(0)
         }
         // `run stop` stops the active run (RUN-05); `stop` alone is never read as a check id.
-        Command::Run { ids, tags, setup } if ids == &["stop"] && tags.is_empty() && setup.is_none() => {
-            run_stop(cli, &out)
-        }
-        Command::Run { ids, tags, setup } => run(cli, &out, ids, tags, setup.as_deref()),
+        Command::Run {
+            ids,
+            tags,
+            setup,
+            each_setup: false,
+            repeat: 1,
+        } if ids == &["stop"] && tags.is_empty() && setup.is_none() => run_stop(cli, &out),
+        Command::Run {
+            ids,
+            tags,
+            each_setup: true,
+            repeat,
+            ..
+        } => run_each_setup(cli, &out, ids, tags, *repeat),
+        Command::Run {
+            ids,
+            tags,
+            setup,
+            repeat,
+            ..
+        } => run(cli, &out, ids, tags, setup.as_deref(), *repeat),
         Command::Status => {
             let status = ops::status()?;
             if cli.json {
@@ -501,7 +524,14 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
     }
 }
 
-fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str>) -> Result<u8, CliError> {
+fn run(
+    cli: &Cli,
+    out: &Out,
+    ids: &[String],
+    tags: &[String],
+    setup: Option<&str>,
+    repeat: u32,
+) -> Result<u8, CliError> {
     let project = ops::project(cli.project.as_deref())?;
     let all = checks::discover(&project.tests, &project.lib)?;
     let selected = checks::select(&all, ids, tags)?;
@@ -548,6 +578,8 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
         ids: ids.to_vec(),
         tags: tags.to_vec(),
         run_id: Some(run_id),
+        repeat,
+        slow_step: project.slow_step,
     };
     let result = conn.request(&request, |e| out.progress(e));
     // A run that started its own session stops it, whatever the outcomes (RUN-04).
@@ -562,6 +594,7 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
     if cli.json {
         out.json(&result);
     } else {
+        print_repeats(&result);
         if stopped {
             println!("Run stopped: {}.", stopped_reason(&result));
         }
@@ -574,15 +607,106 @@ fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str
             result["result_file"].as_str().unwrap_or("?")
         );
     }
-    let count = |k: &str| summary[k].as_u64().unwrap_or(0);
     // A stopped run did not reach a verdict on every check: 2 unless a check failed (RUN-05).
-    Ok(if count("fail") > 0 {
-        1
-    } else if count("invalid") > 0 || stopped {
-        2
+    Ok(ops::exit_of(&result))
+}
+
+/// A line per check with its summary over its repeats and the count of each outcome (`OUT-02`,
+/// `DM-09`).
+fn print_repeats(result: &Value) {
+    for r in result["repeats"].as_array().into_iter().flatten() {
+        let c = &r["counts"];
+        println!(
+            "{:<7} {} in {}: {} pass, {} fail, {} invalid, {} not run",
+            r["outcome"].as_str().unwrap_or("?"),
+            r["check_id"].as_str().unwrap_or("?"),
+            r["setup"].as_str().unwrap_or("?"),
+            c["pass"],
+            c["fail"],
+            c["invalid"],
+            c["not_run"]
+        );
+    }
+}
+
+/// Whether a Ctrl+C or Ctrl+Break came to a run over every setup: no further setup starts.
+static STOP_ASKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// What the command line does as a run over every setup goes: each setup's run is the one a
+/// Ctrl+C or Ctrl+Break stops, its lines are printed as they come, and a line per setup when it
+/// ends.
+struct CliHooks<'a> {
+    out: &'a Out,
+}
+
+impl ops::EachSetupHooks for CliHooks<'_> {
+    fn began(&self, setup: &str, run_id: &str) {
+        eprintln!("setup {setup}: starting its session for run {run_id}");
+        stop_on_console_event(run_id);
+    }
+
+    fn event(&self, event: &Event) {
+        self.out.progress(event);
+    }
+
+    fn ended(&self, setup: &str, result: &Value) {
+        if self.out.json {
+            return;
+        }
+        print_repeats(result);
+        let s = &result["summary"];
+        let start = match result["session_reason"].as_str() {
+            Some(reason) => format!("did not run, {reason}. "),
+            None => String::new(),
+        };
+        println!(
+            "setup {setup}: {start}{} passed, {} failed, {} invalid, {} not run. Result: {}",
+            s["pass"],
+            s["fail"],
+            s["invalid"],
+            s["not_run"],
+            result["result_file"].as_str().unwrap_or("?")
+        );
+    }
+
+    fn stopped(&self) -> bool {
+        STOP_ASKED.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+/// `run --each-setup` (`RUN-07`): with no session running, the selection runs in each setup a
+/// selected check names, one session after the other; the command exits with the highest exit
+/// code of its setups' runs.
+fn run_each_setup(cli: &Cli, out: &Out, ids: &[String], tags: &[String], repeat: u32) -> Result<u8, CliError> {
+    let project = ops::project(cli.project.as_deref())?;
+    let all = checks::discover(&project.tests, &project.lib)?;
+    let selected = checks::select(&all, ids, tags)?;
+    let plan = ops::setups_needed(&project, &selected);
+    let mut conn = client::connect()?;
+    ops::refuse_running_session(&ops::session_of(conn.request(&Request::SessionInfo, |_| {})?))?;
+    drop(conn);
+    let hooks = CliHooks { out };
+    let results = ops::run_each_setup(&project, &plan, (ids, tags), repeat, &hooks)?;
+    let stopped = STOP_ASKED.load(std::sync::atomic::Ordering::SeqCst);
+    let answer = ops::each_setup_result(&ops::each_setup_handle(), &results, stopped);
+    if cli.json {
+        out.json(&answer);
     } else {
-        0
-    })
+        if stopped {
+            println!("Run stopped by hand: no further setup started.");
+        }
+        let s = &answer["summary"];
+        println!(
+            "{} setups: {} passed, {} failed, {} invalid, {} not run.",
+            results.len(),
+            s["pass"],
+            s["fail"],
+            s["invalid"],
+            s["not_run"]
+        );
+    }
+    let code = results.iter().map(ops::exit_of).max().unwrap_or(0);
+    Ok(if stopped { code.max(2) } else { code })
 }
 
 /// The `stopped_reason` of a run, read from its result file.
@@ -609,6 +733,7 @@ fn stop_on_console_event(run_id: &str) {
         let Some(id) = STOPPING.lock().unwrap().clone() else {
             return;
         };
+        STOP_ASKED.store(true, std::sync::atomic::Ordering::SeqCst);
         eprintln!("Stopping run {id}; its result file comes next.");
         std::thread::spawn(move || {
             if let Ok(Some(mut conn)) = client::existing() {

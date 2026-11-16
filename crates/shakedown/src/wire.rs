@@ -83,6 +83,27 @@ pub enum Request {
         /// The id `ReserveRun` gave, for a run whose id the client handed out before it began.
         #[serde(default)]
         run_id: Option<String>,
+        /// How many times each selected check runs in a row (`OUT-02`).
+        #[serde(default = "one")]
+        repeat: u32,
+        /// The project's `slow_step` (`TIM-01`).
+        #[serde(default = "ten")]
+        slow_step: f64,
+    },
+    /// The result file of a run of `run --each-setup` whose session start was refused or failed:
+    /// every check not run, `session-failed`, with the start's reason (`RUN-07`).
+    RunUnstarted {
+        project: PathBuf,
+        run_id: String,
+        spec: SetupSpec,
+        checks: Vec<CheckRef>,
+        ids: Vec<String>,
+        tags: Vec<String>,
+        repeat: u32,
+        slow_step: f64,
+        /// The failed session's id; none when the start was refused before a session existed.
+        session_id: Option<String>,
+        message: String,
     },
     /// A run id handed out before the run begins, so `run_start` returns it at once (`AGT-03`).
     ReserveRun,
@@ -176,4 +197,12 @@ pub enum Event {
     Error {
         error: CliError,
     },
+}
+
+fn one() -> u32 {
+    1
+}
+
+fn ten() -> f64 {
+    10.0
 }

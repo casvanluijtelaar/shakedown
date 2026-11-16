@@ -18,6 +18,9 @@ pub struct ResultFile {
     pub checks: Vec<CheckExecution>,
     pub not_run: Vec<NotRun>,
     pub reloads: Vec<Value>,
+    /// Each selected check's summary over its repeats, when the run repeated them (`OUT-02`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repeats: Option<Vec<RepeatSummary>>,
     pub logs: BTreeMap<String, String>,
 }
 
@@ -29,7 +32,21 @@ pub struct Run {
     pub ended_at: String,
     pub duration_s: f64,
     pub selection: Selection,
+    /// How many times each selected check runs in a row (`OUT-02`).
+    #[serde(default = "one")]
+    pub repeat: u32,
+    /// The project's `slow_step` the run flagged steps against (`TIM-01`).
+    #[serde(default = "ten")]
+    pub slow_step_s: f64,
     pub stopped_reason: Option<String>,
+}
+
+fn one() -> u32 {
+    1
+}
+
+fn ten() -> f64 {
+    10.0
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -40,7 +57,8 @@ pub struct Selection {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
-    pub id: String,
+    /// `None` when the run's session start was refused before a session existed (`RUN-07`).
+    pub id: Option<String>,
     pub setup: Setup,
     pub machines: Vec<Machine>,
 }
@@ -121,6 +139,9 @@ pub struct Step {
     pub end: Option<Clocks>,
     pub duration_s: f64,
     pub error: Option<String>,
+    /// Longer than the run's `slow_step_s` (`TIM-01`).
+    #[serde(default)]
+    pub slow: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -149,6 +170,9 @@ pub struct CheckExecution {
     pub ended_at: String,
     pub duration_s: f64,
     pub reload: String,
+    /// Its duration was more than half its timeout (`TIM-01`).
+    #[serde(default)]
+    pub slow: bool,
     pub steps: Vec<Step>,
     pub errors: Vec<Value>,
     /// Every event the check recorded, on every machine, in wall-clock order (`EVT-01`).
@@ -171,7 +195,73 @@ pub struct RecordedEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotRun {
     pub check_id: String,
+    /// The repeat the execution would have had.
+    #[serde(default = "one")]
+    pub repeat: u32,
+    /// `setup`, `run-stopped`, `session-failed` or `session-broken`.
     pub reason: String,
+    /// For `session-failed`: the start's reason (`RUN-07`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+/// One check's summary over its repeats (`DM-09`, `OUT-02`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RepeatSummary {
+    pub check_id: String,
+    /// `pass`, `fail`, `flaky`, `invalid` or `not-run`.
+    pub outcome: String,
+    pub counts: Counts,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct Counts {
+    pub pass: u32,
+    pub fail: u32,
+    pub invalid: u32,
+    pub not_run: u32,
+}
+
+impl Counts {
+    /// The summary outcome of `DM-09`, read from the repeats that ran.
+    pub fn outcome(&self) -> &'static str {
+        match (self.pass, self.fail, self.invalid) {
+            (0, 0, 0) => "not-run",
+            (0, 0, _) => "invalid",
+            (_, 0, _) => "pass",
+            (0, _, _) => "fail",
+            _ => "flaky",
+        }
+    }
+}
+
+/// The summaries of `DM-09` of every check in `order` (each id once, in the order first
+/// selected), from the run's executions and the executions it did not run.
+pub fn repeat_summaries(order: &[String], checks: &[CheckExecution], not_run: &[NotRun]) -> Vec<RepeatSummary> {
+    let mut ids: Vec<&String> = Vec::new();
+    for id in order {
+        if !ids.contains(&id) {
+            ids.push(id);
+        }
+    }
+    ids.into_iter()
+        .map(|id| {
+            let mut counts = Counts::default();
+            for c in checks.iter().filter(|c| &c.check_id == id) {
+                match c.outcome.as_str() {
+                    "pass" => counts.pass += 1,
+                    "fail" => counts.fail += 1,
+                    _ => counts.invalid += 1,
+                }
+            }
+            counts.not_run = not_run.iter().filter(|n| &n.check_id == id).count() as u32;
+            RepeatSummary {
+                check_id: id.clone(),
+                outcome: counts.outcome().into(),
+                counts,
+            }
+        })
+        .collect()
 }
 
 impl Summary {
@@ -186,5 +276,31 @@ impl Summary {
             invalid,
             not_run: not_run as u32,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn counts(pass: u32, fail: u32, invalid: u32, not_run: u32) -> Counts {
+        Counts {
+            pass,
+            fail,
+            invalid,
+            not_run,
+        }
+    }
+
+    #[test]
+    fn us_076_us_077_dm_09_the_summary_outcome_is_read_from_the_repeats_that_ran() {
+        assert_eq!(counts(10, 0, 0, 0).outcome(), "pass");
+        assert_eq!(counts(0, 10, 0, 0).outcome(), "fail");
+        assert_eq!(counts(6, 4, 0, 0).outcome(), "flaky");
+        assert_eq!(counts(2, 0, 1, 2).outcome(), "pass", "US-077 1");
+        assert_eq!(counts(0, 3, 1, 0).outcome(), "fail");
+        assert_eq!(counts(0, 0, 1, 4).outcome(), "invalid", "US-077 2");
+        assert_eq!(counts(0, 0, 0, 5).outcome(), "not-run");
+        assert_eq!(counts(1, 1, 3, 0).outcome(), "flaky");
     }
 }

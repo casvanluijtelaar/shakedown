@@ -375,6 +375,7 @@ async fn spk_15_heartbeats_over_50_passing_checks() {
             vec!["spk15".into()],
             vec![],
             None,
+            (1, 10.0),
             &|_, _| {},
             &|_, _| {},
         );

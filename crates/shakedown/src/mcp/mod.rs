@@ -36,6 +36,7 @@ const TOOLS: &str = include_str!("tools.json");
 const RESULT_SCHEMA: &str = include_str!("../../../../spec/contract/result.schema.json");
 
 /// A run started by `run_start`, followed by a thread that holds its runner connection.
+#[derive(Default)]
 struct Track {
     state: String,
     ids: Vec<String>,
@@ -43,6 +44,19 @@ struct Track {
     ended: bool,
     /// A refusal before the run began, returned by `run_start`.
     refused: Option<CliError>,
+    /// The setup the run is in.
+    setup: Option<String>,
+    /// A run over every setup (`RUN-07`): each setup's `{"setup", "run_id", "state"}`, the run of
+    /// the setup whose turn it is, whether a stop was asked, and each setup's `run_result`.
+    each: Option<Each>,
+}
+
+#[derive(Default)]
+struct Each {
+    runs: Vec<Value>,
+    current: Option<String>,
+    stop: bool,
+    results: Vec<Value>,
 }
 
 pub struct Server {
@@ -155,6 +169,12 @@ struct Selection {
     tags: Vec<String>,
     #[serde(default)]
     setup: Option<String>,
+    /// Runs the selection in each setup a selected check names (`RUN-07`).
+    #[serde(default)]
+    each_setup: bool,
+    /// Runs each selected check this many times in a row (`OUT-02`).
+    #[serde(default)]
+    repeat: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -514,9 +534,26 @@ impl Server {
     /// outcome for `run_status` (`AGT-03`). With a setup and no session, the run starts one and
     /// stops it at its end (`RUN-04`).
     async fn run_start(&self, a: Selection) -> Result<Value, CliError> {
+        let repeat = match a.repeat {
+            None => 1,
+            Some(n) if (1..=100).contains(&n) => n as u32,
+            Some(n) => {
+                return Err(bad(format!(
+                    "repeat {n} is not a whole number from 1 to 100. Give a repeat from 1 to 100"
+                )));
+            }
+        };
+        if a.each_setup && a.setup.is_some() {
+            return Err(bad(
+                "each_setup runs every setup a selected check names, so it takes no setup. Leave setup out, or each_setup".into(),
+            ));
+        }
         let project = self.project()?;
         let all = checks::discover(&project.tests, &project.lib)?;
         let selected = checks::select(&all, &a.ids, &a.tags)?;
+        if a.each_setup {
+            return self.run_start_each(project, selected, a.ids, a.tags, repeat).await;
+        }
         let spec = a.setup.as_deref().map(|s| ops::spec(&project, s)).transpose()?;
         let (running, run_id) = blocking(|| {
             let mut conn = client::connect()?;
@@ -539,16 +576,19 @@ impl Server {
             }
             _ => None,
         };
-        let total = selected.len();
+        let total = selected.len() * repeat as usize;
         let starting = start.is_some();
+        let setup = match &spec {
+            Some(spec) => Some(spec.setup.name.clone()),
+            None => running["setup"].as_str().map(String::from),
+        };
         self.runs.lock().unwrap().insert(
             run_id.clone(),
             Track {
                 state: if starting { "starting-session" } else { "pending" }.into(),
-                ids: selected.iter().map(|c| c.id.clone()).collect(),
-                outcomes: vec![],
-                ended: false,
-                refused: None,
+                ids: expanded(&selected, repeat),
+                setup,
+                ..Track::default()
             },
         );
         let runs = Arc::clone(&self.runs);
@@ -560,6 +600,8 @@ impl Server {
             ids: a.ids,
             tags: a.tags,
             run_id: Some(run_id.clone()),
+            repeat,
+            slow_step: project.slow_step,
         };
         let root = project.root.clone();
         std::thread::spawn(move || follow(runs, id, root, start, request));
@@ -584,6 +626,69 @@ impl Server {
         Ok(json!({"run_id": run_id, "state": "running", "total": total}))
     }
 
+    /// `run_start` with `each_setup` (`RUN-07`): refused while a session runs; otherwise a
+    /// handle at once, and a thread that runs each setup in turn and records it in the track.
+    async fn run_start_each(
+        &self,
+        project: crate::config::Project,
+        selected: Vec<checks::CheckRef>,
+        ids: Vec<String>,
+        tags: Vec<String>,
+        repeat: u32,
+    ) -> Result<Value, CliError> {
+        blocking(|| {
+            let mut conn = client::connect()?;
+            ops::refuse_running_session(&ops::session_of(conn.request(&Request::SessionInfo, |_| {})?))
+        })
+        .await?;
+        let plan = ops::setups_needed(&project, &selected);
+        let handle = ops::each_setup_handle();
+        let ordered: Vec<checks::CheckRef> = plan.iter().flat_map(|(_, mine)| mine.clone()).collect();
+        let total = ordered.len() * repeat as usize;
+        let setups: Vec<String> = plan.iter().map(|(s, _)| s.clone()).collect();
+        self.runs.lock().unwrap().insert(
+            handle.clone(),
+            Track {
+                state: "starting-session".into(),
+                ids: expanded(&ordered, repeat),
+                setup: setups.first().cloned(),
+                each: Some(Each {
+                    runs: setups
+                        .iter()
+                        .map(|s| json!({"setup": s, "run_id": null, "state": "waiting"}))
+                        .collect(),
+                    ..Each::default()
+                }),
+                ..Track::default()
+            },
+        );
+        let runs = Arc::clone(&self.runs);
+        let id = handle.clone();
+        std::thread::spawn(move || {
+            let hooks = TrackHooks {
+                runs: Arc::clone(&runs),
+                id: id.clone(),
+            };
+            let answer = ops::run_each_setup(&project, &plan, (&ids, &tags), repeat, &hooks);
+            if let Some(t) = runs.lock().unwrap().get_mut(&id) {
+                let stop = t.each.as_ref().is_some_and(|e| e.stop);
+                let stopped = stop
+                    || t.each
+                        .as_ref()
+                        .is_some_and(|e| e.results.iter().any(|r| r["state"] == "stopped"));
+                t.state = if stopped || answer.is_err() {
+                    "stopped"
+                } else {
+                    "finished"
+                }
+                .into();
+                t.setup = None;
+                t.ended = true;
+            }
+        });
+        Ok(json!({"run_id": handle, "state": "starting-session", "total": total, "setups": setups}))
+    }
+
     fn status_of(&self, run_id: &str) -> Option<(Value, usize, bool)> {
         let runs = self.runs.lock().unwrap();
         let t = runs.get(run_id)?;
@@ -592,18 +697,19 @@ impl Server {
             s => s,
         };
         let done = t.outcomes.len();
-        Some((
-            json!({
-                "run_id": run_id,
-                "state": state,
-                "done": done,
-                "total": t.ids.len(),
-                "current_check": if t.ended { None } else { t.ids.get(done).cloned() },
-                "outcomes": t.outcomes,
-            }),
-            done,
-            t.ended,
-        ))
+        let mut status = json!({
+            "run_id": run_id,
+            "state": state,
+            "done": done,
+            "total": t.ids.len(),
+            "current_check": if t.ended { None } else { t.ids.get(done).cloned() },
+            "outcomes": t.outcomes,
+            "setup": t.setup,
+        });
+        if let Some(each) = &t.each {
+            status["runs"] = json!(each.runs);
+        }
+        Some((status, done, t.ended))
     }
 
     /// `run_status`: with `wait_s`, returns as soon as a check or the run ends, or at `wait_s`.
@@ -656,6 +762,36 @@ impl Server {
         if let Some((status, _, true)) = self.status_of(run_id) {
             return Ok(status);
         }
+        // A run over every setup stops the setup's run that is going and starts no further setup.
+        let current = {
+            let mut runs = self.runs.lock().unwrap();
+            runs.get_mut(run_id).and_then(|t| t.each.as_mut()).map(|e| {
+                e.stop = true;
+                e.current.clone()
+            })
+        };
+        if let Some(current) = current {
+            if let Some(inner) = current {
+                let _ = blocking(move || {
+                    let mut conn = client::existing()?.ok_or_else(|| unknown_run(&inner))?;
+                    ops::value(
+                        &mut conn,
+                        &Request::RunStop {
+                            run_id: Some(inner.clone()),
+                        },
+                        |_| {},
+                    )
+                })
+                .await;
+            }
+            while clock.elapsed().as_secs_f64() < WAIT_MAX_S {
+                if let Some((status, _, true)) = self.status_of(run_id) {
+                    return Ok(status);
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            return Ok(self.status_of(run_id).expect("a run's track stays").0);
+        }
         let id = run_id.to_string();
         let answer = blocking(move || {
             let mut conn = client::existing()?.ok_or_else(|| unknown_run(&id))?;
@@ -695,6 +831,11 @@ impl Server {
             ))
             .tag("unknown-run"));
         }
+        if let Some(t) = self.runs.lock().unwrap().get(run_id)
+            && let Some(each) = &t.each
+        {
+            return Ok(ops::each_setup_result(run_id, &each.results, each.stop));
+        }
         let project = self.project()?;
         ops::run_result(&project.root, run_id).ok_or_else(|| unknown_run(run_id))
     }
@@ -722,6 +863,88 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T, CliError> + S
     tokio::task::spawn_blocking(f)
         .await
         .map_err(|e| CliError::framework(format!("The request failed: {e}.")))?
+}
+
+/// The ids of `checks` each `repeat` times in a row, the order a run executes them in.
+fn expanded(checks: &[checks::CheckRef], repeat: u32) -> Vec<String> {
+    checks
+        .iter()
+        .flat_map(|c| std::iter::repeat_n(c.id.clone(), repeat as usize))
+        .collect()
+}
+
+/// Records a run over every setup in its track as it goes (`RUN-07`).
+struct TrackHooks {
+    runs: Arc<Mutex<HashMap<String, Track>>>,
+    id: String,
+}
+
+impl TrackHooks {
+    fn set(&self, f: impl FnOnce(&mut Track)) {
+        if let Some(t) = self.runs.lock().unwrap().get_mut(&self.id) {
+            f(t);
+        }
+    }
+
+    fn set_run(t: &mut Track, setup: &str, f: impl Fn(&mut Value)) {
+        if let Some(each) = t.each.as_mut() {
+            for r in each.runs.iter_mut().filter(|r| r["setup"] == setup) {
+                f(r);
+            }
+        }
+    }
+}
+
+impl ops::EachSetupHooks for TrackHooks {
+    fn began(&self, setup: &str, run_id: &str) {
+        self.set(|t| {
+            t.state = "starting-session".into();
+            t.setup = Some(setup.to_string());
+            if let Some(each) = t.each.as_mut() {
+                each.current = Some(run_id.to_string());
+            }
+            Self::set_run(t, setup, |r| {
+                r["run_id"] = json!(run_id);
+                r["state"] = json!("starting-session");
+            });
+        });
+    }
+
+    fn event(&self, event: &Event) {
+        match event {
+            Event::RunStarted { .. } => self.set(|t| {
+                t.state = "running".into();
+                let setup = t.setup.clone().unwrap_or_default();
+                Self::set_run(t, &setup, |r| r["state"] = json!("running"));
+            }),
+            Event::Check { line, .. } => self.set(|t| t.outcomes.push(line.clone())),
+            _ => {}
+        }
+    }
+
+    fn ended(&self, setup: &str, result: &Value) {
+        self.set(|t| {
+            let state = if result["session_reason"].is_string() {
+                "session-failed".to_string()
+            } else {
+                result["state"].as_str().unwrap_or("finished").to_string()
+            };
+            Self::set_run(t, setup, |r| r["state"] = json!(state));
+            if let Some(each) = t.each.as_mut() {
+                each.current = None;
+                each.results.push(result.clone());
+            }
+        });
+    }
+
+    fn stopped(&self) -> bool {
+        self.runs
+            .lock()
+            .unwrap()
+            .get(&self.id)
+            .and_then(|t| t.each.as_ref())
+            .is_some_and(|e| e.stop)
+    }
 }
 
 /// Follows a run on its own connection and records it in its track.

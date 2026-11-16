@@ -75,16 +75,50 @@
     },
     "OutcomeLine": {
       "type": "object",
-      "required": ["check_id", "repeat", "outcome", "reason", "duration_s"],
+      "required": ["check_id", "repeat", "setup", "outcome", "reason", "duration_s", "slow"],
       "properties": {
         "check_id": {"$ref": "#/$defs/CheckId"},
         "repeat": {"type": "integer", "minimum": 1},
+        "setup": {"type": "string"},
         "outcome": {"enum": ["pass", "fail", "invalid"]},
         "reason": {
           "type": ["object", "null"],
           "properties": {"kind": {"type": "string"}, "message": {"type": "string"}}
         },
-        "duration_s": {"type": "number", "minimum": 0}
+        "duration_s": {"type": "number", "minimum": 0},
+        "slow": {"type": "boolean"}
+      }
+    },
+    "RunResult": {
+      "type": "object", "required": ["run_id", "state", "summary", "outcomes", "not_run", "result_file"],
+      "properties": {
+        "run_id": {"type": "string"},
+        "state": {"type": "string"},
+        "summary": {
+          "type": "object",
+          "properties": {
+            "total": {"type": "integer"}, "pass": {"type": "integer"}, "fail": {"type": "integer"},
+            "invalid": {"type": "integer"}, "not_run": {"type": "integer"}
+          }
+        },
+        "outcomes": {
+          "type": "array",
+          "items": {
+            "allOf": [{"$ref": "#/$defs/OutcomeLine"}],
+            "properties": {
+              "failed_step": {"type": ["array", "null"], "items": {"type": "string"}},
+              "evidence_path": {"type": "string"}
+            }
+          }
+        },
+        "not_run": {"type": "array", "items": {"$ref": "#/$defs/NotRun"}},
+        "repeats": {
+          "type": "array",
+          "items": {"allOf": [{"$ref": "#/$defs/RepeatSummary"}], "properties": {"setup": {"type": "string"}}}
+        },
+        "result_file": {"type": ["string", "null"]},
+        "setup": {"type": "string"},
+        "session_reason": {"type": "string"}
       }
     },
     "Args": {
@@ -170,13 +204,15 @@
     },
     {
       "name": "run_start",
-      "description": "Starts a run of the selected checks against the session and returns its run_id at once; follow it with run_status and read it with run_result. ids run in the order given, once per time given. With setup and no session, the run starts a session and stops it at its end.",
+      "description": "Starts a run of the selected checks against the session and returns its run_id at once; follow it with run_status and read it with run_result. ids run in the order given, once per time given; repeat (1 to 100) runs each of them that many times in a row, and run_result then gives each check's summary: pass, fail, flaky, invalid or not-run. With setup and no session, the run starts a session and stops it at its end. With each_setup and no session, it runs the selection in each setup a selected check names, one session after the other; run_id is then a handle for all of them.",
       "inputSchema": {
         "type": "object", "additionalProperties": false,
         "properties": {
           "ids": {"type": "array", "items": {"type": "string"}},
           "tags": {"type": "array", "items": {"type": "string"}},
-          "setup": {"type": "string"}
+          "setup": {"type": "string"},
+          "each_setup": {"type": "boolean"},
+          "repeat": {"type": "integer", "minimum": 1, "maximum": 100}
         }
       },
       "outputSchema": {
@@ -184,7 +220,8 @@
         "properties": {
           "run_id": {"type": "string"},
           "state": {"enum": ["running", "starting-session"]},
-          "total": {"type": "integer"}
+          "total": {"type": "integer"},
+          "setups": {"type": "array", "items": {"type": "string"}}
         }
       }
     },
@@ -207,7 +244,19 @@
           "done": {"type": "integer"},
           "total": {"type": "integer"},
           "current_check": {"type": ["string", "null"]},
-          "outcomes": {"type": "array", "items": {"$ref": "#/$defs/OutcomeLine"}}
+          "outcomes": {"type": "array", "items": {"$ref": "#/$defs/OutcomeLine"}},
+          "setup": {"type": ["string", "null"]},
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "object", "required": ["setup", "run_id", "state"],
+              "properties": {
+                "setup": {"type": "string"},
+                "run_id": {"type": ["string", "null"]},
+                "state": {"enum": ["waiting", "starting-session", "running", "finished", "stopped", "session-failed"]}
+              }
+            }
+          }
         }
       }
     },
@@ -226,7 +275,19 @@
           "done": {"type": "integer"},
           "total": {"type": "integer"},
           "current_check": {"type": ["string", "null"]},
-          "outcomes": {"type": "array", "items": {"$ref": "#/$defs/OutcomeLine"}}
+          "outcomes": {"type": "array", "items": {"$ref": "#/$defs/OutcomeLine"}},
+          "setup": {"type": ["string", "null"]},
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "object", "required": ["setup", "run_id", "state"],
+              "properties": {
+                "setup": {"type": "string"},
+                "run_id": {"type": ["string", "null"]},
+                "state": {"enum": ["waiting", "starting-session", "running", "finished", "stopped", "session-failed"]}
+              }
+            }
+          }
         }
       }
     },
@@ -239,28 +300,9 @@
         "properties": {"run_id": {"type": "string"}}
       },
       "outputSchema": {
-        "type": "object", "required": ["run_id", "state", "summary", "outcomes", "result_file"],
+        "allOf": [{"$ref": "#/$defs/RunResult"}],
         "properties": {
-          "run_id": {"type": "string"},
-          "state": {"type": "string"},
-          "summary": {
-            "type": "object",
-            "properties": {
-              "total": {"type": "integer"}, "pass": {"type": "integer"}, "fail": {"type": "integer"},
-              "invalid": {"type": "integer"}, "not_run": {"type": "integer"}
-            }
-          },
-          "outcomes": {
-            "type": "array",
-            "items": {
-              "allOf": [{"$ref": "#/$defs/OutcomeLine"}],
-              "properties": {
-                "failed_step": {"type": ["array", "null"], "items": {"type": "string"}},
-                "evidence_path": {"type": "string"}
-              }
-            }
-          },
-          "result_file": {"type": "string"}
+          "runs": {"type": "array", "items": {"$ref": "#/$defs/RunResult"}}
         }
       }
     },

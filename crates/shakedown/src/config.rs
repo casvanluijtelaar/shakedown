@@ -22,8 +22,12 @@ pub struct Project {
     /// folder (`API-06`).
     pub lib: PathBuf,
     pub base_port: u16,
+    /// Seconds a step may take before it is flagged slow, the key `slow_step` (`TIM-01`).
+    pub slow_step: f64,
     pub mods: BTreeMap<String, Mod>,
     pub setups: BTreeMap<String, Setup>,
+    /// The setups' names in the order the file declares them (`RUN-07`).
+    pub setup_order: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -77,6 +81,7 @@ struct RawProject {
     tests: Option<Spanned<String>>,
     lib: Option<Spanned<String>>,
     base_port: Option<Spanned<i64>>,
+    slow_step: Option<Spanned<f64>>,
     #[serde(default)]
     mods: BTreeMap<Spanned<String>, RawMod>,
     #[serde(default)]
@@ -209,6 +214,20 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
         }
     };
 
+    let slow_step = match raw.slow_step {
+        None => 10.0,
+        Some(s) => {
+            let v = *s.get_ref();
+            if !(v.is_finite() && v > 0.0) {
+                return Err(fail(
+                    s.span(),
+                    format!("slow_step must be a number of seconds above 0, got {v}."),
+                ));
+            }
+            v
+        }
+    };
+
     let mut mods = BTreeMap::new();
     for (name, m) in raw.mods {
         if !name_ok(name.get_ref()) {
@@ -241,6 +260,13 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
         );
     }
 
+    let mut declared: Vec<(usize, String)> = raw
+        .setups
+        .keys()
+        .map(|k| (k.span().start, k.get_ref().clone()))
+        .collect();
+    declared.sort();
+    let setup_order = declared.into_iter().map(|(_, n)| n).collect();
     let mut setups = BTreeMap::new();
     for (name, s) in raw.setups {
         if !name_ok(name.get_ref()) {
@@ -317,8 +343,10 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
         tests,
         lib,
         base_port,
+        slow_step,
         mods,
         setups,
+        setup_order,
     })
 }
 
@@ -470,6 +498,62 @@ mods = []
         let text = GOOD.replace("tests = \"tests\"", "tests = 5");
         let e = parse(&root(), &text).unwrap_err();
         assert!(e.message.contains("line 3"), "{}", e.message);
+    }
+
+    #[test]
+    fn us_078_tim_01_slow_step_defaults_to_10_and_takes_an_integer_or_a_decimal() {
+        assert_eq!(parse(&root(), GOOD).unwrap().slow_step, 10.0);
+        let with = |v: &str| {
+            GOOD.replace(
+                "tests = \"tests\"
+",
+                &format!(
+                    "tests = \"tests\"
+slow_step = {v}
+"
+                ),
+            )
+        };
+        assert_eq!(parse(&root(), &with("15")).unwrap().slow_step, 15.0);
+        assert_eq!(parse(&root(), &with("2.5")).unwrap().slow_step, 2.5);
+    }
+
+    #[test]
+    fn us_080_tim_01_cfg_01_a_slow_step_that_is_not_a_positive_number_is_refused_with_its_line() {
+        for v in ["-1", "0", "\"10\""] {
+            let text = GOOD.replace(
+                "tests = \"tests\"
+",
+                &format!(
+                    "tests = \"tests\"
+slow_step = {v}
+"
+                ),
+            );
+            let e = parse(&root(), &text).unwrap_err();
+            assert_eq!(e.code, 3, "{v}");
+            assert!(
+                e.message.contains("slow_step") && e.message.contains("line 4"),
+                "{v}: {}",
+                e.message
+            );
+        }
+    }
+
+    #[test]
+    fn us_074_run_07_the_setups_keep_the_order_the_file_declares() {
+        let text = format!(
+            "{GOOD}
+[setups.zz]
+mode = \"singleplayer\"
+mods = []
+
+[setups.aa]
+mode = \"singleplayer\"
+mods = []
+"
+        );
+        assert_eq!(parse(&root(), &text).unwrap().setup_order, ["sp", "zz", "aa"]);
     }
 
     #[test]

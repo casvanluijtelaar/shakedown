@@ -408,6 +408,8 @@ impl Runner {
                 ids,
                 tags,
                 run_id,
+                repeat,
+                slow_step,
             } => {
                 let emit = |line: serde_json::Value, text: String| {
                     let _ = tx.send(Event::Check { line, text });
@@ -415,10 +417,44 @@ impl Runner {
                 let started = |run_id: String, total: usize| {
                     let _ = tx.send(Event::RunStarted { run_id, total });
                 };
-                run::run(self, project, setups, checks, ids, tags, run_id, &started, &emit)
-                    .await
-                    .map(|result| Event::RunDone { result })
+                run::run(
+                    self,
+                    project,
+                    setups,
+                    checks,
+                    ids,
+                    tags,
+                    run_id,
+                    (repeat, slow_step),
+                    &started,
+                    &emit,
+                )
+                .await
+                .map(|result| Event::RunDone { result })
             }
+            Request::RunUnstarted {
+                project,
+                run_id,
+                spec,
+                checks,
+                ids,
+                tags,
+                repeat,
+                slow_step,
+                session_id,
+                message,
+            } => run::unstarted(
+                self,
+                &project,
+                &run_id,
+                &spec,
+                checks,
+                (ids, tags),
+                (repeat, slow_step),
+                session_id,
+                message,
+            )
+            .map(|result| Event::RunDone { result }),
         };
         answer.unwrap_or_else(|error| Event::Error { error })
     }

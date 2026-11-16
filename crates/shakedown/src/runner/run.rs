@@ -9,7 +9,7 @@ use std::time::{Duration, Instant, SystemTime};
 use serde_json::{Value, json};
 use shakedown_protocol::result::{
     Attached, CheckExecution, Clocks, Evidence, NotRun, Reason, ResultFile, Run, SCHEMA, Selection,
-    Session as RSession, Setup as RSetup, Step, Summary,
+    Session as RSession, Setup as RSetup, Step, Summary, repeat_summaries,
 };
 use shakedown_protocol::time;
 use tokio::sync::watch;
@@ -197,9 +197,16 @@ pub async fn run(
     ids: Vec<String>,
     tags: Vec<String>,
     run_id: Option<String>,
+    (repeat, slow_step): (u32, f64),
     started: &(dyn Fn(String, usize) + Sync),
     emit: &(dyn Fn(Value, String) + Sync),
 ) -> Result<Value, CliError> {
+    // Each selected check runs `repeat` times in a row, each its own execution (OUT-02).
+    let order: Vec<String> = checks.iter().map(|c| c.id.clone()).collect();
+    let checks: Vec<CheckRef> = checks
+        .into_iter()
+        .flat_map(|c| std::iter::repeat_n(c, repeat.max(1) as usize))
+        .collect();
     let Some(session) = runner.session() else {
         return Err(CliError::not_now(
             "No session runs. Start one with `shakedown session start --setup <name>`, or give `run` a --setup.",
@@ -231,10 +238,15 @@ pub async fn run(
     }
     started(run_id.clone(), checks.len());
     let control = control(runner, &run_id);
-    let result = execute(
-        runner, &session, project, &setups, checks, ids, tags, run_id, &control, emit,
-    )
-    .await;
+    let plan = Plan {
+        setups: &setups,
+        checks,
+        order,
+        selection: Selection { ids, tags },
+        repeat: repeat.max(1),
+        slow_step,
+    };
+    let result = execute(runner, &session, project, plan, run_id, &control, emit).await;
     let mut progress = runner.progress.lock().unwrap();
     if session.state() == SessionState::Running {
         session.set_state(SessionState::Ready);
@@ -283,26 +295,136 @@ fn session_state_word(session: &Session) -> String {
     }
 }
 
+/// What a run executes: the checks in execution order, each repeated check once per repeat, the
+/// selected ids in the order first selected, and the run's settings.
+struct Plan<'a> {
+    setups: &'a [String],
+    checks: Vec<CheckRef>,
+    order: Vec<String>,
+    selection: Selection,
+    repeat: u32,
+    slow_step: f64,
+}
+
+/// The run folder `.shakedown/runs/<run id>` of the project, made.
+fn run_folder(project: &Path, run_id: &str) -> Result<PathBuf, CliError> {
+    let state_dir = paths::project_state_dir(project)
+        .map_err(|e| CliError::framework(format!("Cannot create .shakedown in {}: {e}.", project.display())))?;
+    let folder = state_dir.join("runs").join(run_id);
+    std::fs::create_dir_all(&folder)
+        .map_err(|e| CliError::framework(format!("Cannot create the run folder {}: {e}.", folder.display())))?;
+    Ok(folder)
+}
+
+/// Writes the result file into `folder`, redacted so nothing in it names the Steam account
+/// (`LOG-02`), and hands it to the run's stop switch; the `run_result` shape of it.
+fn write_result(runner: &Runner, control: &Control, folder: &Path, result: &ResultFile) -> Result<Value, CliError> {
+    let file = folder.join("result.json");
+    let mut value = serde_json::to_value(result).expect("the result serialises");
+    runner.redactor().redact_value(&mut value);
+    let text = serde_json::to_string_pretty(&value).expect("the result serialises");
+    std::fs::write(&file, text)
+        .map_err(|e| CliError::framework(format!("Cannot write the result file {}: {e}.", file.display())))?;
+    *control.result.lock().unwrap() = Some(file.clone());
+    Ok(run_result_of(&value, &file))
+}
+
+/// The result file of a run of `run --each-setup` whose session start was refused or failed
+/// (`RUN-07`): every execution it would have made is not run, `session-failed`, with the start's
+/// reason, and the session is the one that failed, or none when the start was refused before a
+/// session existed.
 #[allow(clippy::too_many_arguments)]
+pub fn unstarted(
+    runner: &Runner,
+    project: &Path,
+    run_id: &str,
+    spec: &crate::wire::SetupSpec,
+    checks: Vec<CheckRef>,
+    selection: (Vec<String>, Vec<String>),
+    (repeat, slow_step): (u32, f64),
+    session_id: Option<String>,
+    message: String,
+) -> Result<Value, CliError> {
+    let folder = run_folder(project, run_id)?;
+    let mut times: BTreeMap<String, u32> = BTreeMap::new();
+    let order: Vec<String> = checks.iter().map(|c| c.id.clone()).collect();
+    let mut not_run = Vec::new();
+    for c in &checks {
+        for _ in 0..repeat.max(1) {
+            let n = times.entry(c.id.clone()).or_insert(0);
+            *n += 1;
+            not_run.push(NotRun {
+                check_id: c.id.clone(),
+                repeat: *n,
+                reason: "session-failed".into(),
+                message: Some(message.clone()),
+            });
+        }
+    }
+    let now = time::now();
+    let result = ResultFile {
+        schema: SCHEMA.into(),
+        framework_version: shakedown_protocol::VERSION.into(),
+        run: Run {
+            id: run_id.into(),
+            state: "finished".into(),
+            started_at: now.clone(),
+            ended_at: now,
+            duration_s: 0.0,
+            selection: Selection {
+                ids: selection.0,
+                tags: selection.1,
+            },
+            repeat: repeat.max(1),
+            slow_step_s: slow_step,
+            stopped_reason: None,
+        },
+        session: RSession {
+            id: session_id,
+            setup: RSetup {
+                name: spec.setup.name.clone(),
+                mode: spec.setup.mode.as_str().into(),
+                clients: spec.setup.clients,
+                headless: spec.setup.headless,
+                world: spec.setup.world.clone(),
+                mods: spec.setup.mods.clone(),
+            },
+            machines: vec![],
+        },
+        summary: Summary::of(&[], not_run.len()),
+        checks: vec![],
+        repeats: (repeat > 1).then(|| repeat_summaries(&order, &[], &not_run)),
+        not_run,
+        reloads: vec![],
+        logs: BTreeMap::new(),
+    };
+    runner.log(&format!(
+        "run {run_id}: setup {} did not start, {message}",
+        spec.setup.name
+    ));
+    write_result(runner, &control(runner, run_id), &folder, &result)
+}
+
 async fn execute(
     runner: &Arc<Runner>,
     session: &Arc<Session>,
     project: PathBuf,
-    setups: &[String],
-    checks: Vec<CheckRef>,
-    ids: Vec<String>,
-    tags: Vec<String>,
+    plan: Plan<'_>,
     run_id: String,
     control: &Control,
     emit: &(dyn Fn(Value, String) + Sync),
 ) -> Result<Value, CliError> {
+    let Plan {
+        setups,
+        checks,
+        order,
+        selection,
+        repeat: repeat_count,
+        slow_step,
+    } = plan;
     let started = SystemTime::now();
     let clock = Instant::now();
-    let state_dir = paths::project_state_dir(&project)
-        .map_err(|e| CliError::framework(format!("Cannot create .shakedown in {}: {e}.", project.display())))?;
-    let folder = state_dir.join("runs").join(&run_id);
-    std::fs::create_dir_all(&folder)
-        .map_err(|e| CliError::framework(format!("Cannot create the run folder {}: {e}.", folder.display())))?;
+    let folder = run_folder(&project, &run_id)?;
     runner.log(&format!("{} run {run_id}: {} checks", session.id, checks.len()));
     // Every machine marks the run's start in its RPT, so the run's lines can be cut out (LOG-04).
     mark(session, &run_id, "start", "").await;
@@ -319,26 +441,34 @@ async fn execute(
     let mut deadline: Option<tokio::time::Instant> = None;
     // Why the run stopped, once it has: a check ended by the stop, or checks left not run.
     let mut stopped: Option<&'static str> = None;
+    let mut next_repeat = |id: &str| {
+        let n = times.entry(id.to_string()).or_insert(0);
+        *n += 1;
+        *n
+    };
+    let not_run_entry = |check_id: &str, repeat: u32, reason: &str| NotRun {
+        check_id: check_id.into(),
+        repeat,
+        reason: reason.into(),
+        message: None,
+    };
     for (n, check) in checks.iter().enumerate() {
+        let repeat = next_repeat(&check.id);
         if deadline.is_some_and(|d| tokio::time::Instant::now() >= d) {
             control.request(RUN_CEILING);
         }
         if let Some(reason) = control.reason() {
             stopped = Some(reason);
-            not_run.extend(checks[n..].iter().map(|c| NotRun {
-                check_id: c.id.clone(),
-                reason: "run-stopped".into(),
-            }));
+            not_run.push(not_run_entry(&check.id, repeat, "run-stopped"));
+            for c in &checks[n + 1..] {
+                let repeat = next_repeat(&c.id);
+                not_run.push(not_run_entry(&c.id, repeat, "run-stopped"));
+            }
             break;
         }
         let deadline = *deadline.get_or_insert_with(|| tokio::time::Instant::now() + ceiling);
         progress(n, Some(&check.id));
-        let repeat = {
-            let n = times.entry(check.id.clone()).or_insert(0);
-            *n += 1;
-            *n
-        };
-        let execution = execute_check(
+        let executed = execute_check(
             runner,
             session,
             &run_id,
@@ -348,23 +478,21 @@ async fn execute(
             setups,
             control,
             (deadline, ceiling),
+            (repeat_count > 1, slow_step),
         )
-        .await
-        .map(|mut e| {
-            e.repeat = repeat;
-            e
-        });
-        let Some(execution) = execution else {
-            not_run.push(NotRun {
-                check_id: check.id.clone(),
-                reason: "setup".into(),
-            });
-            continue;
+        .await;
+        let mut execution = match executed {
+            Executed::Ran(e) => *e,
+            Executed::NotRun(reason) => {
+                not_run.push(not_run_entry(&check.id, repeat, reason));
+                continue;
+            }
         };
+        execution.repeat = repeat;
         if execution.reason.as_ref().is_some_and(|r| r.kind == "run-stopped") {
             stopped = control.reason();
         }
-        let line = outcome_line(&execution, executions.len());
+        let line = outcome_line(&execution, &session.spec.setup.name);
         emit(line, outcome_text(&execution));
         executions.push(execution);
     }
@@ -403,11 +531,13 @@ async fn execute(
             started_at: time::format_system_time(started),
             ended_at: time::now(),
             duration_s: round3(clock.elapsed().as_secs_f64()),
-            selection: Selection { ids, tags },
+            selection,
+            repeat: repeat_count,
+            slow_step_s: slow_step,
             stopped_reason: stopped.map(String::from),
         },
         session: RSession {
-            id: session.id.clone(),
+            id: Some(session.id.clone()),
             setup: RSetup {
                 name: session.spec.setup.name.clone(),
                 mode: session.spec.setup.mode.as_str().into(),
@@ -419,27 +549,25 @@ async fn execute(
             machines,
         },
         summary: summary.clone(),
-        checks: executions.clone(),
+        repeats: (repeat_count > 1).then(|| repeat_summaries(&order, &executions, &not_run)),
+        checks: executions,
         not_run,
         reloads: vec![],
         logs: run_logs,
     };
-    let file = folder.join("result.json");
-    // Nothing in the result file names the Steam account (LOG-02).
-    let mut value = serde_json::to_value(&result).expect("the result serialises");
-    runner.redactor().redact_value(&mut value);
-    let text = serde_json::to_string_pretty(&value).expect("the result serialises");
-    std::fs::write(&file, text)
-        .map_err(|e| CliError::framework(format!("Cannot write the result file {}: {e}.", file.display())))?;
-    runner.log(&format!("{} run {run_id}: done, {}", session.id, file.display()));
-    *control.result.lock().unwrap() = Some(file.clone());
-
-    Ok(run_result_of(&value, &file))
+    let answer = write_result(runner, control, &folder, &result)?;
+    runner.log(&format!(
+        "{} run {run_id}: done, {}",
+        session.id,
+        folder.join("result.json").display()
+    ));
+    Ok(answer)
 }
 
 /// The `run_result` shape of `contract/mcp-tools.md` from a result file's content, so the command
 /// line's `run --json` and the `run_result` tool give the same JSON (`NFR-US-03`).
 pub fn run_result_of(result: &Value, file: &Path) -> Value {
+    let setup = &result["session"]["setup"]["name"];
     let outcomes: Vec<Value> = result["checks"]
         .as_array()
         .into_iter()
@@ -449,21 +577,47 @@ pub fn run_result_of(result: &Value, file: &Path) -> Value {
             json!({
                 "check_id": c["check_id"],
                 "repeat": c["repeat"],
+                "setup": setup,
                 "outcome": c["outcome"],
                 "reason": if c["reason"].is_null() { Value::Null } else { json!({"kind": c["reason"]["kind"], "message": c["reason"]["message"]}) },
                 "duration_s": c["duration_s"],
+                "slow": slow_of(c),
                 "failed_step": c["evidence"]["failed_step"],
                 "evidence_path": format!("result.json#/checks/{i}/evidence"),
             })
         })
         .collect();
-    json!({
+    let mut answer = json!({
         "run_id": result["run"]["id"],
         "state": result["run"]["state"],
         "summary": result["summary"],
         "outcomes": outcomes,
+        "not_run": result["not_run"],
         "result_file": file,
-    })
+    });
+    if let Some(repeats) = result["repeats"].as_array() {
+        let with_setup: Vec<Value> = repeats
+            .iter()
+            .map(|r| {
+                let mut r = r.clone();
+                r["setup"] = setup.clone();
+                r
+            })
+            .collect();
+        answer["repeats"] = json!(with_setup);
+    }
+    answer
+}
+
+/// Whether a check execution of a result file, or one of its steps, was flagged slow (`TIM-01`).
+fn slow_of(c: &Value) -> bool {
+    c["slow"] == true || c["steps"].as_array().into_iter().flatten().any(|s| s["slow"] == true)
+}
+
+/// What became of one check execution of a run: it ran, or it was not run, with the reason.
+enum Executed {
+    Ran(Box<CheckExecution>),
+    NotRun(&'static str),
 }
 
 /// Executes one check (`P-05`) as the run's `n`th execution; `None` when its `@setups` excludes
@@ -484,7 +638,8 @@ async fn execute_check(
     setups: &[String],
     control: &Control,
     (deadline, ceiling): (tokio::time::Instant, Duration),
-) -> Option<CheckExecution> {
+    (repeated, slow_step): (bool, f64),
+) -> Executed {
     let started = SystemTime::now();
     let clock = Instant::now();
     // The check is read fresh from disk for every execution (RLD-04).
@@ -502,7 +657,7 @@ async fn execute_check(
                 machine: None,
                 at: time::now(),
             };
-            return Some(ended(
+            return Executed::Ran(Box::new(ended(
                 check,
                 None,
                 started,
@@ -511,15 +666,19 @@ async fn execute_check(
                 Some(reason),
                 vec![],
                 Evidence::default(),
-            ));
+            )));
         }
     };
     if let Some(setups) = &header.setups
         && !setups.contains(&session.spec.setup.name)
     {
-        return None;
+        return Executed::NotRun("setup");
     }
-    // P-05 step 2: no check runs in a broken session.
+    // P-05 step 2: no check runs in a broken session; in a run of repeats the repeats it never
+    // started are not run, so a summary counts only the repeats that ran (DM-05, OUT-02).
+    if session.state() == SessionState::Broken && repeated {
+        return Executed::NotRun("session-broken");
+    }
     if session.state() == SessionState::Broken {
         let reason = Reason {
             kind: "session-broken".into(),
@@ -530,7 +689,7 @@ async fn execute_check(
             machine: None,
             at: time::now(),
         };
-        return Some(ended(
+        return Executed::Ran(Box::new(ended(
             check,
             Some(&header),
             started,
@@ -539,7 +698,7 @@ async fn execute_check(
             Some(reason),
             vec![],
             Evidence::default(),
-        ));
+        )));
     }
     // P-05 step 3 for reset mode `mission` (RST-06): the mission restart comes before the start
     // marker and the context, which a mission restart clears.
@@ -570,7 +729,7 @@ async fn execute_check(
             machine: Some(machine),
             at: time::now(),
         };
-        return Some(ended(
+        return Executed::Ran(Box::new(ended(
             check,
             Some(&header),
             started,
@@ -579,7 +738,7 @@ async fn execute_check(
             Some(reason),
             vec![],
             Evidence::default(),
-        ));
+        )));
     }
     let key = format!("{run_id}#{n}");
     mark(session, &key, "start", &check.id).await;
@@ -667,7 +826,17 @@ async fn execute_check(
     decide(&mut execution, causes);
     execution.ended_at = time::now();
     execution.duration_s = round3(clock.elapsed().as_secs_f64());
-    Some(execution)
+    flag_slow(&mut execution, slow_step, header.timeout_s);
+    Executed::Ran(Box::new(execution))
+}
+
+/// `TIM-01`: a step longer than `slow_step`, and an execution longer than half its timeout, are
+/// slow.
+fn flag_slow(execution: &mut CheckExecution, slow_step: f64, timeout_s: u64) {
+    for s in execution.steps.iter_mut() {
+        s.slow = s.duration_s > slow_step;
+    }
+    execution.slow = execution.duration_s > timeout_s as f64 / 2.0;
 }
 
 /// The reason of a check a lost machine ended (`DM-05`, `P-07`, `P-09`): the machine, how it was
@@ -1064,6 +1233,7 @@ fn ended(
         ended_at: time::now(),
         duration_s: round3(clock.elapsed().as_secs_f64()),
         reload: "full".into(),
+        slow: false,
         steps,
         errors: vec![],
         events: vec![],
@@ -1153,6 +1323,7 @@ fn step(v: &Value) -> Option<Step> {
         end: clocks(&v["end"]),
         duration_s: number(&v["duration_s"]).unwrap_or(0.0).max(0.0),
         error: v["error"].as_str().map(String::from),
+        slow: false,
     })
 }
 
@@ -1161,24 +1332,34 @@ fn round3(x: f64) -> f64 {
 }
 
 /// The Outcome line of `contract/mcp-tools.md`.
-fn outcome_line(e: &CheckExecution, _index: usize) -> Value {
+fn outcome_line(e: &CheckExecution, setup: &str) -> Value {
     json!({
         "check_id": e.check_id,
         "repeat": e.repeat,
+        "setup": setup,
         "outcome": e.outcome,
         "reason": e.reason.as_ref().map(|r| json!({"kind": r.kind, "message": r.message})),
         "duration_s": e.duration_s,
+        "slow": e.slow || e.steps.iter().any(|s| s.slow),
     })
 }
 
-/// One line for a person.
+/// One line for a person, with the slow flag and each slow step (`TIM-01`).
 fn outcome_text(e: &CheckExecution) -> String {
     let repeat = if e.repeat > 1 {
         format!(" #{}", e.repeat)
     } else {
         String::new()
     };
-    let mut text = format!("{:<7} {}{repeat}  ({:.1} s)", e.outcome, e.check_id, e.duration_s);
+    let slow = if e.slow { ", slow" } else { "" };
+    let mut text = format!("{:<7} {}{repeat}  ({:.1} s{slow})", e.outcome, e.check_id, e.duration_s);
+    for s in e.steps.iter().filter(|s| s.slow) {
+        text.push_str(&format!(
+            "\n        slow step: {} ({:.1} s)",
+            s.path.join(" > "),
+            s.duration_s
+        ));
+    }
     if let Some(r) = &e.reason {
         text.push_str(&format!("\n        {}: {}", r.kind, r.message));
     }
@@ -1417,10 +1598,12 @@ mod tests {
                     ids: vec!["smoke".into()],
                     tags: vec![],
                 },
+                repeat: 1,
+                slow_step_s: 10.0,
                 stopped_reason: None,
             },
             session: RSession {
-                id: "s-20261105-115900".into(),
+                id: Some("s-20261105-115900".into()),
                 setup: RSetup {
                     name: "sp".into(),
                     mode: "singleplayer".into(),
@@ -1443,8 +1626,81 @@ mod tests {
             checks: vec![e],
             not_run: vec![],
             reloads: vec![],
+            repeats: None,
             logs: BTreeMap::new(),
         }
+    }
+
+    #[test]
+    fn us_078_tim_01_a_step_over_slow_step_and_a_check_over_half_its_timeout_are_slow() {
+        let mut r = sample("pass");
+        let e = &mut r.checks[0];
+        e.steps[0].duration_s = 12.0;
+        e.steps[1].duration_s = 0.5;
+        e.duration_s = 11.0;
+        flag_slow(e, 10.0, 20);
+        assert!(e.steps[0].slow && !e.steps[1].slow && e.slow);
+        let text = outcome_text(e);
+        assert!(
+            text.contains("11.0 s, slow") && text.contains("slow step: outer (12.0 s)"),
+            "{text}"
+        );
+        assert_eq!(outcome_line(e, "sp")["slow"], true);
+        flag_slow(e, 15.0, 30);
+        assert!(!e.steps[0].slow && !e.slow, "US-078 2");
+        validate(&r);
+    }
+
+    #[test]
+    fn us_076_us_077_out_02_a_repeated_run_with_its_summaries_is_valid_against_the_schema() {
+        let mut r = sample("pass");
+        let mut second = r.checks[0].clone();
+        second.repeat = 2;
+        second.outcome = "invalid".into();
+        second.reason = Some(reason("machine-lost", "2026-11-05T12:00:01.000Z"));
+        r.checks.push(second);
+        r.not_run = vec![NotRun {
+            check_id: "smoke".into(),
+            repeat: 3,
+            reason: "session-broken".into(),
+            message: None,
+        }];
+        r.run.repeat = 3;
+        r.summary = Summary::of(&r.checks, 1);
+        r.repeats = Some(repeat_summaries(&["smoke".into()], &r.checks, &r.not_run));
+        let s = &r.repeats.as_ref().unwrap()[0];
+        assert_eq!(
+            (s.outcome.as_str(), s.counts.pass, s.counts.invalid, s.counts.not_run),
+            ("pass", 1, 1, 1)
+        );
+        validate(&r);
+        let value = serde_json::to_value(&r).unwrap();
+        let answer = run_result_of(&value, Path::new("result.json"));
+        assert_eq!(answer["repeats"][0]["setup"], "sp");
+        assert_eq!(answer["outcomes"][0]["setup"], "sp");
+        assert_eq!(
+            crate::ops::exit_of(&answer),
+            2,
+            "an invalid repeat and a not-run session-broken"
+        );
+    }
+
+    #[test]
+    fn us_075_run_07_a_result_with_every_check_not_run_for_a_failed_start_is_valid() {
+        let mut r = sample("pass");
+        r.checks = vec![];
+        r.session.id = None;
+        r.session.machines = vec![];
+        r.not_run = vec![NotRun {
+            check_id: "smoke".into(),
+            repeat: 1,
+            reason: "session-failed".into(),
+            message: Some("the session start was refused: the mod folder C:\\nowhere does not exist".into()),
+        }];
+        r.summary = Summary::of(&[], 1);
+        validate(&r);
+        let answer = run_result_of(&serde_json::to_value(&r).unwrap(), Path::new("result.json"));
+        assert_eq!(crate::ops::exit_of(&answer), 2, "US-075 3");
     }
 
     #[test]
@@ -1542,7 +1798,9 @@ mod tests {
             r.checks.push(e);
             r.not_run = vec![NotRun {
                 check_id: "third".into(),
+                repeat: 1,
                 reason: "run-stopped".into(),
+                message: None,
             }];
             r.summary = Summary::of(&r.checks, 1);
             r.run.state = "stopped".into();

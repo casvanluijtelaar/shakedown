@@ -242,6 +242,7 @@ mod tests {
             ended_at: "2026-11-06T10:00:09.000Z".into(),
             duration_s: 9.0,
             reload: "full".into(),
+            slow: false,
             steps: vec![
                 Step {
                     path: vec!["trigger on p2".into()],
@@ -251,6 +252,7 @@ mod tests {
                     end: Some(clocks("2026-11-06T10:00:03.000Z")),
                     duration_s: 1.0,
                     error: None,
+                    slow: false,
                 },
                 Step {
                     path: vec!["later".into()],
@@ -260,6 +262,7 @@ mod tests {
                     end: Some(clocks("2026-11-06T10:00:06.000Z")),
                     duration_s: 1.0,
                     error: None,
+                    slow: false,
                 },
             ],
             errors: vec![],
