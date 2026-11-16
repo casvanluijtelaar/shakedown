@@ -329,6 +329,82 @@ mod imp {
             .map(|r| r.dwOwningPid)
     }
 
+    /// Reads one of the system's IPv4 socket tables (`GetExtendedTcpTable` or
+    /// `GetExtendedUdpTable`) into a buffer of 8-byte words; `None` when the call fails.
+    fn socket_table(read: impl Fn(Option<*mut std::ffi::c_void>, &mut u32) -> u32) -> Option<Vec<u64>> {
+        let mut size = 0u32;
+        read(None, &mut size);
+        // The table can grow between the two calls; some room covers that.
+        let mut buf: Vec<u64> = vec![0; (size as usize + 4096) / 8 + 1];
+        let mut size = (buf.len() * 8) as u32;
+        (read(Some(buf.as_mut_ptr() as *mut _), &mut size) == 0).then_some(buf)
+    }
+
+    /// Every UDP endpoint on the machine, as (local address, local port, owning process id).
+    fn udp_endpoints() -> Vec<(std::net::Ipv4Addr, u16, u32)> {
+        use windows::Win32::NetworkManagement::IpHelper::{
+            GetExtendedUdpTable, MIB_UDPROW_OWNER_PID, MIB_UDPTABLE_OWNER_PID, UDP_TABLE_OWNER_PID,
+        };
+        const AF_INET: u32 = 2;
+        let Some(buf) =
+            socket_table(|b, size| unsafe { GetExtendedUdpTable(b, size, false, AF_INET, UDP_TABLE_OWNER_PID, 0) })
+        else {
+            return vec![];
+        };
+        let table = buf.as_ptr() as *const MIB_UDPTABLE_OWNER_PID;
+        let rows: &[MIB_UDPROW_OWNER_PID] =
+            unsafe { std::slice::from_raw_parts((*table).table.as_ptr(), (*table).dwNumEntries as usize) };
+        rows.iter()
+            .map(|r| {
+                (
+                    std::net::Ipv4Addr::from(u32::from_be(r.dwLocalAddr)),
+                    u16::from_be(r.dwLocalPort as u16),
+                    r.dwOwningPid,
+                )
+            })
+            .collect()
+    }
+
+    /// The ports of `ports` that a UDP socket on the machine is bound to, read from the system's
+    /// UDP table. Reading the table opens no socket, so the check itself never listens on an
+    /// address other than loopback (`NFR-SC-01`, `SES-03`).
+    pub fn udp_ports_held(ports: &[u16]) -> Vec<u16> {
+        let bound = udp_endpoints();
+        ports
+            .iter()
+            .copied()
+            .filter(|p| bound.iter().any(|(_, port, _)| port == p))
+            .collect()
+    }
+
+    /// The addresses process `pid` listens on: its TCP sockets in the listening state and its
+    /// UDP sockets, read from the system's tables (`NFR-SC-01`).
+    pub fn listening_addresses(pid: u32) -> Vec<std::net::SocketAddrV4> {
+        use windows::Win32::NetworkManagement::IpHelper::{
+            GetExtendedTcpTable, MIB_TCPROW_OWNER_PID, MIB_TCPTABLE_OWNER_PID, TCP_TABLE_OWNER_PID_LISTENER,
+        };
+        const AF_INET: u32 = 2;
+        let mut out: Vec<std::net::SocketAddrV4> = udp_endpoints()
+            .into_iter()
+            .filter(|(_, _, owner)| *owner == pid)
+            .map(|(ip, port, _)| std::net::SocketAddrV4::new(ip, port))
+            .collect();
+        if let Some(buf) = socket_table(|b, size| unsafe {
+            GetExtendedTcpTable(b, size, false, AF_INET, TCP_TABLE_OWNER_PID_LISTENER, 0)
+        }) {
+            let table = buf.as_ptr() as *const MIB_TCPTABLE_OWNER_PID;
+            let rows: &[MIB_TCPROW_OWNER_PID] =
+                unsafe { std::slice::from_raw_parts((*table).table.as_ptr(), (*table).dwNumEntries as usize) };
+            out.extend(rows.iter().filter(|r| r.dwOwningPid == pid).map(|r| {
+                std::net::SocketAddrV4::new(
+                    std::net::Ipv4Addr::from(u32::from_be(r.dwLocalAddr)),
+                    u16::from_be(r.dwLocalPort as u16),
+                )
+            }));
+        }
+        out
+    }
+
     impl Child {
         /// The exit code once the process has ended, waiting up to `wait`.
         pub fn wait(&self, wait: Duration) -> Option<u32> {
@@ -547,6 +623,20 @@ mod imp {
         use super::*;
 
         #[test]
+        fn ses_03_a_bound_udp_port_is_held_and_read_with_its_address() {
+            let socket = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+            let port = socket.local_addr().unwrap().port();
+            assert_eq!(udp_ports_held(&[port]), vec![port]);
+            assert!(
+                listening_addresses(std::process::id())
+                    .contains(&std::net::SocketAddrV4::new(std::net::Ipv4Addr::LOCALHOST, port)),
+                "the UDP table lists the test's socket"
+            );
+            drop(socket);
+            assert_eq!(udp_ports_held(&[port]), Vec::<u16>::new());
+        }
+
+        #[test]
         fn stp_01_a_process_in_the_job_ends_when_the_job_closes() {
             let job = Job::new().unwrap();
             let cmd = std::path::PathBuf::from(
@@ -728,6 +818,19 @@ mod imp {
 
     pub fn tcp_peer_pid(_peer_port: u16, _local_port: u16) -> Option<u32> {
         None
+    }
+
+    /// Without the system's UDP table, a port counts as held when a loopback bind to it fails.
+    pub fn udp_ports_held(ports: &[u16]) -> Vec<u16> {
+        ports
+            .iter()
+            .copied()
+            .filter(|p| std::net::UdpSocket::bind(("127.0.0.1", *p)).is_err())
+            .collect()
+    }
+
+    pub fn listening_addresses(_pid: u32) -> Vec<std::net::SocketAddrV4> {
+        vec![]
     }
 
     impl Child {

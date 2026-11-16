@@ -156,9 +156,7 @@ fn runs(pid: u64) -> bool {
 
 /// The ports from the base port to the base port plus 4 that a program holds (`STP-04`).
 fn held_ports() -> Vec<u16> {
-    (BASE_PORT..BASE_PORT + 5)
-        .filter(|p| std::net::UdpSocket::bind(("0.0.0.0", *p)).is_err())
-        .collect()
+    shakedown::win::udp_ports_held(&(BASE_PORT..BASE_PORT + 5).collect::<Vec<_>>())
 }
 
 /// `STP-02`, `STP-04`: none of `pids` runs, no port is held, no mission copy of `session` is

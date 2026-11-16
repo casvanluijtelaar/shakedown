@@ -522,9 +522,7 @@ impl Session {
             return vec![];
         }
         let base = self.spec.base_port;
-        (base..base.saturating_add(5))
-            .filter(|p| std::net::UdpSocket::bind(("0.0.0.0", *p)).is_err())
-            .collect()
+        crate::win::udp_ports_held(&(base..base.saturating_add(5)).collect::<Vec<_>>())
     }
 
     pub fn lead(&self) -> &'static str {
@@ -2247,9 +2245,7 @@ fn preconditions(runner: &Runner, spec: &SetupSpec) -> Result<(), CliError> {
     }
     if dedicated {
         let base = spec.base_port;
-        let held: Vec<u16> = (base..base.saturating_add(5))
-            .filter(|p| std::net::UdpSocket::bind(("0.0.0.0", *p)).is_err())
-            .collect();
+        let held = crate::win::udp_ports_held(&(base..base.saturating_add(5)).collect::<Vec<_>>());
         if !held.is_empty() {
             missing.push(format!(
                 "free ports {base} to {} for the server; {} held by another program (stop it, or set base_port in shakedown.toml)",

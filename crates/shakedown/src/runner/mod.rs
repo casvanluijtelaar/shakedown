@@ -575,3 +575,67 @@ pub fn main() -> u8 {
         }
     })
 }
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+
+    /// `NFR-SC-01`, `SEC-01`: the runner's port is on 127.0.0.1, and nothing in this process
+    /// listens on another address, read from the system's socket tables.
+    #[tokio::test]
+    async fn nfr_sc_01_the_runner_listens_on_loopback_only() {
+        let runner = Runner::bind(PathBuf::from("addon"), None).await.unwrap();
+        let mine = crate::win::listening_addresses(std::process::id());
+        assert!(
+            mine.contains(&std::net::SocketAddrV4::new(std::net::Ipv4Addr::LOCALHOST, runner.port)),
+            "the runner's port is not listed on 127.0.0.1: {mine:?}"
+        );
+        let off: Vec<_> = mine.iter().filter(|a| !a.ip().is_loopback()).collect();
+        assert!(off.is_empty(), "listening off loopback: {off:?}");
+    }
+
+    /// `NFR-SC-01`: every socket the workspace's code and tests open to listen, the test
+    /// helpers and spikes included, is bound to 127.0.0.1 where it is opened.
+    #[test]
+    fn nfr_sc_01_every_listener_in_the_workspace_binds_loopback() {
+        fn rs_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) {
+            for e in std::fs::read_dir(dir).unwrap().flatten() {
+                let p = e.path();
+                if p.is_dir() && p.file_name().is_some_and(|n| n != "target") {
+                    rs_files(&p, out);
+                } else if p.extension().is_some_and(|x| x == "rs") {
+                    out.push(p);
+                }
+            }
+        }
+        let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let mut files = vec![];
+        rs_files(crates, &mut files);
+        let mut seen = 0;
+        let mut off = vec![];
+        for f in &files {
+            for (n, line) in std::fs::read_to_string(f).unwrap().lines().enumerate() {
+                // The patterns are built so this line does not match itself.
+                if ["TcpListener", "UdpSocket", "TcpSocket"]
+                    .iter()
+                    .any(|t| line.contains(&format!("{t}::bind(")))
+                {
+                    seen += 1;
+                    if !line.contains("\"127.0.0.1") {
+                        off.push(format!("{}:{}: {}", f.display(), n + 1, line.trim()));
+                    }
+                }
+            }
+        }
+        assert!(seen >= 3, "found only {seen} listeners in {}", crates.display());
+        assert!(
+            off.is_empty(),
+            "listeners not bound to 127.0.0.1:
+{}",
+            off.join(
+                "
+"
+            )
+        );
+    }
+}
