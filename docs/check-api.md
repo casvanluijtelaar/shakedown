@@ -176,7 +176,7 @@ private _kit = call skd_lib_kit;
 ["p1", { [player] call ((call skd_lib_kit) get "settle") }] call skd_fnc_on;   // on p1 too
 ```
 
-A changed library file reaches the game with `shakedown reload`, which lists it at level `none` and restarts nothing. A library file that does not compile ends every check `fail` / `check-error` before its body runs, until it is fixed and reloaded: `The library file tests/_lib/kit.sqf does not compile: Missing ;, at line 3. Fix it and run `shakedown reload`; until then every check fails.` A file name that is not letters, digits and `_` is the same mistake.
+A changed library file reaches the game with `shakedown reload`, which lists it at level `none` and restarts nothing. A library file that does not compile ends every check `fail` / `check-error` before its body runs, until it is fixed and reloaded: `The library file tests/_lib/kit.sqf does not compile: Invalid number in expression, at line 4. Fix it and run `shakedown reload`; until then every check fails.` A file name that is not letters, digits and `_` is the same mistake.
 
 ## Cleanups and ending a check
 
