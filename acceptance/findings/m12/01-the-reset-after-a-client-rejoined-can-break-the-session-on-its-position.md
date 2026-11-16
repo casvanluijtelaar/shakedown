@@ -9,7 +9,8 @@ for: developer
 checks: ["US-067 RST-01 MCH-01 after a check that left p2 out the next check starts with p2 joined again", "US-068", "US-069 after each wrong join or leave"]
 stories: [US-067, US-008]
 generated: { by: "claude-code/tester", at: 2026-11-16T01:04:58-08:00 }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-16T01:49:56-08:00, note: "The unit a client left behind stayed at its start position as a body, never deleted, so each rejoin put the new unit into a growing pile of bodies that could push it off its baseline; the server now records that unit on HandleDisconnect and the next reset deletes it (P-06, MCH-01), and a failed reset names the machine that did not verify. The game test us_067_rst_01_the_unit_a_client_left_is_deleted_by_the_next_reset_5_of_5 in crates/shakedown/tests/m11.rs proves it, 20 of 20 checks; the finding's checks passed 18 of 18 with --repeat 3." }
 verified: []
 ---
 
