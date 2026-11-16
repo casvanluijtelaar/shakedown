@@ -86,6 +86,17 @@ addMissionEventHandler ["EntityRespawned", {
     params ["_new", "_old"];
     if (!isNull _old) then { skd_created pushBack _old };
 }];
+// On a dedicated server, the unit a client leaves behind when it leaves stays where it stood, as
+// a body with the session mission's disabledAI, and a client that joins again gets a new unit at
+// the same start position. The left unit goes to the server's recorder, so the next reset deletes
+// it and no rejoined player stands in a pile of the bodies of its earlier starts (MCH-01, RST-01).
+if (isServer && { isMultiplayer }) then {
+    addMissionEventHandler ["HandleDisconnect", {
+        params ["_unit"];
+        if (!isNull _unit) then { skd_created pushBack _unit };
+        false
+    }];
+};
 
 // On a dedicated server, every user that leaves is reported to the runner by its profile name,
 // which is its machine name, so a leave returns once the server has seen it go (MCH-01). The

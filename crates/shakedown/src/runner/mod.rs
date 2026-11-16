@@ -480,7 +480,10 @@ impl Runner {
             Ok(_) => {
                 session.transition(session::SessionState::Reloading, session::SessionState::Ready);
             }
-            Err(m) => session.set_broken(session.lead(), format!("the reset failed: {m}")),
+            Err(m) => {
+                let machine = run::failing_machine(&m, &session.machine_names(), session.lead());
+                session.set_broken(&machine, format!("the reset failed: {m}"))
+            }
         }
         Ok(clock_done)
     }

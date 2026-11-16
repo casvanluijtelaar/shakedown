@@ -104,6 +104,17 @@ private _left = ["p2"] call skd_fnc_leave;
 "#
             .into(),
         ),
+        (
+            "bodies",
+            r#"// @check US-067 RST-01 the check after a leave sees no unit a client left behind
+private _dead = ["server", { allDeadMen apply { netId _x } }] call skd_fnc_on;
+["bodies on the server", _dead] call skd_fnc_evidence;
+[_dead, "==", [], "the bodies on the server"] call skd_fnc_expect;
+private _near = ["p2", { (nearestObjects [player, ["CAManBase"], 3]) - [player] apply { netId _x } }] call skd_fnc_on;
+[_near, "==", [], "the units within 3 m of p2's player"] call skd_fnc_expect;
+"#
+            .into(),
+        ),
         ("w-server", wrong(r#"["server"] call skd_fnc_leave;"#)),
         ("w-hc1", wrong(r#"["hc1"] call skd_fnc_leave;"#)),
         ("w-p1", wrong(r#"["p1"] call skd_fnc_join;"#)),
@@ -442,6 +453,28 @@ fn us_066_us_067_mch_01_a_client_joins_late_leaves_and_joins_again() {
     let result = mcp.call("run_result", json!({"run_id": run_id}));
     assert_eq!(result.data()["outcomes"][0]["outcome"], "pass", "{}", result.text());
     drop(session);
+}
+
+/// `US-067` 4, `RST-01`, `MCH-01`: the unit a client leaves behind is deleted by the next reset,
+/// so a client joined again does not stand among the bodies of its earlier starts, and the reset
+/// after each rejoin verifies, five times over in one session, with a leave alone and a leave and
+/// a join in one check (m12-1).
+#[test]
+#[ignore = "drives the game on the test machine"]
+fn us_067_rst_01_the_unit_a_client_left_is_deleted_by_the_next_reset_5_of_5() {
+    let dir = project("bodies");
+    let session = start(&dir, "ded");
+    for round in 0..5 {
+        let first = if round == 2 { "leave" } else { "leaveonly" };
+        let result = run(&dir, &[first, "bodies", "pass", "bodies"]);
+        session.see();
+        for n in 0..4 {
+            let c = check(&result, n);
+            assert_eq!(outcome(c).0, "pass", "round {round}, check {n}: {c:#}");
+        }
+    }
+    let (_, s, _) = cmd(&dir, &["status"]);
+    assert_eq!(s["session"]["state"], "ready");
 }
 
 #[test]

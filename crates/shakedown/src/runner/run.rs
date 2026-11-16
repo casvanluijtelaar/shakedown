@@ -832,11 +832,15 @@ async fn prepare_and_execute(
     if header.reset != "mission"
         && let Err(message) = reset(runner, session).await
     {
-        session.set_broken(lead, format!("the reset before check {} failed: {message}", check.id));
+        let machine = failing_machine(&message, &session.machine_names(), lead);
+        session.set_broken(
+            &machine,
+            format!("the reset before check {} failed: {message}", check.id),
+        );
         let reason = Reason {
             kind: "reset-failed".into(),
             message: format!("The reset before the check failed: {message}."),
-            machine: Some(lead.into()),
+            machine: Some(machine),
             at: time::now(),
         };
         let e = ended(
@@ -943,6 +947,20 @@ async fn prepare_and_execute(
             (e, Value::Null, executing_at)
         }
     }
+}
+
+/// The machine a failed reset names (`P-05` step 3): the one its first mismatch starts with, as
+/// each machine's mismatches start with its name, else the lead, which drove the reset.
+pub(crate) fn failing_machine(message: &str, machines: &[String], lead: &str) -> String {
+    let first = message
+        .split(|c: char| c == ':' || c == ',' || c.is_whitespace())
+        .next()
+        .unwrap_or_default();
+    machines
+        .iter()
+        .find(|m| m.as_str() == first)
+        .cloned()
+        .unwrap_or_else(|| lead.to_string())
 }
 
 /// The ceiling of a reset (`RST-04`).
@@ -1311,6 +1329,22 @@ pub fn logs(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `US-067`, `P-05` step 3, `RST-01`: a failed reset names the machine that did not verify,
+    /// not the lead that drove it.
+    #[test]
+    fn us_067_p_05_a_failed_reset_names_the_machine_that_did_not_verify() {
+        let machines: Vec<String> = ["server", "p1", "p2", "hc1"].iter().map(|s| s.to_string()).collect();
+        let name = |m: &str| failing_machine(m, &machines, "server");
+        assert_eq!(name("p2: the player is 0.60 m from its baseline position"), "p2");
+        assert_eq!(name("p1 did not answer the reset's verify (Lost)"), "p1");
+        assert_eq!(
+            name("server: it sees p2 0.60 m from its baseline position; p2: x"),
+            "server"
+        );
+        assert_eq!(name("p2, which left, did not join again: no ready"), "p2");
+        assert_eq!(name("the reset's verify failed: panic"), "server");
+    }
 
     /// `US-058` 1, `RLD-01`: a reload asked during a run is refused with exit code 4 and the MCP
     /// code `session-busy`, naming the run, its progress and `run stop`.
