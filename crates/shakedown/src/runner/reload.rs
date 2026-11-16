@@ -3,7 +3,7 @@
 //! `contract/mcp-tools.md`.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime};
 
 use serde_json::{Value, json};
@@ -15,7 +15,7 @@ use crate::error::CliError;
 use crate::wire::Rebuild;
 
 /// The levels of `P-08`, lowest first.
-const LEVELS: [&str; 2] = ["none", "game-restart"];
+const LEVELS: [&str; 3] = ["none", "mission-restart", "game-restart"];
 
 fn rank(level: &str) -> usize {
     LEVELS.iter().position(|l| *l == level).unwrap_or(0)
@@ -23,13 +23,13 @@ fn rank(level: &str) -> usize {
 
 const CHECK: &str = "Checks are read fresh for every execution (RLD-04).";
 const LIBRARY: &str = "Every reload reads the library folder again and has every machine compile it (API-06).";
-const SQF: &str =
-    "The game holds every mod file it has read and reads a changed one only in a new process, so the game restarts.";
+const SQF: &str = "The game is made to let go of the file by reading the framework's release files, and a mission restart compiles it again.";
 const NEW_FILE: &str = "A new or deleted file: file patching finds only files that exist in the built PBO, so the mod must be rebuilt before this reload, which restarts the game.";
 const NEW_FILE_REBUILT: &str = "A new or deleted file: file patching finds only files that exist in the built PBO, so the game restarts after the mod's rebuild.";
 const CONFIG: &str = "Config is read at game start, so the game restarts.";
 const OTHER: &str = "File patching does not reload this kind of file; it is read at game start, so the game restarts.";
 const REBUILT: &str = " The mod's rebuild runs while no game process runs.";
+const REBUILT_FREED: &str = " The mod's rebuild runs once no game process holds the file.";
 
 /// The extensions of the files the game reads as config (`RLD-02`).
 const CONFIG_EXTS: [&str; 6] = ["cpp", "hpp", "h", "inc", "ext", "xml"];
@@ -113,10 +113,10 @@ pub fn place(path: &Path, tests: &Path, lib: &Path, sources: &[(String, PathBuf,
     .tag("bad-arguments"))
 }
 
-/// The level and reason of a file (`RLD-02`): a check needs nothing, and every file of a
-/// watched source needs a game restart, since the game holds each mod file it has read and only a
-/// new process reads a changed one (`SPK-08`, research 27). `rebuilt` says whether the file's mod
-/// has a `rebuild`, which the restart runs.
+/// The level and reason of a file (`RLD-02`): a check needs nothing; a changed `.sqf` of a
+/// watched source that the build holds needs a mission restart once the game has let go of it
+/// (`SPK-19`, research 31); a new or deleted file and every other kind of file needs a game
+/// restart. `rebuilt` says whether the file's mod has a `rebuild`, which the restart runs.
 pub fn classify(path: &Path, place: &Place, is_new_or_deleted: bool, rebuilt: bool) -> (&'static str, String) {
     let Place::Source { .. } = place else {
         let reason = if *place == Place::Library { LIBRARY } else { CHECK };
@@ -130,9 +130,11 @@ pub fn classify(path: &Path, place: &Place, is_new_or_deleted: bool, rebuilt: bo
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
         .unwrap_or_default();
-    let reason = if ext == "sqf" {
-        SQF
-    } else if CONFIG_EXTS.contains(&ext.as_str()) {
+    if ext == "sqf" {
+        let suffix = if rebuilt { REBUILT_FREED } else { "" };
+        return ("mission-restart", format!("{SQF}{suffix}"));
+    }
+    let reason = if CONFIG_EXTS.contains(&ext.as_str()) {
         CONFIG
     } else {
         OTHER
@@ -256,11 +258,15 @@ pub async fn reload(
     if broken {
         level = "game-restart".into();
     }
+    // The level and the files change when a held file turns the reload into a game restart
+    // (`US-082`), so the shape is built from them as they are.
+    let state = Arc::new(Mutex::new((level.clone(), files)));
     let shape = {
-        let (id, level, files, started_at) = (id.clone(), level.clone(), files.clone(), started_at.clone());
-        move |state: &str, machines: Vec<String>, reason: Value, duration: f64| {
+        let (id, started_at, state) = (id.clone(), started_at.clone(), Arc::clone(&state));
+        move |run_state: &str, machines: Vec<String>, reason: Value, duration: f64| {
+            let (level, files) = state.lock().unwrap().clone();
             json!({
-                "id": id, "state": state, "level": level, "files": files, "machines": machines,
+                "id": id, "state": run_state, "level": level, "files": files, "machines": machines,
                 "reason": reason, "started_at": started_at, "duration_s": duration,
             })
         }
@@ -276,27 +282,68 @@ pub async fn reload(
     runner.log(&format!(
         "{} reload {id}: level {level}, {} files",
         session.id,
-        files.len()
+        state.lock().unwrap().1.len()
     ));
+    // The changed `.sqf` files a mission restart takes: each with the file the game reads for it
+    // and its game path (`P-08` step 2).
+    let freed: Vec<(usize, PathBuf, String)> = {
+        let files = &state.lock().unwrap().1;
+        files
+            .iter()
+            .enumerate()
+            .filter(|(_, f)| f["level"] == "mission-restart")
+            .filter_map(|(i, f)| {
+                let path = PathBuf::from(f["path"].as_str()?);
+                let (_, dir, prefix) = sources.iter().find(|(_, d, _)| below(&path, d).is_some())?;
+                let game_path = format!(r"{}\{}", prefix.trim_matches('\\'), below(&path, dir)?);
+                let file = super::release::game_file(&session.spec.game, dir, prefix, &path)?;
+                Some((i, file, game_path))
+            })
+            .collect()
+    };
 
     let task = {
         let runner = Arc::clone(runner);
         let session = Arc::clone(&session);
-        let level = level.clone();
         let shape = shape.clone();
+        let state = Arc::clone(&state);
         let id = id.clone();
         tokio::spawn(async move {
             // A game restart compiles the library on every machine it brings up; a reload of
             // level none has every machine compile it here (API-06).
             *session.library.lock().unwrap() = library;
+            let level = state.lock().unwrap().0.clone();
             if level == "none" {
                 session.load_library(&session.machine_names()).await;
             }
-            let outcome = if level == "game-restart" {
-                session.game_restart(&runner, &rebuilds, &rebuild.folder, &|_| {}).await
-            } else {
-                Ok(())
+            let outcome = match level.as_str() {
+                "mission-restart" => match release(&runner, &session, &freed).await {
+                    Ok(held) if held.is_empty() => {
+                        mission_restart(&runner, &session, &rebuilds, &rebuild.folder, &freed).await
+                    }
+                    Ok(held) => {
+                        // US-082: a file still held makes the reload a game restart.
+                        {
+                            let mut st = state.lock().unwrap();
+                            st.0 = "game-restart".into();
+                            for (i, why) in held {
+                                st.1[i]["level"] = json!("game-restart");
+                                st.1[i]["reason"] = json!(why);
+                            }
+                        }
+                        *runner.last_reload.lock().unwrap() = Some(shape("applying", vec![], Value::Null, 0.0));
+                        runner.log(&format!(
+                            "{} reload {id}: a changed file is still held, so the game restarts",
+                            session.id
+                        ));
+                        session.game_restart(&runner, &rebuilds, &rebuild.folder, &|_| {}).await
+                    }
+                    Err(e) => Err(e),
+                },
+                "game-restart" => session.game_restart(&runner, &rebuilds, &rebuild.folder, &|_| {}).await,
+                _ => Ok(()),
             };
+            let level = state.lock().unwrap().0.clone();
             let duration = (clock.elapsed().as_secs_f64() * 1000.0).round() / 1000.0;
             let value = match outcome {
                 Ok(()) => {
@@ -336,6 +383,109 @@ pub async fn reload(
         }
     }
     Ok(runner.last_reload.lock().unwrap().clone().unwrap_or(Value::Null))
+}
+
+/// How often every machine reads the release files before a held file makes the reload a game
+/// restart (`P-08` step 2).
+const READS: usize = 2;
+
+/// The release of `P-08` step 2: every machine reads the release files, then each changed file is
+/// checked free, once more if one is held. The files still held after the second read, by their
+/// index in the reload's files, each with its reason naming the machine that holds it; a machine
+/// that did not answer the read fails the reload.
+async fn release(
+    runner: &Runner,
+    session: &Arc<super::session::Session>,
+    freed: &[(usize, PathBuf, String)],
+) -> Result<Vec<(usize, String)>, (String, String)> {
+    if let Err(why) = super::release::ensure(&session.spec.game) {
+        // Without the release files the game cannot be made to let go: the game restarts.
+        return Ok(freed
+            .iter()
+            .map(|(i, _, _)| {
+                (
+                    *i,
+                    format!("The release files could not be made ({why}), so the game restarts."),
+                )
+            })
+            .collect());
+    }
+    let paths = super::release::paths();
+    for read in 1..=READS {
+        let t = Instant::now();
+        session.read_release(runner, &paths).await?;
+        let held: Vec<&(usize, PathBuf, String)> = freed
+            .iter()
+            .filter(|(_, file, _)| super::release::is_held(file))
+            .collect();
+        runner.log(&format!(
+            "{} read {read} of the release files in {:.1} s: {} of {} changed files still held",
+            session.id,
+            t.elapsed().as_secs_f64(),
+            held.len(),
+            freed.len()
+        ));
+        if held.is_empty() {
+            return Ok(vec![]);
+        }
+        if read == READS {
+            return Ok(held
+                .into_iter()
+                .map(|(i, file, _)| (*i, held_reason(session, file)))
+                .collect());
+        }
+    }
+    Ok(vec![])
+}
+
+/// The reason of a file still held after the second read: the file, the machine whose process
+/// holds it, found through the Restart Manager, and that the game did not let go of it (`US-082`).
+fn held_reason(session: &super::session::Session, file: &Path) -> String {
+    let pids = super::release::holders(file);
+    let names: Vec<String> = session
+        .machine_names()
+        .into_iter()
+        .filter(|n| session.machine_pid(n).is_some_and(|p| pids.contains(&p)))
+        .collect();
+    let who = if !names.is_empty() {
+        format!("{}'s process", names.join(" and "))
+    } else if pids.is_empty() {
+        "a process the Restart Manager did not name".to_string()
+    } else {
+        let ids: Vec<String> = pids.iter().map(u32::to_string).collect();
+        format!("process {}, which is no machine of the session,", ids.join(", "))
+    };
+    format!(
+        "{} is still held by {who} after two reads of the framework's release files: the game did not let go of it, so the game restarts.",
+        file.display()
+    )
+}
+
+/// Level `mission-restart` once every changed file is free: each setup mod's `rebuild`, then the
+/// mission restart, after which every machine recompiles the `CfgFunctions` functions of the
+/// changed files (`P-08`, `RLD-02`, `RLD-06`). A failed rebuild still restarts the mission and then
+/// fails the reload, naming the mod, with the lead as the machine.
+async fn mission_restart(
+    runner: &Runner,
+    session: &super::session::Session,
+    rebuilds: &[(String, String)],
+    folder: &Path,
+    freed: &[(usize, PathBuf, String)],
+) -> Result<(), (String, String)> {
+    let failed = session.rebuild_all(runner, rebuilds, folder, &|_| {}).await;
+    {
+        let mut recompile = session.recompile.lock().unwrap();
+        for (_, _, game_path) in freed {
+            if !recompile.0.contains(game_path) {
+                recompile.0.push(game_path.clone());
+            }
+        }
+    }
+    session.mission_restart(runner, &|_| {}).await?;
+    match failed {
+        Some(why) => Err((session.lead().to_string(), why)),
+        None => Ok(()),
+    }
 }
 
 fn walk(dir: &Path) -> Vec<(PathBuf, super::session::Stamp)> {
@@ -437,20 +587,22 @@ mod tests {
     }
 
     #[test]
-    fn us_055_rld_02_every_changed_sqf_is_a_game_restart_that_runs_the_rebuild() {
+    fn us_055_us_081_rld_02_a_changed_sqf_is_a_mission_restart_that_runs_the_rebuild() {
         let p = Path::new(r"C:\i\fixtures\skdfx\addons\main\functions\fn_version.sqf");
         let place = place(p, Path::new(r"C:\p\tests"), Path::new(r"C:\p\tests\_lib"), &sources()).unwrap();
         let (level, reason) = classify(p, &place, false, false);
-        assert_eq!(level, "game-restart");
+        assert_eq!(level, "mission-restart");
         assert!(
-            reason.contains("only in a new process") && !reason.contains("rebuild"),
+            reason.contains("let go of the file") && reason.contains("mission restart") && !reason.contains("rebuild"),
             "{reason}"
         );
         let (_, reason) = classify(p, &place, false, true);
         assert!(
-            reason.ends_with("The mod's rebuild runs while no game process runs."),
+            reason.ends_with("The mod's rebuild runs once no game process holds the file."),
             "{reason}"
         );
+        // A config file among the files makes the reload a game restart: the highest level wins.
+        assert!(rank("game-restart") > rank("mission-restart") && rank("mission-restart") > rank("none"));
     }
 
     #[test]

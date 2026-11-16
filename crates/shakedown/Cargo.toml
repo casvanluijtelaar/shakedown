@@ -30,6 +30,7 @@ windows = { version = "0.62.2", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_NetworkManagement_IpHelper",
     "Win32_System_Console",
+    "Win32_System_RestartManager",
 ] }
 
 [dev-dependencies]

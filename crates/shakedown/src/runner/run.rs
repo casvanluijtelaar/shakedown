@@ -489,6 +489,10 @@ async fn execute(
             }
         };
         execution.repeat = repeat;
+        // RLD-05: after a recompile of a CfgFunctions function, until the next game restart.
+        if session.partial() {
+            execution.reload = "partial".into();
+        }
         if execution.reason.as_ref().is_some_and(|r| r.kind == "run-stopped") {
             stopped = control.reason();
         }

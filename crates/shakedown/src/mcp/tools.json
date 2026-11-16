@@ -6,14 +6,14 @@
       "properties": {
         "id": {"type": "string"},
         "state": {"enum": ["applying", "done", "failed"]},
-        "level": {"enum": ["none", "game-restart"]},
+        "level": {"enum": ["none", "mission-restart", "game-restart"]},
         "files": {
           "type": "array",
           "items": {
             "type": "object", "required": ["path", "level", "reason"],
             "properties": {
               "path": {"type": "string"},
-              "level": {"enum": ["none", "game-restart"]},
+              "level": {"enum": ["none", "mission-restart", "game-restart"]},
               "reason": {"type": "string"}
             }
           }
@@ -335,7 +335,7 @@
     },
     {
       "name": "reload",
-      "description": "Reloads changed mod code into the running session: the files given (paths relative to the project, under a mod's watched source, the tests folder or the library folder), or with none what changed under the watched sources and in the library folder since the session was last ready. A changed check or library file needs nothing beyond the library being compiled again on every machine, which every reload does; any other change restarts every game process, running each mod's rebuild from shakedown.toml while none runs. Reports the level applied, each file with its level and reason, the machines it reached and the time taken. On a broken session it restarts the game, which brings every machine back. Returns when done, or after 50 s with state applying; follow it with status.",
+      "description": "Reloads changed mod code into the running session: the files given (paths relative to the project, under a mod's watched source, the tests folder or the library folder), or with none what changed under the watched sources and in the library folder since the session was last ready. A changed check or library file needs nothing beyond the library being compiled again on every machine, which every reload does. A changed .sqf of a mod is level mission-restart: every machine reads the framework's release files so the game lets go of the file, each mod's rebuild from shakedown.toml runs, and the mission restarts; a file the game still holds after two reads makes it a game restart, and that file's reason names the machine holding it. A new or deleted file, config and any other change restarts every game process, running each mod's rebuild while none runs. Reports the level applied, each file with its level and reason, the machines it reached and the time taken. On a broken session it restarts the game, which brings every machine back. Returns when done, or after 50 s with state applying; follow it with status.",
       "inputSchema": {
         "type": "object", "additionalProperties": false,
         "properties": {"files": {"type": "array", "items": {"type": "string"}}}

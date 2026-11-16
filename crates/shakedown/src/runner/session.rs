@@ -298,6 +298,39 @@ struct Inner {
     disconnects: Vec<(String, Instant)>,
 }
 
+/// What every machine runs to read the release files: each path with `loadFile`, the bytes read
+/// summed (`RLD-07`).
+const READ_RELEASE: &str = r#"params ["_paths"]; private _n = 0; { _n = _n + count loadFile _x } forEach _paths; _n"#;
+
+/// What every machine runs after a mission restart to recompile the `CfgFunctions` functions whose
+/// file is one of the given game paths, compared without case or a leading backslash; it returns
+/// the names of the functions it recompiled (`RLD-02`).
+const RECOMPILE: &str = r#"params ["_paths"];
+private _want = _paths apply { private _p = toLower _x; if (_p select [0, 1] == "\") then { _p = _p select [1] }; _p };
+private _found = [];
+{
+    private _tagCfg = _x;
+    private _tag = getText (_tagCfg >> "tag");
+    if (_tag == "") then { _tag = configName _tagCfg };
+    {
+        private _cat = _x;
+        private _dir = getText (_cat >> "file");
+        {
+            private _file = getText (_x >> "file");
+            if (_file == "") then {
+                private _ext = getText (_x >> "ext");
+                if (_ext == "") then { _ext = ".sqf" };
+                _file = format ["%1\fn_%2%3", _dir, configName _x, _ext];
+            };
+            _file = toLower _file;
+            if (_file select [0, 1] == "\") then { _file = _file select [1] };
+            if (_file in _want) then { _found pushBack format ["%1_fnc_%2", _tag, configName _x] };
+        } forEach ("true" configClasses _cat);
+    } forEach ("true" configClasses _tagCfg);
+} forEach ("true" configClasses (configFile >> "CfgFunctions"));
+{ [_x] call BIS_fnc_recompile } forEach _found;
+_found"#;
+
 /// The most script errors a session keeps for `errors`.
 const HISTORY_LIMIT: usize = 1000;
 /// The most recorded events a session holds until check executions take them (`EVT-01`).
@@ -329,6 +362,10 @@ pub struct Session {
     pub(crate) snapshot: Mutex<std::collections::BTreeMap<PathBuf, Stamp>>,
     /// The library folder as the runner read it last, and what keeps it from loading (`API-06`).
     pub(crate) library: Mutex<crate::library::Library>,
+    /// The game paths of the files reloads of level `mission-restart` changed since the last game
+    /// start, whose `CfgFunctions` functions every machine recompiles after each mission restart,
+    /// and the functions that recompile found (`RLD-02`, `RLD-05`).
+    pub(crate) recompile: Mutex<(Vec<String>, std::collections::BTreeSet<String>)>,
 }
 
 /// Tells a machine to stop an order's code when the request that sent it is dropped before the
@@ -1403,6 +1440,7 @@ pub async fn start(
         autotest: (!dedicated).then(|| profile("p1").join("autotest.cfg")),
         snapshot: Mutex::new(Default::default()),
         library: Mutex::new(crate::library::read(&spec.lib, &spec.project)),
+        recompile: Mutex::new(Default::default()),
     });
     if dedicated {
         std::fs::write(
@@ -1773,6 +1811,7 @@ impl Session {
             return Err((lead, "the lead reported ready without a new mission start".into()));
         }
         if result.is_ok() {
+            self.recompile_functions().await;
             self.versions().await;
             self.load_library(&self.machine_names()).await;
             self.take_snapshot();
@@ -1798,21 +1837,10 @@ impl Session {
         self.replace(runner, &others).await;
         self.hold(std::slice::from_ref(&lead)).await;
         self.replace(runner, std::slice::from_ref(&lead)).await;
-        let mut failed = None;
-        for (name, command) in rebuilds {
-            progress(format!("session {}: rebuild of {name}", self.id));
-            let log = self.folder.join(format!("rebuild-{name}.log"));
-            if let Err(why) = rebuild(command, folder, &log).await {
-                runner.log(&format!("{} rebuild of {name} failed: {why}", self.id));
-                failed = Some(format!(
-                    "the rebuild of mod {name} failed: {why} (its output is in {}); every machine came back on the files as they are",
-                    log.display()
-                ));
-                break;
-            }
-            runner.log(&format!("{} rebuild of {name} done", self.id));
-        }
+        let failed = self.rebuild_all(runner, rebuilds, folder, progress).await;
         progress(format!("session {}: game restart", self.id));
+        // New processes compile every function from its file.
+        *self.recompile.lock().unwrap() = Default::default();
         let result = self.bring_up(runner, true, progress).await;
         if result.is_ok() {
             self.versions().await;
@@ -1824,6 +1852,89 @@ impl Session {
             (Ok(()), Some(why)) => Err((lead, why)),
             (Ok(()), None) => Ok(()),
         }
+    }
+
+    /// Has every machine recompile, with `BIS_fnc_recompile`, each `CfgFunctions` function whose
+    /// file is one of the game paths a `mission-restart` reload changed since the last game start,
+    /// since the Functions Library copies an addon's function compiled at the game start into each
+    /// new mission (`RLD-02`, research 27). The functions found are kept for `RLD-05`.
+    pub async fn recompile_functions(&self) {
+        let paths = self.recompile.lock().unwrap().0.clone();
+        if paths.is_empty() {
+            return;
+        }
+        for name in self.machine_names() {
+            let Ok(answer) = self.exec(&name, RECOMPILE, json!([paths.clone()]), 30.0).await else {
+                continue;
+            };
+            let found: Vec<String> = answer["value"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect();
+            self.recompile.lock().unwrap().1.extend(found);
+        }
+    }
+
+    /// Whether a check executing now runs after a recompile of a `CfgFunctions` function, so it
+    /// records `reload: partial` (`RLD-05`).
+    pub fn partial(&self) -> bool {
+        !self.recompile.lock().unwrap().1.is_empty()
+    }
+
+    /// Every machine reads the release files at once, within the ceiling of `RLD-07`; on failure
+    /// the machine that did not answer and why.
+    pub async fn read_release(self: &Arc<Self>, runner: &Runner, paths: &[String]) -> Result<(), (String, String)> {
+        let mut reads = tokio::task::JoinSet::new();
+        for name in self.machine_names() {
+            let (session, paths) = (Arc::clone(self), paths.to_vec());
+            reads.spawn(async move {
+                let answer = session.exec(&name, READ_RELEASE, json!([paths]), 60.0).await;
+                (name, answer)
+            });
+        }
+        let mut failed = None;
+        while let Some(done) = reads.join_next().await {
+            let Ok((name, answer)) = done else { continue };
+            match answer.as_ref().ok().and_then(|a| a["value"].as_u64()) {
+                // File patching found none of the release files; the hold check that follows
+                // decides whether the changed files are free anyway.
+                Some(0) => runner.log(&format!("{} {name} read none of the release files", self.id)),
+                Some(_) => {}
+                None => {
+                    failed = failed.or(Some((
+                        name,
+                        format!("the read of the release files did not complete ({answer:?})"),
+                    )))
+                }
+            }
+        }
+        failed.map_or(Ok(()), Err)
+    }
+
+    /// Runs each `rebuild` in `folder`, in the order given, while no game process holds the files
+    /// it writes (`RLD-06`); the first failure, in the words of the reload's reason.
+    pub async fn rebuild_all(
+        &self,
+        runner: &Runner,
+        rebuilds: &[(String, String)],
+        folder: &Path,
+        progress: &(dyn Fn(String) + Sync),
+    ) -> Option<String> {
+        for (name, command) in rebuilds {
+            progress(format!("session {}: rebuild of {name}", self.id));
+            let log = self.folder.join(format!("rebuild-{name}.log"));
+            if let Err(why) = rebuild(command, folder, &log).await {
+                runner.log(&format!("{} rebuild of {name} failed: {why}", self.id));
+                return Some(format!(
+                    "the rebuild of mod {name} failed: {why} (its output is in {}); every machine came back on the files as they are",
+                    log.display()
+                ));
+            }
+            runner.log(&format!("{} rebuild of {name} done", self.id));
+        }
+        None
     }
 
     /// The names of the setup's mods, in the setup's order.
@@ -2274,7 +2385,7 @@ fn preconditions(runner: &Runner, spec: &SetupSpec) -> Result<(), CliError> {
 /// Makes `link` a directory junction to `target`: created when missing, pointed at `target`
 /// when it is a junction to another folder, and left alone when it already points there
 /// (`INT-AR-06`). A real folder of that name is never touched.
-fn junction(link: &Path, target: &Path) -> Result<(), String> {
+pub(crate) fn junction(link: &Path, target: &Path) -> Result<(), String> {
     let plain = |p: PathBuf| PathBuf::from(p.to_string_lossy().trim_start_matches(r"\\?\").to_string());
     let want = std::fs::canonicalize(target)
         .map(plain)

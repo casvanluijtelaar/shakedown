@@ -5,6 +5,7 @@
 pub mod control;
 pub mod errors;
 pub mod record;
+pub mod release;
 pub mod reload;
 pub mod run;
 pub mod session;
