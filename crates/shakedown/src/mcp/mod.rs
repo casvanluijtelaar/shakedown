@@ -1158,6 +1158,27 @@ mod tests {
     }
 
     #[test]
+    fn us_076_us_074_run_result_with_repeats_and_runs_matches_its_output_schema() {
+        let tool = tools().into_iter().find(|t| t.name == "run_result").unwrap();
+        let schema = Value::Object((*tool.output_schema.unwrap()).clone());
+        let validator = jsonschema::validator_for(&schema).unwrap();
+        let outcome = json!({"check_id": "coin", "repeat": 2, "setup": "sp", "outcome": "fail",
+            "reason": {"kind": "assertion", "message": "m"}, "duration_s": 1.0, "slow": false,
+            "failed_step": null, "evidence_path": "result.json#/checks/1/evidence"});
+        let one = json!({"run_id": "r-20261116-100000-1", "state": "finished",
+            "summary": {"total": 2, "pass": 1, "fail": 1, "invalid": 0, "not_run": 0},
+            "outcomes": [outcome], "not_run": [{"check_id": "coin", "repeat": 3, "reason": "session-broken"}],
+            "repeats": [{"check_id": "coin", "setup": "sp", "outcome": "flaky",
+                "counts": {"pass": 1, "fail": 1, "invalid": 0, "not_run": 1}}],
+            "result_file": "C:/p/.shakedown/runs/r-20261116-100000-1/result.json", "setup": "sp"});
+        let whole = ops::each_setup_result("e-20261116-100000-1", std::slice::from_ref(&one), false);
+        for answer in [one, whole] {
+            let errors: Vec<String> = validator.iter_errors(&answer).map(|e| e.to_string()).collect();
+            assert!(errors.is_empty(), "{errors:?}\n{answer:#}");
+        }
+    }
+
+    #[test]
     fn agt_07_a_long_result_goes_to_a_file() {
         let long = json!({"lines": vec!["x".repeat(100); 300]});
         let out = fit(long.clone(), None, "logs");

@@ -114,7 +114,21 @@
         "not_run": {"type": "array", "items": {"$ref": "#/$defs/NotRun"}},
         "repeats": {
           "type": "array",
-          "items": {"allOf": [{"$ref": "#/$defs/RepeatSummary"}], "properties": {"setup": {"type": "string"}}}
+          "items": {
+            "type": "object", "required": ["check_id", "setup", "outcome", "counts"],
+            "properties": {
+              "check_id": {"type": "string"},
+              "setup": {"type": "string"},
+              "outcome": {"enum": ["pass", "fail", "flaky", "invalid", "not-run"]},
+              "counts": {
+                "type": "object", "required": ["pass", "fail", "invalid", "not_run"],
+                "properties": {
+                  "pass": {"type": "integer"}, "fail": {"type": "integer"},
+                  "invalid": {"type": "integer"}, "not_run": {"type": "integer"}
+                }
+              }
+            }
+          }
         },
         "result_file": {"type": ["string", "null"]},
         "setup": {"type": "string"},
