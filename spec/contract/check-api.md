@@ -189,7 +189,7 @@ A join starts a new process for the machine, with its own profile folder and the
 
 Joining or leaving `server`, a headless client, a machine the setup does not name, a client already in the session or one already out ends the check `fail` / `check-error`, naming the machine and the machines that can join and leave at that moment. In singleplayer either function ends the check `fail` / `check-error` saying that joining and leaving needs a dedicated session.
 
-The reset before the next check first brings the session back to the machines it started with: a late client that joined leaves, and a client that left joins again, within the start ceiling (`RST-01`). A client that left and joined again in the check keeps that start.
+The reset before the next check first brings the session back to the machines it started with: a late client that joined leaves, and a client that left joins again, within the start ceiling (`RST-01`). A client that left and joined again in the check keeps that start. The unit a client left behind when it left stays, as a body, until that reset deletes it.
 
 ## Recording events
 
