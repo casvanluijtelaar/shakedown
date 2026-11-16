@@ -496,6 +496,14 @@ def netstat(ctx, pids):
     return rows
 
 
+def netstat_all(ctx):
+    """With shakedown mcp running beside the runner: (pids of every shakedown.exe, their netstat rows)."""
+    with Mcp(ctx.project, ctx.install, ctx.log) as m:
+        tool_texts(ctx).append(text_of(m.call("status")[0]))
+        pids = {pid for pid, (_, name, _) in win.processes().items() if name.lower() == "shakedown.exe"}
+        return pids, netstat(ctx, pids)
+
+
 def hello_attempt(port, lines):
     """Sends the lines on a new connection; returns (closed by the runner, bytes it answered, seconds)."""
     t0 = time.monotonic()
@@ -585,6 +593,7 @@ def ded_batch(ctx, checks):
     games = {m["pid"] for m in ctx.session["machines"]}
     step(ctx, "netstat", lambda: (rp, games, json.loads(driver.RUNNER_JSON.read_text(encoding="utf-8"))["port"],
                                   netstat(ctx, games | {rp})))
+    step(ctx, "netstat-all", lambda: netstat_all(ctx))
     step(ctx, "exec-cli", lambda: ctx.sh("exec", "--machine", "server", "--code", "6 * 7 + 0 * 52051", "--json"))
 
     def by_mcp():
@@ -624,6 +633,14 @@ def us052_netstat(ctx):
         f"{len({r[4] for r in to_runner})} of {len(games)} game processes have a connection to the runner's port"
     bad = [r for r in to_runner if not (r[1].startswith("127.0.0.1:") and r[2].startswith("127.0.0.1:"))]
     assert not bad, f"game process connections to the runner off 127.0.0.1: {bad}"
+
+
+@m5check("US-052 NFR-SC-01 during a dedicated session, with shakedown mcp running beside the runner, no shakedown.exe process listens on TCP or holds a UDP socket on an address other than 127.0.0.1")
+def us052_no_listener_off_loopback(ctx):
+    pids, rows = got(ctx, "netstat-all")
+    assert len(pids) >= 2, f"found {len(pids)} shakedown.exe processes, expected the runner and shakedown mcp"
+    bad = [r for r in rows if (r[0] == "UDP" or r[3] == "LISTENING") and not r[1].startswith("127.0.0.1:")]
+    assert not bad, f"shakedown.exe sockets listening or bound off 127.0.0.1: {bad}"
 
 
 @m5check("US-052 SEC-04 every exec from the command line, from MCP and from a check is in the session's audit.jsonl with its time, source, target and code")
