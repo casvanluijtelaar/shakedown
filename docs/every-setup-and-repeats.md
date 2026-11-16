@@ -40,7 +40,7 @@ A Ctrl+C or Ctrl+Break stops the setup's run that is going, as for any run ([Sto
 A setup whose session start is refused, such as for a mod folder that does not exist, or fails, because a machine exits or the start ceiling passes (`SES-04`), costs only its own checks. Its result file lists each of them in `not_run` with reason `session-failed` and the start's reason in `message`, and the next setup still runs:
 
 ```
-setup sp-cba-ace: did not run, the session start was refused: The setup cannot start: the folder C:\mods\ace of mod ace does not exist. 0 passed, 0 failed, 0 invalid, 3 not run. Result: ...
+setup sp-cba-ace: did not run, the session start was refused: The session cannot start; missing: the folder C:\mods\ace of mod ace. Provide what is missing and start the session again.. 0 passed, 0 failed, 0 invalid, 3 not run. Result: ...
 ```
 
 The command then exits 2 if no check failed elsewhere. The result file of a refused start has `session.id` `null` and no machines; that of a failed start names the session that failed, whose folder holds each machine's RPT.
