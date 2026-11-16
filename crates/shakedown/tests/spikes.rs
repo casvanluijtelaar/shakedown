@@ -28,6 +28,8 @@ async fn start() -> (std::sync::Arc<Runner>, std::sync::Arc<session::Session>) {
         game: project.game.clone(),
         mods: vec![],
         base_port: project.base_port,
+        project: project.root.clone(),
+        lib: project.lib.clone(),
     };
     let addon = std::fs::canonicalize(repo().join("target").join("shakedown").join("@shakedown")).unwrap();
     let addon = PathBuf::from(addon.to_string_lossy().trim_start_matches(r"\\?\"));

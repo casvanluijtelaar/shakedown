@@ -151,7 +151,21 @@ pub struct CheckExecution {
     pub reload: String,
     pub steps: Vec<Step>,
     pub errors: Vec<Value>,
+    /// Every event the check recorded, on every machine, in wall-clock order (`EVT-01`).
+    #[serde(default)]
+    pub events: Vec<RecordedEvent>,
     pub evidence: Evidence,
+}
+
+/// An event a check recorded with `skd_fnc_record` on one machine (`EVT-01`, `OBS-05`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecordedEvent {
+    pub machine: String,
+    pub name: String,
+    /// `cba` or `mission`.
+    pub kind: String,
+    pub args: Value,
+    pub at: Clocks,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

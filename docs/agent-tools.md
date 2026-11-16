@@ -98,7 +98,7 @@ A failure of the framework itself is a JSON-RPC error, not a tool result.
 Shakedown runs automated checks of an Arma 3 mod inside the running game, in singleplayer or on a dedicated server with game clients and headless clients.
 
 THE PROJECT
-The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under the tests folder (shakedown.toml's tests, default tests/); a check's id is its path there without .sqf.
+The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under the tests folder (shakedown.toml's tests, default tests/); a check's id is its path there without .sqf. Helpers shared by checks go in the library folder (tests/_lib/ by default, or shakedown.toml's lib): each file rope.sqf there is compiled on every machine into skd_lib_rope, which a check or code sent to a machine runs with call skd_lib_rope; a changed library file reaches the game with reload.
 
 START A SESSION
 1. status: is a runner up, does a session run? It works with no game.
@@ -145,5 +145,6 @@ The body is SQF run on the lead machine (server, or p1 in singleplayer), with th
 - skd_fnc_expectError [text, code] for an error the mod should raise; any other script error on any machine fails the check.
 - skd_fnc_evidence [label, value] attaches a value to the result.
 - On a dedicated session, ["p3"] call skd_fnc_join starts a late client (setup key late) or a client that left, and ["p2"] call skd_fnc_leave makes a client leave; the next check's reset brings back the clients the session started with.
+- ["all", "my_event"] call skd_fnc_record records a CBA event (or [machines, "EntityKilled", "mission"] a mission event) on those machines until the check ends; ["p2", "my_event", 10] call skd_fnc_waitEvent waits for one and returns its arguments; ["p2", "my_event"] call skd_fnc_events lists them with their clocks; the result file lists them under the check.
 Every check starts from a reset session, so it needs no cleanup of what it created. Run it with run_start, read the outcome, fix, and run it again: the file is read fresh each time. The project's docs folder has the whole check API.
 ```

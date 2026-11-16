@@ -18,6 +18,9 @@ pub struct Project {
     pub game: PathBuf,
     /// The folder of the check files, the key `tests`.
     pub tests: PathBuf,
+    /// The library folder of shared helpers, the key `lib`, by default `_lib` in the tests
+    /// folder (`API-06`).
+    pub lib: PathBuf,
     pub base_port: u16,
     pub mods: BTreeMap<String, Mod>,
     pub setups: BTreeMap<String, Setup>,
@@ -72,6 +75,7 @@ impl Mode {
 struct RawProject {
     game: Spanned<String>,
     tests: Option<Spanned<String>>,
+    lib: Option<Spanned<String>>,
     base_port: Option<Spanned<i64>>,
     #[serde(default)]
     mods: BTreeMap<Spanned<String>, RawMod>,
@@ -302,10 +306,16 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
         );
     }
 
+    let tests = resolve(raw.tests.as_ref().map(|c| c.get_ref().as_str()).unwrap_or("tests"));
+    let lib = match raw.lib.as_ref() {
+        Some(l) => resolve(l.get_ref()),
+        None => tests.join("_lib"),
+    };
     Ok(Project {
         root: root.to_path_buf(),
         game: resolve(raw.game.get_ref()),
-        tests: resolve(raw.tests.as_ref().map(|c| c.get_ref().as_str()).unwrap_or("tests")),
+        tests,
+        lib,
         base_port,
         mods,
         setups,
@@ -349,6 +359,28 @@ mods = ["cba"]
 
     fn root() -> PathBuf {
         PathBuf::from("project")
+    }
+
+    #[test]
+    fn us_070_api_06_the_library_folder_defaults_to_lib_in_the_tests_folder() {
+        let p = parse(&root(), GOOD).unwrap();
+        assert_eq!(p.lib, root().join("tests").join("_lib"));
+        let p = parse(&root(), &GOOD.replace("tests = \"tests\"", "tests = \"checks\"")).unwrap();
+        assert_eq!(p.lib, root().join("checks").join("_lib"));
+    }
+
+    #[test]
+    fn us_070_api_06_cfg_01_lib_names_the_library_folder_relative_to_the_project() {
+        let p = parse(
+            &root(),
+            &GOOD.replace(
+                "tests = \"tests\"",
+                "tests = \"tests\"
+lib = \"helpers\"",
+            ),
+        )
+        .unwrap();
+        assert_eq!(p.lib, root().join("helpers"));
     }
 
     #[test]

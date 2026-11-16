@@ -503,7 +503,7 @@ fn dispatch(cli: &Cli) -> Result<u8, CliError> {
 
 fn run(cli: &Cli, out: &Out, ids: &[String], tags: &[String], setup: Option<&str>) -> Result<u8, CliError> {
     let project = ops::project(cli.project.as_deref())?;
-    let all = checks::discover(&project.tests)?;
+    let all = checks::discover(&project.tests, &project.lib)?;
     let selected = checks::select(&all, ids, tags)?;
     let spec = setup.map(|s| ops::spec(&project, s)).transpose()?;
     let mut conn = client::connect()?;

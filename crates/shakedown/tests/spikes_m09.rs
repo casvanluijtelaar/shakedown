@@ -37,6 +37,8 @@ async fn start(runner: &Arc<Runner>, setup: &str) -> Option<Arc<session::Session
         game: project.game.clone(),
         mods,
         base_port: project.base_port,
+        project: project.root.clone(),
+        lib: project.lib.clone(),
     };
     let session = session::start(runner, e2e, spec, &|m| println!("{m}")).await.unwrap();
     let view = session.view();

@@ -39,6 +39,8 @@ pub fn spec(project: &config::Project, name: &str) -> Result<SetupSpec, CliError
         game: project.game.clone(),
         mods,
         base_port: project.base_port,
+        project: project.root.clone(),
+        lib: project.lib.clone(),
     })
 }
 
@@ -116,6 +118,7 @@ pub fn reload_request(project: &config::Project, files: &[PathBuf], wait_s: Opti
     Ok(Request::Reload {
         files,
         tests: project.tests.clone(),
+        lib: project.lib.clone(),
         rebuild,
         wait_s,
     })
@@ -123,7 +126,7 @@ pub fn reload_request(project: &config::Project, files: &[PathBuf], wait_s: Opti
 
 /// `list` (`RUN-02`): each selected check once, from the files, with no runner.
 pub fn list(project: &config::Project, ids: &[String], tags: &[String]) -> Result<Value, CliError> {
-    let all = checks::discover(&project.tests)?;
+    let all = checks::discover(&project.tests, &project.lib)?;
     let mut selected = checks::select(&all, ids, tags)?;
     let mut seen = Vec::new();
     selected.retain(|c| {

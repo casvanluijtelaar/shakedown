@@ -39,6 +39,8 @@ async fn start(setup: &str) -> (Arc<Runner>, Arc<session::Session>) {
         game: project.game.clone(),
         mods,
         base_port: project.base_port,
+        project: project.root.clone(),
+        lib: project.lib.clone(),
     };
     let addon = plain(repo().join("target").join("shakedown").join("@shakedown"));
     let runner = Runner::bind(addon, None).await.unwrap();

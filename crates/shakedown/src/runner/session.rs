@@ -227,6 +227,25 @@ fn healthy(a: &Beat, b: &Beat) -> bool {
     b.frame > a.frame && b.time - a.time >= WATCH_RATIO * (b.tick - a.tick)
 }
 
+/// An event message of an agent as the result file records it (`EVT-01`); the clocks travel as
+/// text with fixed decimals.
+fn recorded_event(m: &Value) -> Option<shakedown_protocol::result::RecordedEvent> {
+    let n = |v: &Value| v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok()));
+    let at = &m["at"];
+    Some(shakedown_protocol::result::RecordedEvent {
+        machine: m["machine"].as_str()?.to_string(),
+        name: m["name"].as_str()?.to_string(),
+        kind: m["type"].as_str().unwrap_or("cba").to_string(),
+        args: m["args"].clone(),
+        at: shakedown_protocol::result::Clocks {
+            utc: at["utc"].as_str()?.to_string(),
+            tick: n(&at["tick"])?,
+            time: n(&at["time"])?,
+            frame: n(&at["frame"])?.max(0.0) as u64,
+        },
+    })
+}
+
 /// Whether both clocks moved over the whole of the last `WATCH_WINDOW_S`, which clears a flag.
 fn moving_again(beats: &[Beat]) -> bool {
     let Some(newest) = beats.last() else { return false };
@@ -268,6 +287,9 @@ struct Inner {
     /// The script errors the machines' handlers sent (`ERR-01`), until a check execution takes
     /// those stamped with its key.
     errors: Vec<Value>,
+    /// The events a check's recording sent (`EVT-01`), until a check execution takes those
+    /// stamped with its key.
+    events: Vec<Value>,
     /// Every script error the handlers sent in this session, inside a check or not, the newest
     /// last, for `errors` and `inspect` (`ERR-05`, `INS-01`).
     history: Vec<Value>,
@@ -278,6 +300,8 @@ struct Inner {
 
 /// The most script errors a session keeps for `errors`.
 const HISTORY_LIMIT: usize = 1000;
+/// The most recorded events a session holds until check executions take them (`EVT-01`).
+const EVENTS_LIMIT: usize = 10_000;
 
 pub struct Session {
     pub id: String,
@@ -303,6 +327,8 @@ pub struct Session {
     autotest: Option<PathBuf>,
     /// Every file under the watched `source` folders at the last ready state (`RLD-01`).
     pub(crate) snapshot: Mutex<std::collections::BTreeMap<PathBuf, Stamp>>,
+    /// The library folder as the runner read it last, and what keeps it from loading (`API-06`).
+    pub(crate) library: Mutex<crate::library::Library>,
 }
 
 /// Tells a machine to stop an order's code when the request that sent it is dropped before the
@@ -527,6 +553,20 @@ impl Session {
             .partition(|e| e["key"] == key);
         inner.errors = kept;
         taken
+    }
+
+    /// Takes the events a check's recording sent that are stamped with the key of a check
+    /// execution, in the order of their wall-clock time (`EVT-01`).
+    pub fn take_events(&self, key: &str) -> Vec<shakedown_protocol::result::RecordedEvent> {
+        let mut inner = self.inner.lock().unwrap();
+        let (taken, kept): (Vec<Value>, Vec<Value>) = std::mem::take(&mut inner.events)
+            .into_iter()
+            .partition(|e| e["key"] == key);
+        inner.events = kept;
+        drop(inner);
+        let mut out: Vec<_> = taken.iter().filter_map(recorded_event).collect();
+        out.sort_by(|a, b| a.at.utc.cmp(&b.at.utc));
+        out
     }
 
     /// A machine's profile folder, which holds its RPT (`LOG-01`).
@@ -766,6 +806,12 @@ impl Session {
                     inner.history.remove(0);
                 }
                 inner.errors.push(message);
+            }
+            // An event a check records (EVT-01); one sent outside a check execution is dropped.
+            "event" => {
+                if message["key"].as_str().is_some_and(|k| !k.is_empty()) && inner.events.len() < EVENTS_LIMIT {
+                    inner.events.push(message);
+                }
             }
             // The server saw a user leave (MCH-01).
             "disconnected" => {
@@ -1341,6 +1387,7 @@ pub async fn start(
             streams: HashMap::new(),
             refs: HashMap::new(),
             errors: Vec::new(),
+            events: Vec::new(),
             history: Vec::new(),
             disconnects: Vec::new(),
         }),
@@ -1357,6 +1404,7 @@ pub async fn start(
         check: Mutex::new(None),
         autotest: (!dedicated).then(|| profile("p1").join("autotest.cfg")),
         snapshot: Mutex::new(Default::default()),
+        library: Mutex::new(crate::library::read(&spec.lib, &spec.project)),
     });
     if dedicated {
         std::fs::write(
@@ -1379,6 +1427,7 @@ pub async fn start(
         return Ok(session);
     }
     session.versions().await;
+    session.load_library(&session.machine_names()).await;
     session.take_snapshot();
     session.set_state(SessionState::Ready);
     tokio::spawn(Arc::clone(&session).watch(Arc::clone(runner)));
@@ -1727,6 +1776,7 @@ impl Session {
         }
         if result.is_ok() {
             self.versions().await;
+            self.load_library(&self.machine_names()).await;
             self.take_snapshot();
         }
         result
@@ -1768,6 +1818,7 @@ impl Session {
         let result = self.bring_up(runner, true, progress).await;
         if result.is_ok() {
             self.versions().await;
+            self.load_library(&self.machine_names()).await;
             self.take_snapshot();
         }
         match (result, failed) {
@@ -1789,6 +1840,43 @@ impl Session {
             .iter()
             .filter_map(|m| Some((m.name.clone(), m.source.clone()?, m.prefix.clone().unwrap_or_default())))
             .collect()
+    }
+
+    /// Reads the library folder again (`API-06`), as every reload does.
+    pub fn read_library(&self, dir: &Path, project: &Path) {
+        *self.library.lock().unwrap() = crate::library::read(dir, project);
+    }
+
+    /// What keeps the library from loading, if anything: every check then ends `fail` /
+    /// `check-error` with it (`API-06`).
+    pub fn library_problem(&self) -> Option<String> {
+        self.library.lock().unwrap().problem.clone()
+    }
+
+    /// Has each of the named machines compile the library into `skd_lib_<file name>`
+    /// (`API-06`), after a mission start or a reload. The first compile error a machine reports
+    /// becomes the library's problem. A machine that does not answer is left to the watch, which
+    /// sees it lost.
+    pub async fn load_library(&self, names: &[String]) {
+        let args = self.library.lock().unwrap().order_args();
+        // One machine after another: each compiles in a few milliseconds.
+        for name in names {
+            let Ok(answer) = self.exec(name, "_this call skd_fnc_library", args.clone(), 30.0).await else {
+                continue;
+            };
+            let first = answer["value"].as_array().and_then(|e| e.first()).cloned();
+            if let Some(e) = first {
+                let problem = crate::library::Library::compile_problem(
+                    e[0].as_str().unwrap_or_default(),
+                    &e[1],
+                    e[2].as_str().unwrap_or_default(),
+                );
+                let mut library = self.library.lock().unwrap();
+                if library.problem.is_none() {
+                    library.problem = Some(problem);
+                }
+            }
+        }
     }
 
     /// Takes the snapshot of every file under the watched `source` folders (`RLD-01`).
@@ -2380,6 +2468,7 @@ mod tests {
             streams: HashMap::new(),
             refs: HashMap::new(),
             errors: vec![],
+            events: vec![],
             history: vec![],
             disconnects: vec![],
         };
@@ -2402,6 +2491,22 @@ mod tests {
     }
 
     /// `P-07` step 2: an order is named in the words of a lost machine's message.
+    #[test]
+    fn us_072_evt_01_obs_05_an_event_message_becomes_a_recorded_event() {
+        let e = recorded_event(&json!({
+            "kind": "event", "machine": "p2", "key": "r#1", "name": "skdfx_signalled", "type": "cba",
+            "args": [{"$type": "object", "netId": "2:5", "class": "B_Soldier_F", "alive": true}],
+            "at": {"utc": "2026-11-15T10:00:00.000Z", "tick": "12.500", "time": "3.250", "frame": "120"}
+        }))
+        .unwrap();
+        assert_eq!(
+            (e.machine.as_str(), e.name.as_str(), e.kind.as_str()),
+            ("p2", "skdfx_signalled", "cba")
+        );
+        assert_eq!((e.at.tick, e.at.time, e.at.frame), (12.5, 3.25, 120));
+        assert_eq!(e.args[0]["netId"], "2:5");
+    }
+
     #[test]
     fn p_07_an_order_is_described_for_a_lost_machine() {
         assert_eq!(describe(&json!({"kind": "check", "check_id": "x"})), "to run check x");

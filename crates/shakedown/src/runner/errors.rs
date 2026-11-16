@@ -263,6 +263,7 @@ mod tests {
                 },
             ],
             errors: vec![],
+            events: vec![],
             evidence: Evidence::default(),
         }
     }

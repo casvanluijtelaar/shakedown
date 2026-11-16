@@ -34,6 +34,8 @@ async fn start() -> (std::sync::Arc<Runner>, std::sync::Arc<session::Session>) {
         game: project.game.clone(),
         mods: vec![],
         base_port: project.base_port,
+        project: project.root.clone(),
+        lib: project.lib.clone(),
     };
     let addon = plain(repo().join("target").join("shakedown").join("@shakedown"));
     let runner = Runner::bind(addon, None).await.unwrap();
@@ -290,6 +292,8 @@ async fn int_cba_01_keybind_registry_probe() {
         game: project.game.clone(),
         mods,
         base_port: project.base_port,
+        project: project.root.clone(),
+        lib: project.lib.clone(),
     };
     let addon = plain(repo().join("target").join("shakedown").join("@shakedown"));
     let runner = Runner::bind(addon, None).await.unwrap();

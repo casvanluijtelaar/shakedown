@@ -58,6 +58,12 @@ class CfgFunctions {
             class inspect {};
             class typeName {};
             class joinLeave {};
+            class library {};
+            class recordOn {};
+            class recorded {};
+            class unrecord {};
+            class eventsOn {};
+            class eventList {};
         };
         // The check API (spec/contract/check-api.md).
         class api {
@@ -83,6 +89,9 @@ class CfgFunctions {
             class pressKey {};
             class join {};
             class leave {};
+            class record {};
+            class events {};
+            class waitEvent {};
             class cleanup {};
             class evidence {};
             class fail {};

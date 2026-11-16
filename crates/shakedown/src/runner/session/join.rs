@@ -282,6 +282,7 @@ impl Session {
             }
         }
         self.versions_of(&[name.to_string()]).await;
+        self.load_library(&[name.to_string()]).await;
         // A machine that joins during a check writes the run's and the check's start markers and
         // takes the check's context, so its log is cut out and its script errors count (LOG-04,
         // ERR-01).

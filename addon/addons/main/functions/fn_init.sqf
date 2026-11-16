@@ -33,6 +33,9 @@ skd_orderPaths = [];
 skd_errorCount = 0;
 skd_lastError = "";
 skd_execs = createHashMap;
+// The events a check records on this machine (EVT-01): by name in lower case, [name, kind,
+// handler id, [[args, clocks], ...]].
+skd_recorders = createHashMap;
 addMissionEventHandler ["ScriptError", {
     params ["_text", "_file", "_line", "_position", "_content", "_stack"];
     if (skd_compiling) then {

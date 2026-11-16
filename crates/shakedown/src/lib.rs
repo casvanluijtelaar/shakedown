@@ -6,6 +6,7 @@ pub mod cli;
 pub mod client;
 pub mod config;
 pub mod error;
+pub mod library;
 pub mod logs;
 pub mod mcp;
 pub mod mission;

@@ -15,6 +15,8 @@ skd_check = createHashMapFromArray [
     ["stack", []],
     ["attached", []],
     ["expects", []],
+    // Where the check records each event, by name in lower case (EVT-01).
+    ["recorded", createHashMap],
     ["deadline", diag_tickTime + _timeout],
     ["machines", _order getOrDefault ["machines", [skd_machine]]],
     ["mode", _order getOrDefault ["mode", "singleplayer"]],

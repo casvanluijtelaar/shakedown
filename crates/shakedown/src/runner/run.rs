@@ -632,6 +632,7 @@ async fn execute_check(
     tokio::time::sleep(ERRORS_IN_FLIGHT).await;
     mark(session, &key, "end", &check.id).await;
     *runner.executing.lock().unwrap() = None;
+    execution.events = session.take_events(&key);
     let mut errors: Vec<Value> = session
         .take_errors(&key)
         .iter()
@@ -850,6 +851,26 @@ async fn prepare_and_execute(
         );
         return (e, Value::Null, None);
     }
+    // P-05 step 4: a library that does not load ends every check before its body (API-06).
+    if let Some(problem) = session.library_problem() {
+        let reason = Reason {
+            kind: "check-error".into(),
+            message: problem,
+            machine: None,
+            at: time::now(),
+        };
+        let e = ended(
+            check,
+            Some(&header),
+            started,
+            clock,
+            "fail",
+            Some(reason),
+            vec![],
+            Evidence::default(),
+        );
+        return (e, Value::Null, None);
+    }
     let setup = &session.spec.setup;
     let order = json!({
         "kind": "check",
@@ -1027,6 +1048,7 @@ fn ended(
         reload: "full".into(),
         steps,
         errors: vec![],
+        events: vec![],
         evidence,
     }
 }

@@ -22,6 +22,7 @@ fn rank(level: &str) -> usize {
 }
 
 const CHECK: &str = "Checks are read fresh for every execution (RLD-04).";
+const LIBRARY: &str = "Every reload reads the library folder again and has every machine compile it (API-06).";
 const SQF: &str =
     "The game holds every mod file it has read and reads a changed one only in a new process, so the game restarts.";
 const NEW_FILE: &str = "A new or deleted file: file patching finds only files that exist in the built PBO, so the mod must be rebuilt before this reload, which restarts the game.";
@@ -51,7 +52,7 @@ pub fn changed(
 
 /// A path as a lowercase string with `.` and `..` resolved by its text, so two spellings of one
 /// folder compare equal without following links.
-fn lower(p: &Path) -> String {
+pub(crate) fn lower(p: &Path) -> String {
     let mut parts: Vec<String> = Vec::new();
     for c in p.components() {
         match c {
@@ -77,33 +78,37 @@ fn below(path: &Path, dir: &Path) -> Option<String> {
     p.strip_prefix(&format!("{d}\\")).map(String::from)
 }
 
-/// Where a file is: a check, or a file of a mod's watched source.
+/// Where a file is: a check, a file of the library folder, or a file of a mod's watched source.
 #[derive(Debug, PartialEq)]
 pub enum Place {
     Check,
+    Library,
     Source { mod_name: String },
 }
 
 /// Places a file by the folders it is under; an error names the watched folders.
-pub fn place(path: &Path, tests: &Path, sources: &[(String, PathBuf, String)]) -> Result<Place, CliError> {
+pub fn place(path: &Path, tests: &Path, lib: &Path, sources: &[(String, PathBuf, String)]) -> Result<Place, CliError> {
     for (name, dir, _) in sources {
         if below(path, dir).is_some() {
             return Ok(Place::Source { mod_name: name.clone() });
         }
+    }
+    if crate::library::below(path, lib) {
+        return Ok(Place::Library);
     }
     if below(path, tests).is_some() {
         return Ok(Place::Check);
     }
     let watched: Vec<String> = sources.iter().map(|(_, d, _)| d.display().to_string()).collect();
     Err(CliError::wrong(format!(
-        "{} is not under a watched source folder or the tests folder. Give a file under {}{}.",
+        "{} is not under a watched source folder, the tests folder or the library folder. Give a file under {}{}.",
         path.display(),
         if watched.is_empty() {
             "a mod's `source` (no mod of this setup sets one in shakedown.toml)".to_string()
         } else {
             watched.join(" or ")
         },
-        format_args!(", or under {}", tests.display())
+        format_args!(", under {} or under {}", tests.display(), lib.display())
     ))
     .tag("bad-arguments"))
 }
@@ -114,7 +119,8 @@ pub fn place(path: &Path, tests: &Path, sources: &[(String, PathBuf, String)]) -
 /// has a `rebuild`, which the restart runs.
 pub fn classify(path: &Path, place: &Place, is_new_or_deleted: bool, rebuilt: bool) -> (&'static str, String) {
     let Place::Source { .. } = place else {
-        return ("none", CHECK.into());
+        let reason = if *place == Place::Library { LIBRARY } else { CHECK };
+        return ("none", reason.into());
     };
     if is_new_or_deleted {
         let reason = if rebuilt { NEW_FILE_REBUILT } else { NEW_FILE };
@@ -142,6 +148,7 @@ pub async fn reload(
     runner: &Arc<Runner>,
     files: Vec<PathBuf>,
     tests: PathBuf,
+    lib: PathBuf,
     rebuild: Rebuild,
     wait_s: Option<f64>,
 ) -> Result<Value, CliError> {
@@ -184,8 +191,12 @@ pub async fn reload(
             now.insert(p, s);
         }
     }
+    // The library folder as it is now, compared with the library the session read last (API-06).
+    let library = crate::library::read(&lib, &rebuild.folder);
     let paths: Vec<PathBuf> = if files.is_empty() {
-        changed(&before, &now)
+        let mut paths = changed(&before, &now);
+        paths.extend(crate::library::changed(&session.library.lock().unwrap(), &library));
+        paths
     } else {
         files
     };
@@ -194,7 +205,7 @@ pub async fn reload(
     let in_now: std::collections::HashSet<String> = now.keys().map(|p| lower(p)).collect();
     let mut places = Vec::new();
     for p in &paths {
-        let place = place(p, &tests, &sources)?;
+        let place = place(p, &tests, &lib, &sources)?;
         let known = in_before.contains(&lower(p)) || in_now.contains(&lower(p));
         if matches!(place, Place::Source { .. }) && !known && !p.exists() {
             return Err(CliError::wrong(format!(
@@ -275,6 +286,12 @@ pub async fn reload(
         let shape = shape.clone();
         let id = id.clone();
         tokio::spawn(async move {
+            // A game restart compiles the library on every machine it brings up; a reload of
+            // level none has every machine compile it here (API-06).
+            *session.library.lock().unwrap() = library;
+            if level == "none" {
+                session.load_library(&session.machine_names()).await;
+            }
             let outcome = if level == "game-restart" {
                 session.game_restart(&runner, &rebuilds, &rebuild.folder, &|_| {}).await
             } else {
@@ -375,15 +392,27 @@ mod tests {
     fn us_040_rld_02_a_check_file_is_level_none() {
         let tests = Path::new(r"C:\p\tests");
         let p = Path::new(r"C:\p\tests\smoke.sqf");
-        let place = place(p, tests, &sources()).unwrap();
+        let place = place(p, tests, &tests.join("_lib"), &sources()).unwrap();
         assert_eq!(place, Place::Check);
         assert_eq!(classify(p, &place, false, true), ("none", CHECK.into()));
     }
 
     #[test]
+    fn us_070_api_06_rld_02_a_library_file_is_level_none_inside_or_outside_the_tests_folder() {
+        let tests = Path::new(r"C:\p\tests");
+        let p = Path::new(r"C:\p\tests\_lib\rope.sqf");
+        let at = place(p, tests, &tests.join("_lib"), &sources()).unwrap();
+        assert_eq!(at, Place::Library);
+        assert_eq!(classify(p, &at, false, false), ("none", LIBRARY.into()));
+        let p = Path::new(r"C:\p\helpers\rope.sqf");
+        let at = place(p, tests, Path::new(r"C:\p\helpers"), &sources()).unwrap();
+        assert_eq!(at, Place::Library);
+    }
+
+    #[test]
     fn us_056_rld_06_a_new_sqf_needs_a_rebuild_and_a_game_restart() {
         let p = Path::new(r"C:\i\fixtures\skdfx\addons\main\functions\fn_new.sqf");
-        let place = place(p, Path::new(r"C:\p\tests"), &sources()).unwrap();
+        let place = place(p, Path::new(r"C:\p\tests"), Path::new(r"C:\p\tests\_lib"), &sources()).unwrap();
         assert_eq!(
             place,
             Place::Source {
@@ -401,7 +430,7 @@ mod tests {
     #[test]
     fn us_056_rld_02_config_is_a_game_restart() {
         let p = Path::new(r"C:\i\fixtures\skdfx\addons\main\config.cpp");
-        let place = place(p, Path::new(r"C:\p\tests"), &sources()).unwrap();
+        let place = place(p, Path::new(r"C:\p\tests"), Path::new(r"C:\p\tests\_lib"), &sources()).unwrap();
         let (level, reason) = classify(p, &place, false, false);
         assert_eq!(level, "game-restart");
         assert!(reason.contains("Config is read at game start"));
@@ -410,7 +439,7 @@ mod tests {
     #[test]
     fn us_055_rld_02_every_changed_sqf_is_a_game_restart_that_runs_the_rebuild() {
         let p = Path::new(r"C:\i\fixtures\skdfx\addons\main\functions\fn_version.sqf");
-        let place = place(p, Path::new(r"C:\p\tests"), &sources()).unwrap();
+        let place = place(p, Path::new(r"C:\p\tests"), Path::new(r"C:\p\tests\_lib"), &sources()).unwrap();
         let (level, reason) = classify(p, &place, false, false);
         assert_eq!(level, "game-restart");
         assert!(
@@ -426,7 +455,13 @@ mod tests {
 
     #[test]
     fn rld_01_a_file_outside_every_watched_folder_is_refused_naming_them() {
-        let e = place(Path::new(r"C:\elsewhere\x.sqf"), Path::new(r"C:\p\tests"), &sources()).unwrap_err();
+        let e = place(
+            Path::new(r"C:\elsewhere\x.sqf"),
+            Path::new(r"C:\p\tests"),
+            Path::new(r"C:\p\tests\_lib"),
+            &sources(),
+        )
+        .unwrap_err();
         assert_eq!(e.code, 3);
         assert!(e.message.contains(r"C:\i\fixtures\skdfx\addons"), "{}", e.message);
     }

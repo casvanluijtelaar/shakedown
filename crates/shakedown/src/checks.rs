@@ -25,13 +25,16 @@ pub struct Header {
 
 const KEYS: [&str; 5] = ["check", "tags", "setups", "timeout", "reset"];
 
-/// Every `.sqf` file under `dir`, with its check id, in check id order.
-pub fn discover(dir: &Path) -> Result<Vec<CheckRef>, CliError> {
-    fn walk(base: &Path, dir: &Path, out: &mut Vec<CheckRef>) -> std::io::Result<()> {
+/// Every `.sqf` file under `dir`, with its check id, in check id order; none under the library
+/// folder `lib`, whose files are helpers, not checks (`API-06`).
+pub fn discover(dir: &Path, lib: &Path) -> Result<Vec<CheckRef>, CliError> {
+    fn walk(base: &Path, dir: &Path, lib: &Path, out: &mut Vec<CheckRef>) -> std::io::Result<()> {
         for entry in std::fs::read_dir(dir)? {
             let path = entry?.path();
             if path.is_dir() {
-                walk(base, &path, out)?;
+                if !crate::library::same(&path, lib) {
+                    walk(base, &path, lib, out)?;
+                }
             } else if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("sqf")) {
                 let rel = path.strip_prefix(base).unwrap_or(&path).with_extension("");
                 let id = rel
@@ -52,7 +55,7 @@ pub fn discover(dir: &Path) -> Result<Vec<CheckRef>, CliError> {
         ))
         .tag("config-error"));
     }
-    walk(dir, dir, &mut out)
+    walk(dir, dir, lib, &mut out)
         .map_err(|e| CliError::framework(format!("Cannot read the tests folder {}: {e}.", dir.display())))?;
     out.sort_by(|a, b| a.id.cmp(&b.id));
     Ok(out)
@@ -496,6 +499,36 @@ mod tests {
             names(select(&all, &ids(&["a", "a", "a"]), &[]).unwrap()),
             ["a", "a", "a"]
         );
+    }
+
+    #[test]
+    fn us_070_api_06_no_file_of_the_library_folder_is_a_check() {
+        let dir = std::env::temp_dir().join(format!("skd-checks-lib-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("tests").join("_lib")).unwrap();
+        std::fs::create_dir_all(dir.join("tests").join("rope")).unwrap();
+        std::fs::write(
+            dir.join("tests").join("a.sqf"),
+            "// @check US-1 a
+",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("tests").join("rope").join("b.sqf"),
+            "// @check US-1 b
+",
+        )
+        .unwrap();
+        std::fs::write(dir.join("tests").join("_lib").join("rope.sqf"), "1").unwrap();
+        let ids = |v: Vec<CheckRef>| v.into_iter().map(|c| c.id).collect::<Vec<_>>();
+        let tests = dir.join("tests");
+        assert_eq!(ids(discover(&tests, &tests.join("_lib")).unwrap()), ["a", "rope/b"]);
+        // A library folder elsewhere leaves `_lib` in the tests folder a folder of checks.
+        assert_eq!(
+            ids(discover(&tests, &dir.join("helpers")).unwrap()),
+            ["_lib/rope", "a", "rope/b"]
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

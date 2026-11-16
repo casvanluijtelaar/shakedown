@@ -12,5 +12,7 @@ params ["_key", "_edge", ["_checkId", ""]];
 diag_log text format ["[shakedown] %1 %2 %3", _key, _edge, (call skd_fnc_clocks) get "utc"];
 if (_checkId isNotEqualTo "") then {
     skd_context = if (_edge isEqualTo "start") then { [_key, _checkId] } else { ["", ""] };
+    // A check's event recording ends with it, on every machine (EVT-01).
+    call skd_fnc_unrecord;
 };
 true

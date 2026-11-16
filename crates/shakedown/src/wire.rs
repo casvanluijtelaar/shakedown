@@ -20,6 +20,12 @@ pub struct SetupSpec {
     pub mods: Vec<Mod>,
     /// The server's game port; it and the next four are the session's (`SES-03`).
     pub base_port: u16,
+    /// The project folder and its library folder, which the session reads when it starts
+    /// (`API-06`).
+    #[serde(default)]
+    pub project: PathBuf,
+    #[serde(default)]
+    pub lib: PathBuf,
 }
 
 /// The `rebuild` commands of the project's mods, read fresh from the project file, and the folder
@@ -51,6 +57,9 @@ pub enum Request {
         files: Vec<PathBuf>,
         /// The tests folder, the project file's `tests`.
         tests: PathBuf,
+        /// The library folder, the project file's `lib`, read fresh (`API-06`).
+        #[serde(default)]
+        lib: PathBuf,
         #[serde(default)]
         rebuild: Rebuild,
         wait_s: Option<f64>,
