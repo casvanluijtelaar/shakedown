@@ -28,12 +28,14 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
 |---|---|
 | `schema` | Always `"shakedown/result/1"`. A change that breaks a reader raises the number. |
 | `framework_version` | The version of the `shakedown` binary that wrote the file. |
-| `run` | The run's id, its end state (`finished`, or `stopped` with `stopped_reason`), its wall-clock start, end and duration, and the selection it was given, ids as given, a repeated id each time. |
+| `run` | The run's id, its end state (`finished`, or `stopped` with `stopped_reason`), its wall-clock start, end and duration, the selection it was given, ids as given, a repeated id each time, its `repeat` count (`OUT-02`, 1 when not repeated) and `slow_step_s`, the project's `slow_step` it flagged steps against (`TIM-01`). A run of `--each-setup` whose session did not start has state `finished`, its start and end both the moment it was given up. |
+| `session.id` | The session's id; `null` when the run's session start was refused before a session existed (`RUN-07`). |
 | `session.setup` | The setup the session ran: its name, mode, client and headless client counts, world and mod names. |
-| `session.machines` | Every machine start that took part in the run: name, kind, start number, the game version and the version of each mod with a `patch` key as that machine loaded it, and its state at the end of the run. A machine that was `lost` says whether it exited (with its exit code and the paths of its crash dumps under `dumps/`) or stopped answering, and the wall-clock time it was lost (`RES-05`). Its crash dumps are the `.mdmp` and `.bidmp` files written to its profile folder after its process started (`P-09`). A client that joined during the run is listed with its own start number, and one that left, or was made to leave by the reset, ends `stopped` (`MCH-01`). |
+| `session.machines` | Every machine start that took part in the run: name, kind, start number, the game version and the version of each mod with a `patch` key as that machine loaded it, and its state at the end of the run. A machine that was `lost` says whether it exited (with its exit code and the paths of its crash dumps under `dumps/`) or stopped answering, and the wall-clock time it was lost (`RES-05`). Its crash dumps are the `.mdmp` and `.bidmp` files written to its profile folder after its process started (`P-09`). A client that joined during the run is listed with its own start number, and one that left, or was made to leave by the reset, ends `stopped` (`MCH-01`). Empty when the run's session did not start. |
 | `summary` | The count of check executions per outcome, and of checks not run. `total` is `pass + fail + invalid + not_run`. |
 | `checks` | One entry per check execution, in run order (below): a check given twice in the selection has two entries. |
-| `not_run` | Selected checks that were not executed, one entry per time a check was given: `setup` when the check's `@setups` excludes the session's setup, `run-stopped` when the run stopped first. |
+| `not_run` | Selected checks that were not executed, one entry per execution the run would have made, with the `repeat` it would have had and its `reason`: `setup` when the check's `@setups` excludes the session's setup, `run-stopped` when the run stopped first, `session-failed` when the session of a `--each-setup` setup was refused or failed to start, with the start's reason in `message` (`RUN-07`), and `session-broken` when the session broke before a repeat started in a run with `repeat` above 1 (`OUT-02`). |
+| `repeats` | Only when `run.repeat` is above 1: one entry per selected check, in the order first selected, with its summary `outcome` (`pass`, `fail`, `flaky`, `invalid` or `not-run`, `DM-09`) and `counts` of its executions per outcome and of its executions not run. |
 | `reloads` | Every reload done in the session between the run's start and end. |
 | `logs` | Each machine's log excerpt for the whole run. |
 
@@ -47,7 +49,8 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
 | `reason` | `null` for `pass`. Otherwise its `kind` (`DM-03`, `DM-04`, `DM-05`), a `message` that says what happened in one or two sentences, the `machine` it concerns when there is one, and `at`, the wall-clock time of the cause that decided the outcome, so the order of `DM-06` can be read from the file (`RES-05`). |
 | `started_at`, `ended_at`, `duration_s` | Wall clock, from the start of `preparing` to the outcome. |
 | `reload` | `partial` when the check ran after a `mission`-level reload of mod code (`RLD-05`), otherwise `full`. |
-| `steps` | Every step in the order it started, nested steps after their parent, each with its path, the machine it ran on, its state, its start and end on the clocks of `OBS-05`, its duration and its error. A step that was running when the check ended has state `running` and no end. |
+| `steps` | Every step in the order it started, nested steps after their parent, each with its path, the machine it ran on, its state, its start and end on the clocks of `OBS-05`, its duration, its error, and `slow`, `true` when its duration is above `run.slow_step_s` (`TIM-01`). A step that was running when the check ended has state `running` and no end. |
+| `slow` | `true` when the execution's `duration_s` is more than half the check's `@timeout` (`TIM-01`). |
 | `errors` | Every script error caught on any machine during the execution, from the start of its reset to the end of the wait for errors in flight, in the order of their wall-clock time, with its machine, text, file (empty for code that has none), line, stack (`file:line` and scope, outermost frame first), the check and step it was stamped with or attributed to (`P-05` step 7), whether the handler or the RPT scan caught it (`source`), whether an `expectError` block matched it, and its clocks. An error the RPT scan found has its `at.utc` to the second and `tick`, `time` and `frame` 0, which the RPT does not give. Errors during the reset and errors raised while compiling code the check sent are listed but do not decide a `script-error` (`ERR-03`). |
 | `events` | Every event the check recorded with `skd_fnc_record`, on every machine, in the order of their wall-clock time: the machine, the event's name, its kind (`cba` or `mission`), its arguments as the machine received them (`DM-13`) and its clocks (`EVT-01`, `OBS-05`). Empty when the check recorded none. |
 | `evidence.failed_step` | The path of the step the outcome was decided in. |
@@ -64,7 +67,7 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
   "run": {
     "id": "r-20261104-213706-1", "state": "finished",
     "started_at": "2026-11-04T21:37:06.123Z", "ended_at": "2026-11-04T21:37:19.880Z", "duration_s": 13.757,
-    "selection": { "ids": [], "tags": ["US-012"] }, "stopped_reason": null
+    "selection": { "ids": [], "tags": ["US-012"] }, "repeat": 1, "slow_step_s": 10, "stopped_reason": null
   },
   "session": {
     "id": "s-20261104-213512",
@@ -85,12 +88,12 @@ Every path in `result.json` is relative to the run folder (`RES-04`). The folder
       "tags": ["US-012", "smoke"], "repeat": 1, "outcome": "fail",
       "reason": { "kind": "assertion", "message": "ropes attached to the wall: expected >= 1 on every machine; p2 read 0 for 10 s.", "machine": "p2", "at": "2026-11-04T21:37:19.650Z" },
       "started_at": "2026-11-04T21:37:06.200Z", "ended_at": "2026-11-04T21:37:19.700Z", "duration_s": 13.5,
-      "reload": "full",
+      "reload": "full", "slow": false,
       "steps": [
         { "path": ["every machine sees the rope"], "machine": "server", "state": "failed",
           "start": { "utc": "2026-11-04T21:37:09.600Z", "tick": 412.5, "time": 301.2, "frame": 20311 },
           "end": { "utc": "2026-11-04T21:37:19.650Z", "tick": 422.6, "time": 311.3, "frame": 20817 },
-          "duration_s": 10.05, "error": "ropes attached to the wall: p2 read 0" }
+          "duration_s": 10.05, "error": "ropes attached to the wall: p2 read 0", "slow": true }
       ],
       "errors": [],
       "events": [],

@@ -122,7 +122,7 @@ pending ──▶ preparing ──▶ executing ──▶ done(outcome)
 - **DM-04** The outcome is `fail` with reason kind `check-error` when the check itself is wrong: its source does not compile, its header is malformed, it names a machine the session does not have, an action that does not exist on the target, a keybind that is not registered, or it calls the API with wrong arguments. A broken check is the author's to fix, so it is never `invalid`; the reason says what to fix (`CR-31`, `CR-50`).
 - **DM-05** The outcome is `invalid` when the environment, not the mod, stopped the check from reaching a verdict. Its reason kind is one of (`CR-31`, G3):
   - `machine-lost` - a machine's process exited, or it did not answer within a runner ceiling or sent no heartbeat for 10 s; the reason names the machine, the exit code if any, and any crash dump.
-  - `session-broken` - the session was `broken` before the check started.
+  - `session-broken` - the session was `broken` before the check started. In a run with a repeat count above 1 such a check execution is not run instead, listed with reason `session-broken`, so a summary of `DM-09` counts only the repeats that ran (`OUT-02`).
   - `reset-failed` - the reset before the check did not complete.
   - `reload-failed` - the reload the check needed did not complete.
   - `run-stopped` - the run was stopped by hand or by its runner ceiling.
@@ -131,7 +131,7 @@ pending ──▶ preparing ──▶ executing ──▶ done(outcome)
 - **DM-06** When causes for both `fail` and `invalid` are present in one check execution, `invalid` wins only if its cause came first in wall-clock time; otherwise the first cause decides. A machine lost after an assertion already failed does not hide the failure, and a failure that follows a lost machine is not trusted (`CR-31`, G3).
 - **DM-07** A wait that reaches its in-game ceiling is `fail`. A wait that reaches its runner ceiling with no answer from the machine is `invalid` with reason kind `machine-lost` (`CR-20`, `CR-31`; gap H5).
 - **DM-08** A check executed after a `mission`-level reload of mod code that changed only in level A records `reload: partial` in its execution, because handlers the mod registered by value keep the old code (`RLD-05`, `CR-03`).
-- **DM-09** With a repeat count above 1, a check's summary outcome is `pass` when every repeat passed, `fail` when every repeat that was not `invalid` failed, `flaky` when its repeats include both `pass` and `fail`, and `invalid` when every repeat was `invalid`. `flaky` is a summary label only; each repeat keeps its own outcome (`CR-32`, a `should`).
+- **DM-09** With a repeat count above 1, a check's summary outcome is read from the repeats that ran, leaving out the repeats not run: `pass` when every repeat that was not `invalid` passed, `fail` when every repeat that was not `invalid` failed, `flaky` when its repeats include both `pass` and `fail`, `invalid` when every repeat that ran was `invalid`, and `not-run` when no repeat ran. `flaky` and `not-run` are summary labels only; each repeat keeps its own outcome, and the summary gives the count of each outcome and of the repeats not run beside it (`CR-32`, a `should`).
 
 ## Machine rules
 

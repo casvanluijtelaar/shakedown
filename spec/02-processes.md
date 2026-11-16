@@ -58,7 +58,7 @@ Used by `exec`, by every check API call that names another machine, and by the r
 
 Triggered by `run` (command line) or `run_start` (MCP).
 
-1. **client**: resolves the selection (check ids, tags) against the tests folder and refuses if it matches nothing, listing what exists. With `--setup` and no session running, it starts one (`P-02`) and stops it after the run (`P-10`), so the run leaves nothing running (`RUN-04`).
+1. **client**: resolves the selection (check ids, tags) against the tests folder and refuses if it matches nothing, listing what exists. With `--setup` and no session running, it starts one (`P-02`) and stops it after the run (`P-10`), so the run leaves nothing running (`RUN-04`). With `--each-setup` it does this once per setup a selected check names, in the project file's order, each with the checks that name that setup (`RUN-07`).
 2. **runner**: refuses if the session is not `ready`, saying its state. Otherwise creates the run id and the run folder and marks the session `running`.
 3. **runner**: for each selected check in the selection's order, a check given more than once each time it is given (`RUN-03`), and for each repeat, executes the check (`P-05`). Checks whose `@setups` header excludes the session's setup are not executed and are listed as `not-run` with reason `setup`.
 4. **runner**: after the last check, or when the run is stopped, cuts each machine's log for the run's time span into the run folder, redacted (`LOG-02`), writes the result file (`RES-01`), and marks the session `ready` (or leaves it `broken`).
@@ -67,7 +67,7 @@ Triggered by `run` (command line) or `run_start` (MCP).
 ## **P-05** Executing one check
 
 1. **runner**: reads the check file fresh from disk, parses its header (`API-01`). A header error ends the check as `fail` / `check-error` without touching the game.
-2. **runner**: if the session is `broken`, ends the check `invalid` / `session-broken`.
+2. **runner**: if the session is `broken`, ends the check `invalid` / `session-broken`; in a run with a repeat count above 1, lists the execution as not run with reason `session-broken` instead (`DM-05`, `OUT-02`).
 3. **runner**: if the check's reset mode is `mission`, restarts the mission first (`P-08` level B), since a mission restart clears the context variables and a replaced machine writes a new RPT. Then it tells every machine the run, the check id and the execution's key `<run id>#<n>` (an order that sets the context variables), and each machine writes the execution's start marker into its RPT (`LOG-04`); then, for reset mode `in-place`, resets (`P-06`). A failure of either ends the check `invalid` / `reset-failed`, naming the machine that did not come back or did not verify, and leaves the session `broken`.
 4. **runner**: if the library folder holds a file that does not compile, or whose name is not letters, digits and `_`, ends the check `fail` / `check-error` naming the file, its line and the engine's message (`API-06`). Otherwise it sends the lead an order of kind `check` with the check source, its id and its timeout.
 5. **lead**: compiles the body (a compile error ends it `fail` / `check-error`), `spawn`s it, and records each step's start and end on the wall clock and the clocks of `OBS-05` as the body calls `skd_fnc_step`. Calls that target other machines go through `P-03`.
@@ -109,7 +109,7 @@ While a machine's mission restarts or its process is replaced, at level B or C, 
 
 1. **runner**: sees a game process of the session end without having asked it to (it waits on every process handle).
 2. **runner**: records the exit code and the wall-clock time of the exit, looks in that machine's profile folder for every `.mdmp` and `.bidmp` file written after the machine's process started, waiting up to 5 s for a file still being written, and copies each one into the active run's folder as `dumps/<machine>/<file>`, marks the machine `lost` with reason `exited`, and marks the session `broken`.
-3. **runner**: the check executing ends `invalid` / `machine-lost` naming the machine, its exit code and any dump; following checks of the run end `invalid` / `session-broken`.
+3. **runner**: the check executing ends `invalid` / `machine-lost` naming the machine, its exit code and any dump; following checks of the run end `invalid` / `session-broken`, or are not run in a run with a repeat count above 1 (`P-05` step 2).
 4. On a dedicated session the other processes keep running until the session stops or a `game-restart` reload replaces every machine.
 
 ## **P-10** Stop a session

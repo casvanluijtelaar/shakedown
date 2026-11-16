@@ -19,6 +19,7 @@ game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'   # required
 tests = "tests"        # default "tests": the folder of the check files
 lib = "tests/_lib"     # default "_lib" in the tests folder: the library folder of shared helpers (API-06)
 base_port = 2402       # default 2402; the server uses it and the next four
+slow_step = 10         # default 10 seconds: a step that takes longer is flagged slow (TIM-01)
 
 [mods.cba]
 path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997'
@@ -52,6 +53,7 @@ start_timeout = 180    # default 180 seconds (SES-04)
 | `tests` | path | no | The tests folder, which holds the check files. A file that has a `checks` key is refused as an unknown key, naming `tests` among the keys it expects. |
 | `lib` | path | no | The library folder, whose `.sqf` files every machine compiles as shared helpers ([check-api.md](check-api.md#shared-helpers-the-library-folder), `API-06`). Default `_lib` in the tests folder. A folder that does not exist is an empty library. `list` and `run` take no file under it as a check. Read when a session starts and at each `reload`. |
 | `base_port` | integer 1024-65530 | no | The server's game port. |
+| `slow_step` | number above 0 | no | Seconds a step may take before it is flagged `slow` in the result file and the run's lines (`TIM-01`). An integer or a decimal; a string, `0` or a negative number is refused with exit code 3, naming `slow_step` and its line. |
 | `mods.<name>.path` | path | yes | The mod's folder, as `-mod` takes it. |
 | `mods.<name>.patch` | string | no | The `CfgPatches` class whose `versionStr` each machine reports. |
 | `mods.<name>.source` | path | no | The folder of the mod's addon sources that `reload` watches. |
@@ -85,7 +87,7 @@ Without `--json`, output is short lines of text for a person; its wording is not
 | `shakedown session start --setup <name>` | Starts a session and returns when it is `ready` or `failed` (`SES-01`). | `session_start` |
 | `shakedown session stop` | Stops the session and returns when nothing of it runs (`SES-07`). On a failed start that `status` still shows, clears it and exits 0. | `session_stop` |
 | `shakedown list [<id>...] [--tag <tag>]...` | Lists checks from the files, with no runner, each selected check once (`RUN-02`). | `list_checks` |
-| `shakedown run [<id>...] [--tag <tag>]... [--setup <name>]` | Runs the selection against the session and returns when the run ends, printing one line per check execution as it ends. An id given more than once runs that check once per time it is given, in the order given (`RUN-03`); the line of its second and later executions carries `#<repeat>` right after the check id, before the duration. With `--setup` and no session, starts one and stops it after (`RUN-04`). With `--setup` naming another setup than the running session's, refuses. | `run_start`, then `run_status` and `run_result` |
+| `shakedown run [<id>...] [--tag <tag>]... [--setup <name> \| --each-setup] [--repeat <n>]` | Runs the selection against the session and returns when the run ends, printing one line per check execution as it ends. An id given more than once runs that check once per time it is given, in the order given (`RUN-03`); the line of its second and later executions carries `#<repeat>` right after the check id, before the duration. The line of a check execution flagged `slow` says so after its duration and names each slow step with its duration (`TIM-01`). With `--setup` and no session, starts one and stops it after (`RUN-04`). With `--setup` naming another setup than the running session's, refuses. `--repeat <n>`, 1 to 100, default 1, runs each selected check `n` times in a row, each its own execution with its own reset (`OUT-02`); with `n` above 1, after the run it prints a line per check with its summary outcome (`pass`, `fail`, `flaky`, `invalid` or `not-run`, `DM-09`) and the count of each outcome. `--each-setup`, with no session running, runs the selection once per setup a selected check names, in the order the project file declares the setups, each with its own session, run and result file, and prints a line per setup with its counts and result file (`RUN-07`); with a session running it is refused, exit 4. With `--json` it prints the `run_result` of the whole command, with a `runs` entry per setup. | `run_start`, then `run_status` and `run_result` |
 | `shakedown run stop` | Stops the active run and returns once its result file is written, printing the run's status (`RUN-05`). With no run active, exit 4. `run` with the one word `stop` and no other option is always this command, never a check named `stop`; such a check runs with `--tag` or beside another id. | `run_stop` |
 | `shakedown reset` | Resets the session (`RST-03`). Refused, exit 4, while a run, a reload or a reset is in progress, naming it; for a reload, its id and level; for a run, its id, its progress and `shakedown run stop` (`RLD-01`). | `reset` |
 | `shakedown reload [<file>...]` | Reloads changed mod code (`RLD-01`). Files are paths under a watched `source`, the tests folder or the library folder, relative to the current folder; with none, the changed files are found, the library folder's among them. A changed check or library file is level `none`; every reload reads the library folder again and compiles it on every machine (`API-06`). Any other file is level `game-restart`, which stops every game process, runs each setup mod's `rebuild` and starts them again. Prints the level applied, each file with its level and reason, the machines reached and the time. On a `broken` session it restarts the game. Refused, exit 4, while a run, a reload or a reset is in progress, naming it; for a reload, its id and level; for a run, its id, its progress and `shakedown run stop`. A reload that ended `failed` exits 4 naming the level, the machine and why. | `reload` |
@@ -116,9 +118,9 @@ The command line and the MCP server reach the runner through these; a test of `S
 
 | Code | Meaning |
 |---|---|
-| `0` | Done. For `run`: every executed check passed. |
+| `0` | Done. For `run`: every executed check passed. `run --each-setup` exits with the highest code of its setups' runs. |
 | `1` | `run`: at least one check `fail`. |
-| `2` | `run`: no check `fail`, and at least one `invalid` or the run was stopped (`RUN-05`, `RUN-06`). |
+| `2` | `run`: no check `fail`, and at least one `invalid`, the run was stopped (`RUN-05`, `RUN-06`), or a check was not run because its session failed to start or broke (`RUN-07`, `OUT-02`). |
 | `3` | The request is wrong: an unknown command, option, check, machine or setup, a malformed project file, SQF that does not compile. The message says what to fix. |
 | `4` | The request is right but cannot be done now: no session, a session already running, a precondition of `SES-03` failed, a session start that ended `failed`, a reload that ended `failed`, the session is `broken` or busy with a run, a reload or a reset, the runner refused, the runner does not answer or runs another version. The message says what to do. |
 | `5` | The framework itself failed. The message gives the path of `runner.log`. |

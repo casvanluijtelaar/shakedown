@@ -224,4 +224,4 @@ private _args = ["p2", "skdfx_signalled", 10] call skd_fnc_waitEvent;
 
 ## Not in this contract yet
 
-Handing over to a manual tester (`MAN-01`), ACE interaction actions (`ACT-04`), real key input (`ACT-05`), repeats (`OUT-02`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.
+Handing over to a manual tester (`MAN-01`), ACE interaction actions (`ACT-04`), real key input (`ACT-05`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.

@@ -15,6 +15,11 @@
     "checks": { "type": "array", "items": { "$ref": "#/$defs/CheckExecution" } },
     "not_run": { "type": "array", "items": { "$ref": "#/$defs/NotRun" } },
     "reloads": { "type": "array", "items": { "$ref": "#/$defs/Reload" } },
+    "repeats": {
+      "description": "Only when run.repeat is above 1: each selected check's summary over its repeats (DM-09, OUT-02).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/RepeatSummary" }
+    },
     "logs": {
       "description": "Each machine's log excerpt for the run, by machine name: a path relative to the run folder.",
       "type": "object",
@@ -55,7 +60,7 @@
     "Run": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "state", "started_at", "ended_at", "duration_s", "selection", "stopped_reason"],
+      "required": ["id", "state", "started_at", "ended_at", "duration_s", "selection", "repeat", "slow_step_s", "stopped_reason"],
       "properties": {
         "id": { "type": "string", "pattern": "^r-\\d{8}-\\d{6}-\\d+$" },
         "state": { "enum": ["finished", "stopped"] },
@@ -71,6 +76,8 @@
             "tags": { "type": "array", "items": { "type": "string" } }
           }
         },
+        "repeat": { "description": "How many times the run executes each selected check in a row (OUT-02).", "type": "integer", "minimum": 1, "maximum": 100 },
+        "slow_step_s": { "description": "The project's slow_step: a step longer than this is flagged slow (TIM-01).", "type": "number", "exclusiveMinimum": 0 },
         "stopped_reason": {
           "description": "Why a stopped run stopped; null for a finished run.",
           "oneOf": [{ "type": "null" }, { "enum": ["by-hand", "run-ceiling", "session-stopped"] }]
@@ -82,7 +89,10 @@
       "additionalProperties": false,
       "required": ["id", "setup", "machines"],
       "properties": {
-        "id": { "type": "string", "pattern": "^s-\\d{8}-\\d{6}$" },
+        "id": {
+          "description": "null when the run's session start was refused before a session existed (RUN-07).",
+          "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^s-\\d{8}-\\d{6}$" }]
+        },
         "setup": {
           "type": "object",
           "additionalProperties": false,
@@ -170,7 +180,7 @@
       "additionalProperties": false,
       "required": [
         "check_id", "name", "tags", "repeat", "outcome", "reason", "started_at", "ended_at", "duration_s",
-        "reload", "steps", "errors", "events", "evidence"
+        "reload", "slow", "steps", "errors", "events", "evidence"
       ],
       "properties": {
         "check_id": { "$ref": "#/$defs/CheckId" },
@@ -183,6 +193,7 @@
         "ended_at": { "$ref": "#/$defs/Time" },
         "duration_s": { "$ref": "#/$defs/Duration" },
         "reload": { "description": "partial after a mission-level reload of mod code (RLD-05).", "enum": ["full", "partial"] },
+        "slow": { "description": "duration_s is more than half the check's timeout (TIM-01).", "type": "boolean" },
         "steps": { "type": "array", "items": { "$ref": "#/$defs/Step" } },
         "errors": { "type": "array", "items": { "$ref": "#/$defs/ScriptError" } },
         "events": { "description": "Every event the check recorded (EVT-01).", "type": "array", "items": { "$ref": "#/$defs/RecordedEvent" } },
@@ -199,7 +210,7 @@
     "Step": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "machine", "state", "start", "end", "duration_s", "error"],
+      "required": ["path", "machine", "state", "start", "end", "duration_s", "error", "slow"],
       "properties": {
         "path": { "description": "Step titles from the outermost step in.", "type": "array", "items": { "type": "string" }, "minItems": 1 },
         "machine": { "$ref": "#/$defs/MachineName" },
@@ -207,7 +218,8 @@
         "start": { "$ref": "#/$defs/Clocks" },
         "end": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/Clocks" }] },
         "duration_s": { "$ref": "#/$defs/Duration" },
-        "error": { "type": ["string", "null"] }
+        "error": { "type": ["string", "null"] },
+        "slow": { "description": "duration_s is above run.slow_step_s (TIM-01).", "type": "boolean" }
       }
     },
     "ScriptError": {
@@ -277,10 +289,32 @@
     "NotRun": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["check_id", "reason"],
+      "required": ["check_id", "repeat", "reason"],
       "properties": {
         "check_id": { "$ref": "#/$defs/CheckId" },
-        "reason": { "enum": ["setup", "run-stopped"] }
+        "repeat": { "description": "The repeat the execution would have had.", "type": "integer", "minimum": 1 },
+        "reason": { "enum": ["setup", "run-stopped", "session-failed", "session-broken"] },
+        "message": { "description": "For session-failed: the start's reason (RUN-07).", "type": "string" }
+      }
+    },
+    "RepeatSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "outcome", "counts"],
+      "properties": {
+        "check_id": { "$ref": "#/$defs/CheckId" },
+        "outcome": { "enum": ["pass", "fail", "flaky", "invalid", "not-run"] },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pass", "fail", "invalid", "not_run"],
+          "properties": {
+            "pass": { "type": "integer", "minimum": 0 },
+            "fail": { "type": "integer", "minimum": 0 },
+            "invalid": { "type": "integer", "minimum": 0 },
+            "not_run": { "type": "integer", "minimum": 0 }
+          }
+        }
       }
     },
     "Reload": {
