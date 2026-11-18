@@ -627,28 +627,27 @@ fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
     assert_eq!((&d["state"], &d["level"]), (&json!("done"), &json!("none")), "{d}");
 
     // US-055 1 and 2 in singleplayer, through the reload tool: the staged CBA PREP function
-    // changed, a reload with no files is a game restart that runs the mod's rebuild, and p1, a
-    // new start, compiles the new file (RLD-02, RLD-06).
+    // changed, a reload with no files is a mission restart that runs the mod's rebuild once the
+    // game has let go of the file, and p1, the same start, compiles the new file (RLD-02, RLD-06).
     stage(&dir, "2");
     let a = mcp.call("reload", json!({}));
     let d = a.data();
     println!("US-055 reload in singleplayer: {d}");
     assert_eq!(
         (&d["state"], &d["level"]),
-        (&json!("done"), &json!("game-restart")),
+        (&json!("done"), &json!("mission-restart")),
         "{d}"
     );
     assert_eq!(d["files"].as_array().unwrap().len(), 1, "{d}");
     assert!(d["files"][0]["path"].as_str().unwrap().ends_with("fnc_version.sqf"));
     let reason = d["files"][0]["reason"].as_str().unwrap();
     assert!(
-        reason.contains("only in a new process") && reason.contains("rebuild"),
+        reason.contains("let go of the file") && reason.contains("rebuild"),
         "{reason}"
     );
     assert!(d["duration_s"].as_f64().unwrap() > 0.0);
     drop(mcp);
     assert_eq!(versions(&dir)["p1"]["value"], "2");
-    let start = start + 1;
     assert_eq!(machines(&dir)[0].1, start);
     let (code, after) = s.run(&["edit"]);
     assert_eq!(code, 1, "the edited check still fails as edited: {after:#}");
@@ -687,9 +686,10 @@ fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
 }
 
 /// `US-055` 1 and 2 and `NFR-PF-02` on a dedicated session with two clients, the demo's setup:
-/// ten reloads of a changed CBA `PREP` function, each a game restart that runs the mod's rebuild
-/// while no game process runs, each timed; every machine returns the new value, and the check
-/// after the first passes from the start state with every start one higher.
+/// ten reloads of a changed CBA `PREP` function, each a mission restart that runs the mod's
+/// rebuild once the game has let go of the file, each timed; every machine returns the new value,
+/// and the check after the first passes from the start state, the server kept and every client a
+/// new start.
 #[test]
 #[ignore = "starts Arma 3; run on the test machine"]
 fn us_055_nfr_pf_02_ten_reloads_of_a_changed_function_on_a_dedicated_session() {
@@ -714,14 +714,14 @@ fn us_055_nfr_pf_02_ten_reloads_of_a_changed_function_on_a_dedicated_session() {
         assert_eq!(code, 0, "{r} {err}");
         assert_eq!(
             (&r["state"], &r["level"]),
-            (&json!("done"), &json!("game-restart")),
+            (&json!("done"), &json!("mission-restart")),
             "{r}"
         );
         assert_eq!(r["files"].as_array().unwrap().len(), 1, "{r}");
         assert!(r["files"][0]["path"].as_str().unwrap().ends_with("fnc_version.sqf"));
         let reason = r["files"][0]["reason"].as_str().unwrap();
         assert!(
-            reason.contains("only in a new process") && reason.contains("rebuild"),
+            reason.contains("let go of the file") && reason.contains("rebuild"),
             "{reason}"
         );
         assert_eq!(r["machines"], json!(names));
@@ -731,16 +731,19 @@ fn us_055_nfr_pf_02_ten_reloads_of_a_changed_function_on_a_dedicated_session() {
         }
         for (name, start, _, state) in machines(&dir) {
             let old = before.iter().find(|m| m.0 == name).map_or(0, |m| m.1);
-            assert_eq!((start, state.as_str()), (old + 1, "ready"), "{name}");
+            let want = if name == "server" { old } else { old + 1 };
+            assert_eq!((start, state.as_str()), (want, "ready"), "{name}");
         }
         durations.push(r["duration_s"].as_f64().unwrap());
         walls.push(wall);
         if n == 2 {
-            // US-055 2: the next check passes from the start state, every start one higher.
+            // US-055 2: the next check passes from the start state, the server's start kept and
+            // every client's one higher.
             let (code, result) = s.run(&["fresh"]);
             assert_eq!(code, 0, "{result:#}");
             for m in result["session"]["machines"].as_array().unwrap() {
-                assert_eq!(m["start"], 2, "{m}");
+                let want = if m["name"] == "server" { 1 } else { 2 };
+                assert_eq!(m["start"], want, "{m}");
             }
         }
     }
@@ -795,7 +798,7 @@ fn us_057_a_reload_that_loses_p2_breaks_the_session_and_a_reload_mends_it() {
     assert_eq!(r["state"], "failed", "{r}");
     assert_eq!(
         (&r["reason"]["step"], &r["reason"]["machine"]),
-        (&json!("game-restart"), &json!("p2"))
+        (&json!("mission-restart"), &json!("p2"))
     );
     let (_, st, _) = cmd(&dir, &["status"]);
     assert_eq!(st["session"]["state"], "broken");

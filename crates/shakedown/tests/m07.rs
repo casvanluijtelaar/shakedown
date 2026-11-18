@@ -34,8 +34,10 @@ const STAGE: &str = r"stage\skdfx\addons";
 /// The finding the rerun checks carry as a tag.
 const FINDING: &str = "m07-1";
 
-/// `NFR-PF-02`'s target for a `game-restart` reload, in seconds, before the rebuild's own time.
-const PF_02_S: f64 = 90.0;
+/// `NFR-PF-02`'s targets for a `mission-restart` reload, in seconds, before the rebuild's own time:
+/// in singleplayer and on a dedicated session with two clients.
+const PF_02_SP_S: f64 = 20.0;
+const PF_02_DED_S: f64 = 90.0;
 
 fn install() -> PathBuf {
     repo().join("target").join("shakedown")
@@ -290,11 +292,12 @@ impl Drop for Changed {
 ///   asked during a run are refused naming the run, its progress and `run stop`; the run's checks
 ///   end as in a run with no reload asked, and no start number changes. Asked during the reload
 ///   that follows, they are refused naming that reload.
-/// - `US-054` 1 to 3: `reload` with no files restarts the game with the rebuild, reporting the
+/// - `US-054` 1 to 3: `reload` with no files restarts the mission with the rebuild, reporting the
 ///   level, the file and its reason, every machine and the time; the checks tagged with the
-///   finding, rerun, see `"2"` on every machine with every start one higher and `reload` `full`,
-///   within `NFR-PF-02`'s target plus 10 s from the reload.
-fn reload_loop(name: &str, setup: &str, names: &[&str]) {
+///   finding, rerun, see `"2"` on every machine, the lead's start kept and every other machine's
+///   one higher, and `reload` `partial`, since every machine recompiled the `CfgFunctions`
+///   function, within `NFR-PF-02`'s target plus 10 s from the reload.
+fn reload_loop(name: &str, setup: &str, names: &[&str], target_s: f64) {
     let dir = project(name, names.len());
     // Dropped after the session, so the file is put back when no process holds it.
     let _target = Changed::new();
@@ -401,14 +404,17 @@ fn reload_loop(name: &str, setup: &str, names: &[&str]) {
     assert_eq!(code, 0, "{r} {err}");
     assert_eq!(
         (&r["state"], &r["level"]),
-        (&json!("done"), &json!("game-restart")),
+        (&json!("done"), &json!("mission-restart")),
         "{r}"
     );
     let files = r["files"].as_array().unwrap();
     assert_eq!(files.len(), 1, "{r}");
     assert!(files[0]["path"].as_str().unwrap().ends_with("fn_version.sqf"), "{r}");
     let reason = files[0]["reason"].as_str().unwrap();
-    assert!(reason.contains("new process") && reason.contains("rebuild"), "{reason}");
+    assert!(
+        reason.contains("let go of the file") && reason.contains("rebuild"),
+        "{reason}"
+    );
     assert_eq!(r["machines"], json!(names), "{r}");
     let duration = r["duration_s"].as_f64().expect("the reload reports its time");
 
@@ -419,26 +425,31 @@ fn reload_loop(name: &str, setup: &str, names: &[&str]) {
     let checks = result["checks"].as_array().unwrap();
     assert_eq!(checks.len(), 3, "{result:#}");
     for c in checks {
-        assert_eq!((&c["outcome"], &c["reload"]), (&json!("pass"), &json!("full")), "{c:#}");
+        assert_eq!(
+            (&c["outcome"], &c["reload"]),
+            (&json!("pass"), &json!("partial")),
+            "{c:#}"
+        );
     }
     for (name, start, _, state) in machines(&dir) {
         let old = after.iter().find(|m| m.0 == name).map_or(0, |m| m.1);
-        assert_eq!((start, state.as_str()), (old + 1, "ready"), "{name}");
+        let want = if name == names[0] { old } else { old + 1 };
+        assert_eq!((start, state.as_str()), (want, "ready"), "{name}");
     }
     println!(
-        "NFR-PF-02 on {setup}: reload duration_s {duration:.1} s, reload command {reload_wall:.1} s, reload to the rerun's last outcome {total:.1} s (target {PF_02_S} s plus 10 s)"
+        "NFR-PF-02 on {setup}: reload duration_s {duration:.1} s, reload command {reload_wall:.1} s, reload to the rerun's last outcome {total:.1} s (target {target_s} s plus 10 s)"
     );
-    assert!(total < PF_02_S + 10.0, "{total:.1} s");
+    assert!(total < target_s + 10.0, "{total:.1} s");
 }
 
 #[test]
 #[ignore = "starts Arma 3; run on the test machine"]
 fn us_054_us_058_nfr_pf_02_reload_during_a_run_and_rerun_by_finding_in_singleplayer() {
-    reload_loop("sp", "sp", &["p1"]);
+    reload_loop("sp", "sp", &["p1"], PF_02_SP_S);
 }
 
 #[test]
 #[ignore = "starts Arma 3; run on the test machine"]
 fn us_054_us_058_nfr_pf_02_reload_during_a_run_and_rerun_by_finding_on_a_dedicated_session() {
-    reload_loop("ded2", "ded2", &["server", "p1", "p2"]);
+    reload_loop("ded2", "ded2", &["server", "p1", "p2"], PF_02_DED_S);
 }
