@@ -45,7 +45,7 @@ A project with no mod declares `mods = []` in its setup and no `[mods.*]` table;
 | `mods.<name>.patch` | no | A `CfgPatches` class of the mod; the result file records its `versionStr` as the game loaded it. |
 | `mods.<name>.source` | no | The folder of your own files of the mod, the one holding its addon folders, which `reload` watches ([Reloading](reloading.md)). |
 | `mods.<name>.prefix` | with `source` | The game path of `source`, such as `'z\agh\addons'`. |
-| `mods.<name>.rebuild` | no | A command line that makes the build the game loads from your files, such as `hemtt build`. A `game-restart` reload runs it with `cmd /C` in the project folder, after every game process has ended and before any starts again; it must end within 120 s with exit code 0. It is read fresh at each reload. |
+| `mods.<name>.rebuild` | no | A command line that makes the build the game loads from your files, such as `hemtt build`. A `game-restart` reload runs it with `cmd /C` in the project folder, after every game process has ended and before any starts again, and a `mission-restart` reload once no game process holds a changed file, while the game still holds the mod's PBOs, so a rebuild that serves both writes only the loose files that changed ([Reloading](reloading.md#setting-a-mod-up-for-reload)); it must end within 120 s with exit code 0. It is read fresh at each reload. |
 | `setups.<name>.mode` | yes | `"singleplayer"` or `"dedicated"`. |
 | `setups.<name>.clients` | no, default 1 | A dedicated setup's game clients, `p1` to `pN`, 1 to 8. |
 | `setups.<name>.headless` | no, default 0 | A dedicated setup's headless clients, `hc1` to `hcN`, 0 to 8. |
