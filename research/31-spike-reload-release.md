@@ -9,7 +9,7 @@ sources:
   - { id: rpt, resource: "the RPT of every machine of the round's sessions, the line FileServer MaxCacheSize", read: 2026-11-15 }
   - { id: cba, resource: "https://github.com/CBATeam/CBA_A3 at tag v3.19.0, addons/xeh/fnc_compileFunction.sqf (read with gh)", read: 2026-11-15 }
   - { id: r27, resource: "research/27-spikes-reload.md: the hold, the release table, the approaches tried and the mission restart's time in M6", read: 2026-11-15 }
-  - { id: m14, resource: "the M14 build of 2026-11-18 on the Windows test machine, shakedown 0.1.4 from the worktree developer/m14, tests/m14.rs: three singleplayer and ten dedicated reloads at level mission-restart through the release files the runner makes in <game>\skd_release, a changed CfgFunctions function of @skd_fixture in each mode, a file held by skdfx_fnc_holdFile, and the runner log of each run", read: 2026-11-18 }
+  - { id: m14, resource: "the M14 build of 2026-11-18 on the Windows test machine, shakedown 0.1.4 from the worktree developer/m14, tests/m14.rs: three singleplayer and ten dedicated reloads at level mission-restart through the release files the runner makes in <game>\\skd_release, a changed CfgFunctions function of @skd_fixture in each mode, a file held by skdfx_fnc_holdFile, and the runner log of each run", read: 2026-11-18 }
   - { id: r10, resource: "research/10-prior-harness.md and research/14-sessions.md: clients kept across a mission change", read: 2026-11-15 }
 ---
 
