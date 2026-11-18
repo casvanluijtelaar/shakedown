@@ -1897,10 +1897,10 @@ impl Session {
         let mut failed = None;
         while let Some(done) = reads.join_next().await {
             let Ok((name, answer)) = done else { continue };
-            match answer.as_ref().ok().and_then(|a| a["value"].as_u64()) {
+            match answer.as_ref().ok().and_then(|a| a["value"].as_f64()) {
                 // File patching found none of the release files; the hold check that follows
                 // decides whether the changed files are free anyway.
-                Some(0) => runner.log(&format!("{} {name} read none of the release files", self.id)),
+                Some(n) if n <= 0.0 => runner.log(&format!("{} {name} read none of the release files", self.id)),
                 Some(_) => {}
                 None => {
                     failed = failed.or(Some((
