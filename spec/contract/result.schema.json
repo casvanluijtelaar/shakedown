@@ -197,13 +197,18 @@
         "steps": { "type": "array", "items": { "$ref": "#/$defs/Step" } },
         "errors": { "type": "array", "items": { "$ref": "#/$defs/ScriptError" } },
         "events": { "description": "Every event the check recorded (EVT-01).", "type": "array", "items": { "$ref": "#/$defs/RecordedEvent" } },
-        "evidence": { "$ref": "#/$defs/Evidence" }
+        "evidence": { "$ref": "#/$defs/Evidence" },
+        "handed_over": { "description": "Only on the execution that handed the session over to a manual tester, which is pass (MAN-01).", "$ref": "#/$defs/HandedOver" }
       },
       "allOf": [
         {
           "if": { "properties": { "outcome": { "const": "pass" } } },
           "then": { "properties": { "reason": { "type": "null" } } },
           "else": { "properties": { "reason": { "$ref": "#/$defs/Reason" } } }
+        },
+        {
+          "if": { "required": ["handed_over"] },
+          "then": { "properties": { "outcome": { "const": "pass" } } }
         }
       ]
     },
@@ -286,6 +291,16 @@
         }
       }
     },
+    "HandedOver": {
+      "description": "A hand over to a manual tester (MAN-01): the game client whose window to use and the things to look for, in order.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machine", "items"],
+      "properties": {
+        "machine": { "$ref": "#/$defs/MachineName" },
+        "items": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "maxItems": 10 }
+      }
+    },
     "NotRun": {
       "type": "object",
       "additionalProperties": false,
@@ -293,7 +308,7 @@
       "properties": {
         "check_id": { "$ref": "#/$defs/CheckId" },
         "repeat": { "description": "The repeat the execution would have had.", "type": "integer", "minimum": 1 },
-        "reason": { "enum": ["setup", "run-stopped", "session-failed", "session-broken"] },
+        "reason": { "enum": ["setup", "run-stopped", "session-failed", "session-broken", "handed-over"] },
         "message": { "description": "For session-failed: the start's reason (RUN-07).", "type": "string" }
       }
     },

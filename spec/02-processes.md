@@ -58,10 +58,10 @@ Used by `exec`, by every check API call that names another machine, and by the r
 
 Triggered by `run` (command line) or `run_start` (MCP).
 
-1. **client**: resolves the selection (check ids, tags) against the tests folder and refuses if it matches nothing, listing what exists. With `--setup` and no session running, it starts one (`P-02`) and stops it after the run (`P-10`), so the run leaves nothing running (`RUN-04`). With `--each-setup` it does this once per setup a selected check names, in the project file's order, each with the checks that name that setup (`RUN-07`).
+1. **client**: resolves the selection (check ids, tags) against the tests folder and refuses if it matches nothing, listing what exists. With `--setup` and no session running, it starts one (`P-02`) and stops it after the run (`P-10`), so the run leaves nothing running (`RUN-04`), unless a check handed the session over to a manual tester (`MAN-01`). With `--each-setup` it does this once per setup a selected check names, in the project file's order, each with the checks that name that setup (`RUN-07`).
 2. **runner**: refuses if the session is not `ready`, saying its state. Otherwise creates the run id and the run folder and marks the session `running`.
 3. **runner**: for each selected check in the selection's order, a check given more than once each time it is given (`RUN-03`), and for each repeat, executes the check (`P-05`). Checks whose `@setups` header excludes the session's setup are not executed and are listed as `not-run` with reason `setup`.
-4. **runner**: after the last check, or when the run is stopped, cuts each machine's log for the run's time span into the run folder, redacted (`LOG-02`), writes the result file (`RES-01`), and marks the session `ready` (or leaves it `broken`).
+4. **runner**: after the last check, when the run is stopped, or after a check that handed the session over to a manual tester (`MAN-01`), which lists the checks after it as not run, cuts each machine's log for the run's time span into the run folder, redacted (`LOG-02`), writes the result file (`RES-01`), and marks the session `ready` (or leaves it `broken`).
 5. **client**: the command line prints one line per check and the summary and exits with the code [contract/cli.md](contract/cli.md) gives; the MCP server answers `run_status` and `run_result` from the runner.
 
 ## **P-05** Executing one check

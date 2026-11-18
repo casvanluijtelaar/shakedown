@@ -222,6 +222,38 @@ private _args = ["p2", "skdfx_signalled", 10] call skd_fnc_waitEvent;
 | `skd_fnc_fail` | `[message]` | Does not return. Ends the check `fail` / `explicit`. |
 | `skd_fnc_invalid` | `[message]` | Does not return. Ends the check `invalid` / `explicit`, for a cause outside the mod that the check detects itself. |
 
+## Handing over to a manual tester
+
+A check sets up a situation for a person to judge by eye and hands it over (`MAN-01`): the person is put in a game client's window at the check's end, with a list of what to look for, and the session stays up for them.
+
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_handOver` | `[machine, items]` - `machine` a game client, `"p1"` to `"pN"`; `items` an Array of 1 to 10 Strings that are not empty, each one thing to look for, written for a person who knows the game and not SQF. | Does not return: the body ends there. | `fail` / `check-error` for `server` or a headless client on a dedicated session, naming the game clients it can hand over to (`DM-04`), and for `items` of the wrong form; `fail` / `wait-ceiling` when the list is not on the client's screen within 10 s. |
+
+`skd_fnc_handOver` shows the list on the client's screen, at its top left under the title `Shakedown: look for`, numbered in the order given, and writes it to that client's RPT; then it ends the body, closing every step still running as `passed`. In singleplayer `"server"` names `p1`, as everywhere. The check's outcome is then fixed as for a body that reached its end, so a script error raised earlier still ends it `fail` / `script-error`.
+
+A check that ends `pass` is **handed over**:
+
+- its execution in the result file carries `handed_over`, the machine and the items ([result-file.md](result-file.md));
+- the run ends after it: the checks after it in the run are not run, with reason `handed-over`;
+- `shakedown run` prints the machine whose window to use, the numbered items and the command that ends the session, and `run_result` returns them as `handed_over` ([cli.md](cli.md), [mcp-tools.md](mcp-tools.md));
+- no reset follows, so the player stands where the check put it and every object the check made is there;
+- the session stays up and `ready`, also when the run started its own session with `--setup` (`RUN-04`); in `run --each-setup` that setup's session stays up and no further setup starts.
+
+The next `run`, `reset`, `reload` or `session stop` takes the session back as usual: the reset before the next check, or the `reset` command, removes the list from the screen with the rest of the check's state. A check that ends `fail` or `invalid` is not handed over; the run goes on with its reset as usual.
+
+```sqf
+// @check US-083 The owner looks at the crate the fixture adds
+// @setups dedicated
+private _crate = ["skdfx_Crate", AGLToASL [100, 103, 0], 180] call skd_fnc_create;
+["p1", AGLToASL [100, 100, 0], 0] call skd_fnc_place;
+["p1", [
+    "An ammo crate stands 3 m in front of you.",
+    "Looking at it, the action menu offers Open crate.",
+    "Opening it puts a first aid kit in your inventory."
+]] call skd_fnc_handOver;
+```
+
 ## Not in this contract yet
 
-Handing over to a manual tester (`MAN-01`), ACE interaction actions (`ACT-04`), real key input (`ACT-05`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.
+ACE interaction actions (`ACT-04`), real key input (`ACT-05`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.

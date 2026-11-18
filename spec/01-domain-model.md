@@ -87,7 +87,7 @@ A `game-restart` reload or a `mission` reset on a dedicated session replaces a m
 
 ### Run
 
-`running` → `finished` when every selected check has an outcome; `running` → `stopped` when stopped by hand or by its runner ceiling, in which case the check executing gets `invalid` with reason `run-stopped` and the checks not started are listed as not run. Both end states write the result file.
+`running` → `finished` when every selected check has an outcome, or when a check handed the session over to a manual tester, in which case the checks after it are listed as not run (`MAN-01`); `running` → `stopped` when stopped by hand or by its runner ceiling, in which case the check executing gets `invalid` with reason `run-stopped` and the checks not started are listed as not run. Both end states write the result file.
 
 ### Check execution
 
