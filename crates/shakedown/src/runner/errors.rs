@@ -267,6 +267,7 @@ mod tests {
             ],
             errors: vec![],
             events: vec![],
+            handed_over: None,
             evidence: Evidence::default(),
         }
     }

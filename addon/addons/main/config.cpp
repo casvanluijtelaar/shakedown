@@ -64,6 +64,8 @@ class CfgFunctions {
             class unrecord {};
             class eventsOn {};
             class eventList {};
+            class handOverShow {};
+            class handOverClear {};
         };
         // The check API (spec/contract/check-api.md).
         class api {
@@ -96,6 +98,7 @@ class CfgFunctions {
             class evidence {};
             class fail {};
             class invalid {};
+            class handOver {};
         };
     };
 };

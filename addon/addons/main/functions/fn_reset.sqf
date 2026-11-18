@@ -3,7 +3,7 @@
     phases in order, each on every machine at once: "cleanups", "free", "restore" and "verify". In singleplayer every machine is p1.
 
     - "cleanups" [ceiling]: runs the cleanups the previous check registered for this machine, last first (P-06
-      step 1). A cleanup still running at the ceiling is terminated and named.
+      step 1), after removing the list of a hand over (MAN-01) from the screen. A cleanup still running at the ceiling is terminated and named.
     - "free" [ceiling]: waits for this machine's player to be alive (a dead player respawns at
       once, RST-05) and moves it out of any vehicle, so no deletion takes a player with it.
     - "restore" [ceiling, world]: deletes every entity this machine recorded since the baseline that is
@@ -47,6 +47,8 @@ private _deleteLocal = {
 switch (_phase) do {
     case "cleanups": {
         _args params [["_ceiling", 15]];
+        // The list a hand over showed goes with the rest of the check's state (MAN-01).
+        call skd_fnc_handOverClear;
         private _cleanups = +skd_cleanups;
         skd_cleanups = [];
         reverse _cleanups;

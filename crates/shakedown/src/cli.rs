@@ -582,8 +582,9 @@ fn run(
         slow_step: project.slow_step,
     };
     let result = conn.request(&request, |e| out.progress(e));
-    // A run that started its own session stops it, whatever the outcomes (RUN-04).
-    if started_here {
+    // A run that started its own session stops it, whatever the outcomes (RUN-04), unless a check
+    // handed the session over to a manual tester (MAN-01).
+    if started_here && !ops::handed_over(&result) {
         conn.request(&Request::SessionStop, |e| out.progress(e))?;
     }
     let Event::RunDone { result } = result? else {
@@ -606,9 +607,31 @@ fn run(
             summary["not_run"],
             result["result_file"].as_str().unwrap_or("?")
         );
+        print_handed_over(&result["handed_over"]);
     }
     // A stopped run did not reach a verdict on every check: 2 unless a check failed (RUN-05).
     Ok(ops::exit_of(&result))
+}
+
+/// What a hand over gives the manual tester (`MAN-01`): the window to use, the numbered items, and
+/// the session that stays up with the command that ends it.
+fn print_handed_over(h: &Value) {
+    if !h.is_object() {
+        return;
+    }
+    let machine = h["machine"].as_str().unwrap_or("?");
+    println!(
+        "Handed over to {machine} by {}. Look through {machine}'s window for:",
+        h["check_id"].as_str().unwrap_or("?")
+    );
+    for (i, item) in h["items"].as_array().into_iter().flatten().enumerate() {
+        println!("  {}. {}", i + 1, item.as_str().unwrap_or("?"));
+    }
+    println!(
+        "Session {} stays up for you. End it with `{}`.",
+        h["session_id"].as_str().unwrap_or("?"),
+        h["stop"].as_str().unwrap_or("shakedown session stop")
+    );
 }
 
 /// A line per check with its summary over its repeats and the count of each outcome (`OUT-02`,
@@ -667,6 +690,7 @@ impl ops::EachSetupHooks for CliHooks<'_> {
             s["not_run"],
             result["result_file"].as_str().unwrap_or("?")
         );
+        print_handed_over(&result["handed_over"]);
     }
 
     fn stopped(&self) -> bool {

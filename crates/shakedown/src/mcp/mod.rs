@@ -988,7 +988,8 @@ fn follow(
         Event::Check { line, .. } => set(&|t| t.outcomes.push(line.clone())),
         _ => {}
     });
-    if started_here {
+    // A hand over keeps the session up for the manual tester (MAN-01).
+    if started_here && !ops::handed_over(&answer) {
         let _ = conn.request(&Request::SessionStop, |_| {});
     }
     match answer {

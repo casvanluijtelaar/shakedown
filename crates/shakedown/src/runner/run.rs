@@ -8,7 +8,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use serde_json::{Value, json};
 use shakedown_protocol::result::{
-    Attached, CheckExecution, Clocks, Evidence, NotRun, Reason, ResultFile, Run, SCHEMA, Selection,
+    Attached, CheckExecution, Clocks, Evidence, HandedOver, NotRun, Reason, ResultFile, Run, SCHEMA, Selection,
     Session as RSession, Setup as RSetup, Step, Summary, repeat_summaries,
 };
 use shakedown_protocol::time;
@@ -498,7 +498,18 @@ async fn execute(
         }
         let line = outcome_line(&execution, &session.spec.setup.name);
         emit(line, outcome_text(&execution));
+        let handed = execution.handed_over.is_some();
         executions.push(execution);
+        // A hand over ends the run: no reset follows, and the session is left to the manual tester
+        // (MAN-01).
+        if handed {
+            for c in &checks[n + 1..] {
+                let repeat = next_repeat(&c.id);
+                not_run.push(not_run_entry(&c.id, repeat, "handed-over"));
+            }
+            runner.log(&format!("{} run {run_id}: handed over", session.id));
+            break;
+        }
     }
     if let Some(reason) = stopped {
         runner.log(&format!("{} run {run_id}: stopped, {reason}", session.id));
@@ -597,6 +608,7 @@ pub fn run_result_of(result: &Value, file: &Path) -> Value {
         "summary": result["summary"],
         "outcomes": outcomes,
         "not_run": result["not_run"],
+        "handed_over": handed_over_of(result),
         "result_file": file,
     });
     if let Some(repeats) = result["repeats"].as_array() {
@@ -611,6 +623,28 @@ pub fn run_result_of(result: &Value, file: &Path) -> Value {
         answer["repeats"] = json!(with_setup);
     }
     answer
+}
+
+/// The `handed_over` of `run_result` (`MAN-01`) from a result file's content: the check that
+/// handed the session over, its machine and items, the session that stays up and the command
+/// that ends it; `null` when no check handed over.
+pub fn handed_over_of(result: &Value) -> Value {
+    result["checks"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|c| c["handed_over"].is_object())
+        .map(|c| {
+            json!({
+                "check_id": c["check_id"],
+                "repeat": c["repeat"],
+                "machine": c["handed_over"]["machine"],
+                "items": c["handed_over"]["items"],
+                "session_id": result["session"]["id"],
+                "stop": "shakedown session stop",
+            })
+        })
+        .unwrap_or(Value::Null)
 }
 
 /// Whether a check execution of a result file, or one of its steps, was flagged slow (`TIM-01`).
@@ -828,6 +862,10 @@ async fn execute_check(
         causes.push(unhealthy_reason(&flag));
     }
     decide(&mut execution, causes);
+    // Only a check that ends pass is handed over; any other goes on to the reset as usual (MAN-01).
+    if execution.outcome != "pass" {
+        execution.handed_over = None;
+    }
     execution.ended_at = time::now();
     execution.duration_s = round3(clock.elapsed().as_secs_f64());
     flag_slow(&mut execution, slow_step, header.timeout_s);
@@ -1242,6 +1280,7 @@ fn ended(
         errors: vec![],
         events: vec![],
         evidence,
+        handed_over: None,
     }
 }
 
@@ -1298,7 +1337,20 @@ fn from_report(
             .unwrap_or_default(),
         logs: BTreeMap::new(),
     };
-    ended(check, Some(header), started, clock, outcome, reason, steps, evidence)
+    let mut execution = ended(check, Some(header), started, clock, outcome, reason, steps, evidence);
+    execution.handed_over = handed_over(&report["handover"]);
+    execution
+}
+
+/// The hand over of a lead's end report (`MAN-01`), when it holds one of the contract's form.
+fn handed_over(v: &Value) -> Option<HandedOver> {
+    let machine = v["machine"].as_str()?.to_string();
+    let items: Vec<String> = v["items"]
+        .as_array()?
+        .iter()
+        .filter_map(|i| i.as_str().filter(|s| !s.is_empty()).map(String::from))
+        .collect();
+    (!items.is_empty()).then_some(HandedOver { machine, items })
 }
 
 fn number(v: &Value) -> Option<f64> {
@@ -1366,6 +1418,9 @@ fn outcome_text(e: &CheckExecution) -> String {
     }
     if let Some(r) = &e.reason {
         text.push_str(&format!("\n        {}: {}", r.kind, r.message));
+    }
+    if let Some(h) = &e.handed_over {
+        text.push_str(&format!("\n        handed over to {}", h.machine));
     }
     text
 }
@@ -1705,6 +1760,61 @@ mod tests {
         validate(&r);
         let answer = run_result_of(&serde_json::to_value(&r).unwrap(), Path::new("result.json"));
         assert_eq!(crate::ops::exit_of(&answer), 2, "US-075 3");
+    }
+
+    /// `US-083` 1, `MAN-01`: the lead's report of a hand over becomes the check's `handed_over`,
+    /// the checks after it are not run `handed-over`, the result is valid, and `run_result` gives
+    /// the machine, the items, the session and the command that ends it, with exit code 0.
+    #[test]
+    fn us_083_man_01_a_hand_over_is_in_the_result_and_run_result() {
+        let mut r = sample("pass");
+        let report = json!({"handover": {"machine": "p1", "items": ["one", "two", "three"]}});
+        r.checks[0].handed_over = handed_over(&report["handover"]);
+        assert_eq!(
+            r.checks[0].handed_over,
+            Some(HandedOver {
+                machine: "p1".into(),
+                items: vec!["one".into(), "two".into(), "three".into()]
+            })
+        );
+        r.not_run = vec![NotRun {
+            check_id: "later".into(),
+            repeat: 1,
+            reason: "handed-over".into(),
+            message: None,
+        }];
+        r.summary = Summary::of(&r.checks, 1);
+        validate(&r);
+        let answer = run_result_of(&serde_json::to_value(&r).unwrap(), Path::new("result.json"));
+        let h = &answer["handed_over"];
+        assert_eq!(h["machine"], "p1");
+        assert_eq!(h["items"], json!(["one", "two", "three"]));
+        assert_eq!(h["check_id"], "smoke");
+        assert_eq!(h["session_id"], "s-20261105-115900");
+        assert_eq!(h["stop"], "shakedown session stop");
+        assert_eq!(crate::ops::exit_of(&answer), 0, "a hand over is not a failure");
+        assert!(outcome_text(&r.checks[0]).contains("handed over to p1"));
+        // No hand over: `handed_over` is null, and the field is left out of the result file.
+        let plain = sample("pass");
+        let value = serde_json::to_value(&plain).unwrap();
+        assert!(value["checks"][0].get("handed_over").is_none());
+        assert!(run_result_of(&value, Path::new("result.json"))["handed_over"].is_null());
+    }
+
+    /// `MAN-01`: a hand over is only ever on a check that passed, and the report's form is kept.
+    #[test]
+    fn man_01_a_failed_check_is_never_handed_over_and_a_malformed_report_holds_none() {
+        let mut r = sample("fail");
+        r.checks[0].handed_over = Some(HandedOver {
+            machine: "p1".into(),
+            items: vec!["one".into()],
+        });
+        let schema: Value = serde_json::from_str(include_str!("../../../../spec/contract/result.schema.json")).unwrap();
+        let validator = jsonschema::validator_for(&schema).unwrap();
+        assert!(!validator.is_valid(&serde_json::to_value(&r).unwrap()));
+        assert!(handed_over(&json!({"machine": "p1", "items": []})).is_none());
+        assert!(handed_over(&json!({"items": ["x"]})).is_none());
+        assert!(handed_over(&Value::Null).is_none());
     }
 
     #[test]

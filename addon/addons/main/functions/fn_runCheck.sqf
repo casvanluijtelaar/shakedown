@@ -101,4 +101,9 @@ if (count _end == 0) then {
     if (!isNil "_observed") then { _evidence set ["observed", [_observed] call skd_fnc_encode] };
     if (!isNil "_path") then { _evidence set ["failed_step", _path] };
 };
+// A hand over (MAN-01): the game client and the items; the runner keeps it only for a check that ends pass.
+private _handover = skd_check get "handover";
+if (!isNil "_handover") then {
+    _report set ["handover", createHashMapFromArray [["machine", _handover select 0], ["items", _handover select 1]]];
+};
 [_report] call skd_fnc_send;

@@ -130,6 +130,22 @@
             }
           }
         },
+        "handed_over": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object", "required": ["check_id", "repeat", "machine", "items", "session_id", "stop"],
+              "properties": {
+                "check_id": {"type": "string"},
+                "repeat": {"type": "integer", "minimum": 1},
+                "machine": {"type": "string"},
+                "items": {"type": "array", "items": {"type": "string"}},
+                "session_id": {"type": ["string", "null"]},
+                "stop": {"type": "string"}
+              }
+            }
+          ]
+        },
         "result_file": {"type": ["string", "null"]},
         "setup": {"type": "string"},
         "session_reason": {"type": "string"}
@@ -218,7 +234,7 @@
     },
     {
       "name": "run_start",
-      "description": "Starts a run of the selected checks against the session and returns its run_id at once; follow it with run_status and read it with run_result. ids run in the order given, once per time given; repeat (1 to 100) runs each of them that many times in a row, and run_result then gives each check's summary: pass, fail, flaky, invalid or not-run. With setup and no session, the run starts a session and stops it at its end. With each_setup and no session, it runs the selection in each setup a selected check names, one session after the other; run_id is then a handle for all of them.",
+      "description": "Starts a run of the selected checks against the session and returns its run_id at once; follow it with run_status and read it with run_result. ids run in the order given, once per time given; repeat (1 to 100) runs each of them that many times in a row, and run_result then gives each check's summary: pass, fail, flaky, invalid or not-run. With setup and no session, the run starts a session and stops it at its end, unless a check hands the session over to a manual tester (skd_fnc_handOver), which leaves it up. With each_setup and no session, it runs the selection in each setup a selected check names, one session after the other; run_id is then a handle for all of them.",
       "inputSchema": {
         "type": "object", "additionalProperties": false,
         "properties": {

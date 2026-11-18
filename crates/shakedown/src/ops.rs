@@ -315,7 +315,10 @@ pub fn run_each_setup(
                     slow_step: project.slow_step,
                 };
                 let answer = conn.request(&request, |e| hooks.event(e));
-                conn.request(&Request::SessionStop, |e| hooks.event(e))?;
+                // A hand over keeps the session up for the manual tester (MAN-01).
+                if !handed_over(&answer) {
+                    conn.request(&Request::SessionStop, |e| hooks.event(e))?;
+                }
                 match answer? {
                     Event::RunDone { result } => result,
                     _ => return Err(CliError::framework("The runner ended the run without a result.")),
@@ -346,9 +349,20 @@ pub fn run_each_setup(
         };
         result["setup"] = json!(setup);
         hooks.ended(setup, &result);
+        let handed = !result["handed_over"].is_null();
         results.push(result);
+        // The session handed over stays up, so no further setup starts (MAN-01, RUN-07).
+        if handed {
+            break;
+        }
     }
     Ok(results)
+}
+
+/// Whether a run's answer says a check handed the session over to a manual tester (`MAN-01`),
+/// so a session the run started is left up.
+pub fn handed_over(answer: &Result<Event, CliError>) -> bool {
+    matches!(answer, Ok(Event::RunDone { result }) if result["handed_over"].is_object())
 }
 
 /// The `run_result` of a whole run over every setup (`RUN-07`): the setups' summaries added up,
@@ -374,6 +388,7 @@ pub fn each_setup_result(handle: &str, results: &[Value], stopped: bool) -> Valu
         "summary": summary,
         "outcomes": outcomes,
         "not_run": not_run,
+        "handed_over": results.iter().map(|r| r["handed_over"].clone()).find(Value::is_object).unwrap_or(Value::Null),
         "result_file": null,
         "runs": results,
     });

@@ -179,6 +179,18 @@ pub struct CheckExecution {
     #[serde(default)]
     pub events: Vec<RecordedEvent>,
     pub evidence: Evidence,
+    /// Only on the execution that handed the session over to a manual tester, which is `pass`
+    /// (`MAN-01`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handed_over: Option<HandedOver>,
+}
+
+/// A hand over to a manual tester (`MAN-01`): the game client whose window to use and the things
+/// to look for, in the order the check gave them.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HandedOver {
+    pub machine: String,
+    pub items: Vec<String>,
 }
 
 /// An event a check recorded with `skd_fnc_record` on one machine (`EVT-01`, `OBS-05`).
@@ -198,7 +210,7 @@ pub struct NotRun {
     /// The repeat the execution would have had.
     #[serde(default = "one")]
     pub repeat: u32,
-    /// `setup`, `run-stopped`, `session-failed` or `session-broken`.
+    /// `setup`, `run-stopped`, `session-failed`, `session-broken` or `handed-over`.
     pub reason: String,
     /// For `session-failed`: the start's reason (`RUN-07`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
