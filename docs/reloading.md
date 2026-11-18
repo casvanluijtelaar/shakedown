@@ -112,7 +112,7 @@ shakedown reload
 shakedown run --tag m07-1
 ```
 
-With `@skd_fixture` alone, the time from the reload to the last of three short checks' outcomes on the test machine was about 29 s in singleplayer (the reload about 24 s) and about 50 s on a dedicated session with two clients (the reload about 44 s). A setup that loads more mods, such as CBA_A3, takes longer to start, and so to reload.
+With `@skd_fixture` alone and a changed `CfgFunctions` function, the time from the reload to the last of three short checks' outcomes on the test machine was about 13 s in singleplayer (the reload about 8 s) and about 57 s on a dedicated session with two clients (the reload about 50 s, most of it the clients' new start).
 
 ## What reloads inside the mission, and `partial`
 
