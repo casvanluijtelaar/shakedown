@@ -3,8 +3,8 @@
 // @setups sp
 
 ["build the scene", {
-    ["p1", AGLToASL [100, 100, 0], 0] call skd_fnc_place;
-    ["skdfx_Crate", AGLToASL [100, 103, 0], 180] call skd_fnc_create
+    ["p1", AGLToASL [150, 150, 0], 0] call skd_fnc_place;
+    ["skdfx_Crate", AGLToASL [150, 153, 0], 180] call skd_fnc_create
 }] call skd_fnc_step;
 
 ["p1", [

@@ -6,6 +6,6 @@
     ["server", { count (allMissionObjects "skdfx_Crate") }, "==", 0, "skdfx_Crate objects on the server"] call skd_fnc_expectOn;
 }] call skd_fnc_step;
 ["p1 is back at its start", {
-    ["p1", { (getPosASL player) distance2D [100, 100, 0] }, ">", 2, "p1's distance from where the hand over put it"] call skd_fnc_expectOn;
+    ["p1", { (getPosASL player) distance2D [150, 150, 0] }, ">", 2, "p1's distance from where the hand over put it"] call skd_fnc_expectOn;
     ["p1", { (getPosASL player) distance2D [200, 200, 0] }, ">", 2, "p1's distance from where the refused hand over put it"] call skd_fnc_expectOn;
 }] call skd_fnc_step;

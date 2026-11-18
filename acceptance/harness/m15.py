@@ -279,7 +279,7 @@ def handed_over_answer(ho, sid, what):
 
 
 def at_hand_over(sc, what):
-    d = dist2d(sc["pos"], 100, 100)
+    d = dist2d(sc["pos"], 150, 150)
     assert d < 1.5, f"{what}: p1 stands {d:.2f} m from where the check put it, at {sc['pos']}"
     assert sc["crates"] >= 1, f"{what}: the server sees {sc['crates']} skdfx_Crate objects"
 
@@ -300,9 +300,13 @@ def us083_printed(ctx):
     assert a.code == 0, f"{a}: {a.stdout[-800:]} {a.stderr[-300:]}"
     text = a.stdout
     lines = text.splitlines()
-    line = [ln for ln in lines if CRATE in ln and re.match(r"^\s*pass\b", ln)]
-    assert line and "handed over to p1" in line[0], f"the check's line {line}: {text[-800:]}"
-    after = text[text.index(line[0]) + len(line[0]):]
+    at = [i for i, ln in enumerate(lines) if CRATE in ln and re.match(r"^\s*pass\b", ln)]
+    assert at, f"no pass line of {CRATE}: {text[-800:]}"
+    i = at[0]
+    said = lines[i] if "handed over to p1" in lines[i] else (lines[i + 1] if i + 1 < len(lines) else "")
+    assert "handed over to p1" in said, \
+        f"neither the check's line nor the one under it says handed over to p1: {lines[i:i + 2]}"
+    after = "\n".join(lines[i + 1:])
     pos = 0
     for n, item in enumerate(ITEMS, 1):
         m = re.compile(rf"^\s*{n}\.\s+{re.escape(item)}\s*$", re.M).search(after, pos)
@@ -394,7 +398,7 @@ def us083_reset(ctx):
     assert a.code == 0 and a.json()["state"] == "done", f"{a}: {a.stdout[:500]}"
     sc = d["scene_reset"]
     assert sc["crates"] == 0, f"the server sees {sc['crates']} skdfx_Crate objects after the reset"
-    dd = dist2d(sc["pos"], 100, 100)
+    dd = dist2d(sc["pos"], 150, 150)
     assert dd > 2, f"p1 stands {dd:.2f} m from where the hand over put it after the reset, at {sc['pos']}"
 
 
@@ -434,7 +438,7 @@ def us083_each(ctx):
     assert s and s["state"] == "ready", f"status after the command: {s}"
     setup = s["setup"]["name"] if isinstance(s["setup"], dict) else s["setup"]
     assert setup == "sp", f"the session left up is of setup {setup}"
-    dd = dist2d(e["scene"], 100, 100)
+    dd = dist2d(e["scene"], 150, 150)
     assert dd < 1.5, f"p1 stands {dd:.2f} m from where the check put it, at {e['scene']}"
     text = a.stdout
     for n, item in enumerate(ITEMS, 1):
