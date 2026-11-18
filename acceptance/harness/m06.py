@@ -10,9 +10,9 @@ installed copy, as spec/contract/fixture-mod.md gives it. Per repeat the batch d
 2. US-011: a check that sets a public variable, then a @reset mission check.
 3. US-056: a new file and config.cpp named to reload, a game restart.
 4. US-012: a @reset mission check whose restart loses p2, then the reload that brings the session back.
-5. US-055: the staged version changed to "2" and reloaded, a game restart; a check sees "2".
-6. US-057: the staged version put back to "1" and reloaded, with p2 ended during the restart; a run
-   refused; the reload tool brings the session back; a check sees "1".
+5. US-055: the staged version changed to "2" and reloaded, a mission restart; a check sees "2".
+6. US-057: the staged version put back to "1" and reloaded, a mission restart, with p2 ended during it;
+   a run refused; the reload tool brings the session back by a game restart; a check sees "1".
 
 Every repeat ends with the installed copy as it was. After the session stops, the installed copy is
 put back once more, whatever happened.
@@ -205,8 +205,8 @@ def m06_batch(ctx, checks):
     for key in ("us056", "us055"):
         v = ctx.m06.get(key)
         if isinstance(v, dict) and isinstance(v.get("reload"), dict) and v["reload"].get("duration_s") is not None:
-            durations.append((key, v["reload"]["duration_s"]))
-    ctx.log(f"M6 game-restart reload durations so far: {durations}")
+            durations.append((key, v["reload"].get("level"), v["reload"]["duration_s"]))
+    ctx.log(f"M6 reload durations so far (step, level, s): {durations}")
 
 
 def us040(ctx, m, edit, original):
@@ -314,10 +314,10 @@ def all_ready_one_higher(st, before, who=ALL):
     return s
 
 
-def done_game_restart(r, what):
+def done_game_restart(r, what, level="game-restart"):
     assert r is not None, f"{what}: no Reload JSON"
     assert r.get("state") == "done", f"{what}: state {r.get('state')}, reason {r.get('reason')}"
-    assert r.get("level") == "game-restart", f"{what}: level {r.get('level')}"
+    assert r.get("level") == level, f"{what}: level {r.get('level')}, expected {level}"
     assert sorted(r.get("machines") or []) == sorted(ALL), f"{what}: machines {r.get('machines')}, expected {ALL}"
     assert isinstance(r.get("duration_s"), (int, float)) and r["duration_s"] > 0, f"{what}: duration_s {r.get('duration_s')}"
     assert r.get("id") and r.get("started_at"), f"{what}: no id or started_at: {r}"
@@ -461,46 +461,48 @@ def us056_config(ctx):
 
 # ---------------------------------------------------------------- US-055
 
-@m6check("US-055 RLD-02 RLD-03 RLD-06 FIX-03 the staged fnc_version.sqf changed to \"2\" and shakedown reload reports game-restart, the file with the reasons new process and rebuild, the machines and the time", [V2])
+@m6check("US-055 RLD-02 RLD-03 RLD-06 RLD-07 FIX-03 the staged fnc_version.sqf changed to \"2\" and shakedown reload reports mission-restart, the file with the reasons that the game is made to let go of it, a mission restart compiles it and the rebuild runs, the machines and the time", [V2])
 def us055_reload(ctx):
     v = got(ctx, "us055")
     a = v["answer"]
     assert a.code == 0, f"{a}: {text_of(a)[:400]}"
     r = v["reload"]
-    done_game_restart(r, "the reload of the staged change")
+    done_game_restart(r, "the reload of the staged change", "mission-restart")
     f = file_entry(r, PATHS["staged"])
     reason = f["reason"].lower()
-    assert f["level"] == "game-restart", f"the file has level {f['level']}"
-    assert "new process" in reason, f"the reason does not say the game reads a changed file only in a new process: {f['reason']!r}"
+    assert f["level"] == "mission-restart", f"the file has level {f['level']}"
+    assert "let go" in reason and "mission restart" in reason, \
+        f"the reason does not say the game is made to let go of the file and a mission restart compiles it: {f['reason']!r}"
     assert "rebuild" in reason, f"the reason does not say the mod's rebuild runs: {f['reason']!r}"
     assert v["installed"] == PATHS["original"].replace(b'"1"', b'"2"'), "the rebuild did not copy the staged file into the installed copy"
 
 
-@m6check("US-055 RST-02 NFR-RL-04 after the reload skdfx_cba_fnc_version returns \"2\" on every machine, the session is ready, the next check passes from the start state, and every machine has a start number one higher in its result file", [V2])
+@m6check("US-055 RST-02 NFR-RL-04 INT-CBA-02 after the reload skdfx_cba_fnc_version returns \"2\" on every machine, the session is ready, the next check passes from the start state, and in its result file the lead keeps its start number while every other machine has one higher", [V2])
 def us055_after(ctx):
     v = got(ctx, "us055")
-    s = all_ready_one_higher(v["after"], v["before"])
-    off = {n: (v["before"][n], s[n]) for n in ALL if s[n] != v["before"][n] + 1}
-    assert not off, f"start numbers not one higher (before, after): {off}"
+    s = all_ready_one_higher(v["after"], v["before"], [n for n in ALL if n != "server"])
+    want = {n: v["before"][n] + (0 if n == "server" else 1) for n in ALL}
+    off = {n: (v["before"][n], s.get(n)) for n in ALL if s.get(n) != want[n]}
+    assert not off, f"status start numbers are not the server's kept and the others one higher (before, after): {off}"
     _, _, r = v["run"]
     e = execution(r, V2)
     assert e["outcome"] == "pass", f"{V2}: {e['outcome']} {e['reason']}"
     in_file = {m["name"]: m["start"] for m in r["session"]["machines"]}
-    off = {n: (v["before"][n], in_file.get(n)) for n in ALL if in_file.get(n) != v["before"][n] + 1}
-    assert not off, f"the result file's start numbers are not one higher (before, in file): {off}"
+    off = {n: (v["before"][n], in_file.get(n)) for n in ALL if in_file.get(n) != want[n]}
+    assert not off, f"the result file's start numbers are not the server's kept and the others one higher (before, in file): {off}"
 
 
-@m6check("NFR-PF-02 US-055 every game-restart reload of the round, on a dedicated session with two clients and a headless client, took under 90 s plus its one-file rebuild by duration_s", [V2])
+@m6check("NFR-PF-02 US-055 US-056 every game-restart and mission-restart reload of the round, on a dedicated session with two clients and a headless client, took under 90 s plus its one-file rebuild by duration_s", [V2])
 def nfr_pf_02(ctx):
     d = ctx.m06_keep.get("durations", [])
-    assert d, "no game-restart reload reported a duration"
-    over = [(k, s) for k, s in d if s >= NFR_PF_02 + 1]
+    assert d, "no reload reported a duration"
+    over = [(k, lv, s) for k, lv, s in d if s >= NFR_PF_02 + 1]
     assert not over, f"reloads over {NFR_PF_02} s plus the rebuild: {over}; all: {d}"
 
 
 # ---------------------------------------------------------------- US-057
 
-@m6check("US-057 RLD-03 DM-05 P-08 INS-04 p2 ended during a game-restart reload of a changed .sqf: reload exits 4 with state failed naming the step and p2, and status shows the session broken with that reason", [V1])
+@m6check("US-057 RLD-03 DM-05 P-08 INS-04 p2 ended during a mission-restart reload of a changed .sqf: reload exits 4 with state failed naming the step and p2, and status shows the session broken with that reason", [V1])
 def us057_failed(ctx):
     v = got(ctx, "us057")
     pid, when = v["killed"]
@@ -512,7 +514,7 @@ def us057_failed(ctx):
     reason = r.get("reason") or {}
     assert reason.get("machine") == "p2", f"the reason names machine {reason.get('machine')!r}: {reason}"
     assert reason.get("step"), f"the reason names no step: {reason}"
-    assert "game-restart" in str(reason.get("step")), f"the step is not the level it was applying: {reason}"
+    assert "mission-restart" in str(reason.get("step")), f"the step is not the level it was applying, mission-restart: {reason}"
     for what, st in (("command", v["broken"]), ("tool", v["broken_tool"])):
         s = st.get("session") or {}
         assert s.get("state") == "broken", f"status ({what}) shows the session {s.get('state')}"

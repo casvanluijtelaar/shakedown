@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11, m12, m13  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11, m12, m13, m14  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import AFTER_SESSION, BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
@@ -71,7 +71,8 @@ def make_project(work, game, install, cba, agh):
         "mods = [\"cba\", \"fixture\", \"fixture-cba\", \"agh\"]\n\n"
         "[setups.slow]\nmode = \"dedicated\"\nclients = 1\nworld = \"Altis\"\nstart_timeout = 300\n"
         "mods = [\"fixture\"]\n" + m06.project_toml(project, game, install)
-        + m07.project_toml(project, game, install),
+        + m07.project_toml(project, game, install)
+        + m14.project_toml(project, game, install),
         encoding="utf-8")
     m08.project_files(project)
     (project / ".mcp.json").write_text(json.dumps(
@@ -126,6 +127,7 @@ def main():
     project = make_project(work, args.game, exe.parent, args.cba, args.agh)
     ctx = Context(driver.Shakedown(exe, project, log), project, REPO, log)
     ctx.work, ctx.install = work, exe.parent
+    ctx.repeat_total = args.repeat
     results = []  # (repeat, name, ok, message)
 
     def run_check(c, repeat):

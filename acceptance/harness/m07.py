@@ -34,7 +34,8 @@ DEMO = ["m07/US-054-flag", "m07/US-054-start-state", "m07/US-054-version-2"]  # 
 V2, V1 = "m07/US-054-version-2", "m07/US-054-version-1"
 SLOW, AFTER = "m07/US-058-slow", "m07/US-058-after"
 CEILING = 400
-NFR_PF_02 = 90.0            # s, plus the rebuild, which copies one file
+NFR_PF_02 = {"rld7": 90.0, "rld7sp": 20.0}  # s, a mission-restart reload, plus the rebuild, which copies one file
+LEAD = {"rld7": "server", "rld7sp": "p1"}
 REBUILD = 1.0               # s, a ceiling for a copy of one file
 PATHS = {}
 
@@ -127,7 +128,7 @@ def make_batch(setup):
                 r = v.get(key)
                 if isinstance(r, dict) and r.get("duration_s") is not None:
                     durations.append(r["duration_s"])
-        ctx.log(f"M7 {setup} game-restart reload durations so far: {durations}")
+        ctx.log(f"M7 {setup} mission-restart reload durations so far: {durations}")
     return m07_batch
 
 
@@ -195,19 +196,22 @@ def us054(ctx, m):
 
 # ---------------------------------------------------------------- judging
 
-def done_game_restart(r, names, what):
+def done_mission_restart(r, names, what):
     assert r is not None, f"{what}: no Reload JSON"
     assert r.get("state") == "done", f"{what}: state {r.get('state')}, reason {r.get('reason')}"
-    assert r.get("level") == "game-restart", f"{what}: level {r.get('level')}"
+    assert r.get("level") == "mission-restart", f"{what}: level {r.get('level')}, expected mission-restart"
     assert sorted(r.get("machines") or []) == names, f"{what}: machines {r.get('machines')}, expected {names}"
     assert isinstance(r.get("duration_s"), (int, float)) and r["duration_s"] > 0, f"{what}: duration_s {r.get('duration_s')}"
 
 
-def one_higher(st, before):
+def lead_kept(st, before, lead):
+    """The lead keeps its start number and every other machine is one higher, all ready (P-08 steps 3 and 4)."""
     s, now = starts(st), states(st)
     assert (st.get("session") or {}).get("state") == "ready", f"the session is {(st.get('session') or {}).get('state')}"
-    off = {n: (before[n], s.get(n), now.get(n)) for n in before if s.get(n) != before[n] + 1 or now.get(n) != "ready"}
-    assert not off, f"machines not ready with a start number one higher (before, after, state): {off}"
+    want = {n: before[n] + (0 if n == lead else 1) for n in before}
+    off = {n: (before[n], s.get(n), now.get(n)) for n in before if s.get(n) != want[n] or now.get(n) != "ready"}
+    assert not off, f"machines not ready with {lead}'s start kept and the others one higher (before, after, state): {off}"
+    return want
 
 
 def busy_refusal(answer, what, *words):
@@ -223,26 +227,26 @@ def register(setup, label):
     def c(name, needs=()):
         return check(f"{name} {label}", "session", needs, setup=setup)
 
-    @c("US-054 RLD-01 RLD-02 RLD-03 RLD-06 FIX-03 the staged fn_version.sqf changed to \"2\" and shakedown reload with no files exits 0, level game-restart, the file with its reason, every machine reached and the time", [V2])
+    @c("US-054 RLD-01 RLD-02 RLD-03 RLD-06 FIX-03 the staged fn_version.sqf changed to \"2\" and shakedown reload with no files exits 0, level mission-restart, the file with its reason, every machine reached and the time", [V2])
     def us054_reload(ctx):
         v = got(ctx, "us054")
         a = v["answer"]
         assert a.code == 0, f"{a}: {text_of(a)[:400]}"
         r = v["reload"]
-        done_game_restart(r, v["names"], "the reload of the staged change")
+        done_mission_restart(r, v["names"], "the reload of the staged change")
         found = [f for f in r.get("files", []) if same_path(f["path"], PATHS["staged"])]
         assert found, f"the reload does not list the staged file; it lists {[f['path'] for f in r.get('files', [])]}"
         f = found[0]
-        assert f["level"] == "game-restart", f"the file has level {f['level']}"
+        assert f["level"] == "mission-restart", f"the file has level {f['level']}"
         reason = f["reason"].lower()
-        assert "new process" in reason and "rebuild" in reason, f"the file's reason: {f['reason']!r}"
+        assert "let go" in reason and "mission restart" in reason and "rebuild" in reason, f"the file's reason: {f['reason']!r}"
         assert v["installed"] == PATHS["original"].replace(b'"1"', b'"2"'), \
             "the rebuild did not copy the staged file into the installed copy"
 
-    @c("US-054 RUN-01 RLD-05 DM-08 after the reload onEach of skdfx_fnc_version gives \"2\" from every machine, every machine has a start number one higher, and the rerun by the finding's tag runs its three checks, each reload full", DEMO)
+    @c("US-054 RUN-01 RLD-05 DM-08 after the reload onEach of skdfx_fnc_version gives \"2\" from every machine, the lead keeps its start number while every other machine has one higher, and the rerun by the finding's tag runs its three checks, each reload partial", DEMO)
     def us054_rerun(ctx):
         v = got(ctx, "us054")
-        one_higher(v["after"], v["before"])
+        want = lead_kept(v["after"], v["before"], LEAD[setup])
         answer, _, r = v["run"]
         assert answer.code == 0, f"the run by tag: {answer}: {text_of(answer)[:400]}"
         errors = ctx.validate(r)
@@ -251,17 +255,17 @@ def register(setup, label):
         assert ids == DEMO, f"`run --tag {TAG}` ran {ids}, expected {DEMO}"
         for e in r["checks"]:
             assert e["outcome"] == "pass", f"{e['check_id']}: {e['outcome']} {e['reason']}"
-            assert e.get("reload") == "full", f"{e['check_id']}: reload {e.get('reload')!r}, expected full"
+            assert e.get("reload") == "partial", f"{e['check_id']}: reload {e.get('reload')!r}, expected partial"
         in_file = {m["name"]: m["start"] for m in r["session"]["machines"]}
-        off = {n: (v["before"][n], in_file.get(n)) for n in v["before"] if in_file.get(n) != v["before"][n] + 1}
-        assert not off, f"the result file's start numbers are not one higher (before, in file): {off}"
+        off = {n: (v["before"][n], in_file.get(n)) for n in v["before"] if in_file.get(n) != want[n]}
+        assert not off, f"the result file's start numbers are not the lead's kept and the others one higher (before, in file): {off}"
 
-    @c("US-054 NFR-PF-02 the time from shakedown reload to the outcome of the last of the three checks tagged with the finding is within 90 s plus the rebuild plus 10 s", DEMO)
+    @c(f"US-054 NFR-PF-02 the time from shakedown reload to the outcome of the last of the three checks tagged with the finding is within {NFR_PF_02[setup]:.0f} s plus the rebuild plus 10 s", DEMO)
     def us054_time(ctx):
         v = got(ctx, "us054")
         took = v["took"]
         assert took is not None, "the run by tag holds no execution"
-        limit = NFR_PF_02 + REBUILD + 10
+        limit = NFR_PF_02[setup] + REBUILD + 10
         assert 0 < took < limit, f"{took:.1f} s from the reload order to the last outcome, limit {limit:.0f} s"
 
     @c("US-058 RLD-01 RST-03 a reset, a second reload and the reload tool asked while a reload applies are refused, exit 4 and session-busy", [V2])
@@ -286,17 +290,17 @@ def register(setup, label):
     def us054_back(ctx):
         v = got(ctx, "us054")
         assert v["back"].code == 0, f"{v['back']}: {text_of(v['back'])[:400]}"
-        done_game_restart(v["back_reload"], v["names"], "the reload back to \"1\"")
+        done_mission_restart(v["back_reload"], v["names"], "the reload back to \"1\"")
         assert v["back_installed"] == PATHS["original"], "the installed fn_version.sqf is not \"1\" again"
         e = execution(v["back_run"][2], V1)
         assert e["outcome"] == "pass", f"{V1}: {e['outcome']} {e['reason']}"
 
-    @c("NFR-PF-02 US-054 every game-restart reload of the round took under 90 s plus its one-file rebuild by duration_s", [V2])
+    @c(f"NFR-PF-02 US-054 every mission-restart reload of the round took under {NFR_PF_02[setup]:.0f} s plus its one-file rebuild by duration_s", [V2])
     def nfr_pf_02(ctx):
         d = ctx.m07_keep.get(setup, [])
-        assert d, "no game-restart reload reported a duration"
-        over = [s for s in d if s >= NFR_PF_02 + REBUILD]
-        assert not over, f"reloads over {NFR_PF_02} s plus the rebuild: {over}; all: {d}"
+        assert d, "no mission-restart reload reported a duration"
+        over = [s for s in d if s >= NFR_PF_02[setup] + REBUILD]
+        assert not over, f"reloads over {NFR_PF_02[setup]} s plus the rebuild: {over}; all: {d}"
 
     @c("US-058 RLD-01 NFR-US-01 shakedown reload during a run exits 4 naming the run's id, its progress and shakedown run stop, and the reload tool returns session-busy", [SLOW, AFTER])
     def us058_reload(ctx):
