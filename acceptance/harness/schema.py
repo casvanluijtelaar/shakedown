@@ -10,7 +10,7 @@ KNOWN = {
     "$schema", "$id", "$comment", "$defs", "$ref", "title", "description",
     "type", "const", "enum", "pattern", "minLength", "minimum", "maximum", "exclusiveMinimum",
     "properties", "required", "additionalProperties", "propertyNames",
-    "items", "minItems", "oneOf", "anyOf", "allOf", "if", "then", "else",
+    "items", "minItems", "maxItems", "oneOf", "anyOf", "allOf", "if", "then", "else",
 }
 
 _TYPES = {
@@ -104,6 +104,8 @@ def _check(value, schema, root, path, errors):
     if isinstance(value, list):
         if "minItems" in schema and len(value) < schema["minItems"]:
             errors.append(f"{path}: fewer than {schema['minItems']} items")
+        if "maxItems" in schema and len(value) > schema["maxItems"]:
+            errors.append(f"{path}: more than {schema['maxItems']} items")
         if "items" in schema:
             for i, item in enumerate(value):
                 _check(item, schema["items"], root, f"{path}[{i}]", errors)
