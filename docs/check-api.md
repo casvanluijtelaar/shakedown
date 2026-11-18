@@ -1,7 +1,7 @@
 ---
 type: Documentation
 title: The check API by example
-description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, joining and leaving, recorded events, helpers shared from the library folder, cleanups and ending a check - and what each does when it fails.
+description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, joining and leaving, recorded events, helpers shared from the library folder, cleanups, ending a check and handing over - and what each does when it fails.
 status: draft
 ---
 
@@ -192,7 +192,7 @@ if (isNil "agh_fnc_placeHook") then { ["arma-grappling-hook is not loaded"] call
 if (_n > 3) then { ["too many boxes"] call skd_fnc_fail };
 ```
 
-`skd_fnc_cleanup [code, args, machine]` registers code that runs on `machine` at the start of the next reset, each machine's last registered first, for state the reset cannot name: an action added to the player, a variable, a mod's setting. It runs whatever the check's outcome, so a check that fails half way leaves no such state to the next. `machine` defaults to the lead machine: `p1` in singleplayer, the server on a dedicated session. State that is local to one client, such as an action on its player, `allowDamage` on its unit, a CBA event handler or a variable in its `missionNamespace`, is undone on that client, so its cleanup names it. Like code given to `skd_fnc_on`, a cleanup sees only its `args` as `_this` and calls no `skd_fnc_*` function. `skd_fnc_fail [message]` ends the check `fail` / `explicit`; `skd_fnc_invalid [message]` ends it `invalid` / `explicit`, for a cause outside the mod that the check itself detects.
+`skd_fnc_cleanup [code, args, machine]` registers code that runs on `machine` at the start of the next reset, each machine's last registered first, for state the reset cannot name: an action added to the player, a variable, a mod's setting. It runs whatever the check's outcome, so a check that fails half way leaves no such state to the next. `machine` defaults to the lead machine: `p1` in singleplayer, the server on a dedicated session. State that is local to one client, such as an action on its player, `allowDamage` on its unit, a CBA event handler or a variable in its `missionNamespace`, is undone on that client, so its cleanup names it. Like code given to `skd_fnc_on`, a cleanup sees only its `args` as `_this` and calls no `skd_fnc_*` function. `skd_fnc_fail [message]` ends the check `fail` / `explicit`; `skd_fnc_invalid [message]` ends it `invalid` / `explicit`, for a cause outside the mod that the check itself detects. `skd_fnc_handOver [machine, items]` ends the body and hands the situation over to a person in that game client's window, with the items to look for on screen, and leaves the session up ([Handing over to a manual tester](handing-over.md)).
 
 ## The reset between checks
 

@@ -15,7 +15,7 @@ One command runs every check of a setup and leaves nothing behind, whatever happ
 shakedown run --setup dedicated-2
 ```
 
-With no session running, `run --setup` starts a session of that setup, runs every check, and stops the session, whatever the outcomes: passed, failed, stopped by hand or at the runner ceiling. Give ids or `--tag` to run fewer. When it ends:
+With no session running, `run --setup` starts a session of that setup, runs every check, and stops the session, whatever the outcomes: passed, failed, stopped by hand or at the runner ceiling. The one exception is a check that hands the session over to a manual tester, which leaves it up ([Handing over to a manual tester](handing-over.md)). Give ids or `--tag` to run fewer. When it ends:
 
 - the exit code says how it went: 0 every check passed, 1 a check failed, 2 none failed and one was `invalid` or the run was stopped;
 - the run folder `.shakedown\runs\<run id>\` holds `result.json`, `logs\<machine>.log` for each machine and `checks\<n>\<machine>.log` for each check execution ([What a run leaves behind](writing-and-running-checks.md#what-a-run-leaves-behind)); every path in `result.json` is relative to that folder;
