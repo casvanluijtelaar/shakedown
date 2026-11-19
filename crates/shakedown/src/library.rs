@@ -213,8 +213,30 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// `same` also decides which folder `list` skips on macOS and Linux (`NFR-PT-02`), so the
+    /// comparison is proven on the platform's own separator.
     #[test]
     fn api_06_below_and_same_compare_paths_by_their_text() {
+        let p = std::env::temp_dir().join("p");
+        let up = std::env::temp_dir().join("P");
+        assert!(below(
+            &p.join("tests").join("_lib").join("a.sqf"),
+            &up.join("tests").join(".").join("_lib")
+        ));
+        assert!(!below(
+            &p.join("tests").join("_libx").join("a.sqf"),
+            &p.join("tests").join("_lib")
+        ));
+        assert!(same(
+            &p.join("tests").join("_lib"),
+            &p.join("x").join("..").join("tests").join("_lib")
+        ));
+    }
+
+    /// Windows paths, with a drive letter in either case, as a session on Windows sees them.
+    #[cfg(windows)]
+    #[test]
+    fn api_06_below_and_same_compare_windows_paths_by_their_text() {
         assert!(below(
             Path::new(r"C:\p\tests\_lib\a.sqf"),
             Path::new(r"c:\P\tests\.\_lib")
