@@ -13,6 +13,13 @@ if ((_fields select 0) isEqualTo "refused") exitWith {
     diag_log text "[shakedown] no runner in this game's environment; the agent stays idle";
 };
 skd_machine = _fields select 2;
+// A client or headless client that finds itself in a mission whose server is not the session's
+// own, as code a check sent can make it, tells the runner and stays idle; the runner ends its
+// process (SEC-05). The session's server is named "shakedown <session id>" (INT-AR-05).
+if (isMultiplayer && { !isServer } && { serverName isNotEqualTo format ["shakedown %1", _fields select 1] }) exitWith {
+    diag_log text format ["[shakedown] %1 is on the server ""%2"", not the session's own", skd_machine, serverName];
+    [createHashMapFromArray [["kind", "foreign-server"], ["machine", skd_machine], ["server", serverName]]] call skd_fnc_send;
+};
 skd_ops = ["==", "!=", "<", "<=", ">", ">=", "~=", "in", "contains"];
 
 private _starts = (uiNamespace getVariable ["skd_missionStarts", 0]) + 1;
@@ -154,6 +161,13 @@ addMissionEventHandler ["ExtensionCallback", {
         ["player", hasInterface && { !isNull player }],
         ["baseline", [skd_baseline] call skd_fnc_encode]
     ]] call skd_fnc_send;
+    // A client whose mission display closes is between two missions, and sends no heartbeat
+    // until its agent starts again (SEC-05).
+    if (hasInterface) then {
+        (findDisplay 46) displayAddEventHandler ["Unload", {
+            [createHashMapFromArray [["kind", "mission-left"], ["machine", skd_machine]]] call skd_fnc_send;
+        }];
+    };
     // From ready on, a heartbeat every second of real time carries this machine's clocks
     // (HLT-02). It is sent from a per-frame handler gated on diag_tickTime, not a scheduled loop,
     // so it keeps coming while the scheduled environment or the simulation stands still.

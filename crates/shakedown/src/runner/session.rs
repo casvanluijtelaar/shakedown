@@ -93,9 +93,14 @@ pub struct Machine {
     last_beat: Option<Instant>,
     /// The clock the watch flagged, while it is flagged (`HLT-02`).
     flag: Option<FlagInterval>,
+    /// When its agent said its mission display closed, until it is ready again: a client between
+    /// two missions sends no heartbeat, and the watch gives it `LEAVE_CEILING` to start its agent
+    /// again, so a client sent to another server is ended for that (`SEC-05`), not as `no-answer`.
+    left_mission: Option<Instant>,
 }
 
-/// How a machine was lost: its process `exited`, or it gave `no-answer` (`P-07`, `P-09`).
+/// How a machine was lost: its process `exited`, it gave `no-answer` (`P-07`, `P-09`), or the
+/// runner ended it because it joined a `foreign-server` (`SEC-05`).
 #[derive(Debug, Clone)]
 pub struct LostRecord {
     pub reason: &'static str,
@@ -139,6 +144,9 @@ pub const WATCH_WINDOW_S: f64 = 5.0;
 pub const WATCH_RATIO: f64 = 0.5;
 /// A machine whose heartbeat has not come for this long has stopped answering (`HLT-02`, `P-07`).
 pub const HEARTBEAT_GAP: Duration = Duration::from_secs(10);
+/// How long a client whose mission display closed may go without a heartbeat before it is
+/// `no-answer`: the time a client takes to join a server and start its mission (`SEC-05`).
+pub const LEAVE_CEILING: Duration = Duration::from_secs(90);
 /// How often the runner looks at every machine's process and heartbeat (`P-07`, `P-09`).
 const WATCH_EVERY: Duration = Duration::from_millis(250);
 /// A watch round this late shows that the runner itself did not run (`SES-06`, `US-060`).
@@ -169,6 +177,7 @@ impl Machine {
             beats: Vec::new(),
             last_beat: None,
             flag: None,
+            left_mission: None,
         }
     }
 }
@@ -809,7 +818,11 @@ impl Session {
                     m.beats.retain(|b| b.tick >= keep);
                 }
             }
+            if kind == "mission-left" {
+                m.left_mission = Some(Instant::now());
+            }
             if kind == "ready" {
+                m.left_mission = None;
                 m.beats.clear();
                 m.flag = None;
                 m.last_beat = Some(Instant::now());
@@ -847,6 +860,28 @@ impl Session {
                 if message["key"].as_str().is_some_and(|k| !k.is_empty()) && inner.events.len() < EVENTS_LIMIT {
                     inner.events.push(message);
                 }
+            }
+            // The machine's agent started in a mission whose server is not the session's own
+            // (SEC-05): its process is ended and it is lost for that.
+            "foreign-server" => {
+                let server = message["server"].as_str().unwrap_or_default().to_string();
+                if let Some(p) = inner
+                    .machines
+                    .iter()
+                    .find(|m| m.name == machine)
+                    .and_then(|m| m.process.as_ref())
+                {
+                    p.terminate();
+                }
+                drop(inner);
+                let message = format!(
+                    "{machine} joined the server \"{server}\", which is not the session's own (\"shakedown {}\"), so the runner ended its process: a client may join only the session's own server",
+                    self.id
+                );
+                if self.lose(machine, "foreign-server", None, message.clone()) {
+                    runner.log(&format!("{} {machine}: lost: {message}", self.id));
+                }
+                return;
             }
             // The server saw a user leave (MCH-01).
             "disconnected" => {
@@ -1618,9 +1653,16 @@ impl Session {
                         }
                     })
                     .collect();
+                // The machine named is the one that got least far: a launched machine whose
+                // extension never connected before one that connected (SES-04).
                 let first_waiting = seen
                     .iter()
-                    .find(|m| m.state != "ready")
+                    .filter(|m| m.state != "ready" && (rest_launched || m.kind == "server"))
+                    .min_by_key(|m| match m.state {
+                        "launched" => 0,
+                        "connected" => 1,
+                        _ => 2,
+                    })
                     .map_or(plan[0].0.clone(), |m| m.name.clone());
                 let cause = format!(
                     "the session was not ready within the start ceiling of {} s: {}",
@@ -2241,10 +2283,13 @@ impl Session {
                         name: m.name.clone(),
                         pid: m.pid,
                         exit: m.process.as_ref().and_then(win::exited),
-                        gap: m
-                            .last_beat
-                            .map_or(Duration::ZERO, |t| t.elapsed())
-                            .min(resumed.map_or(Duration::MAX, |t| t.elapsed())),
+                        gap: if m.left_mission.is_some_and(|t| t.elapsed() < LEAVE_CEILING) {
+                            Duration::ZERO
+                        } else {
+                            m.last_beat
+                                .map_or(Duration::ZERO, |t| t.elapsed())
+                                .min(resumed.map_or(Duration::MAX, |t| t.elapsed()))
+                        },
                         last: m.last_answer_at.clone(),
                         asked: inner
                             .pending

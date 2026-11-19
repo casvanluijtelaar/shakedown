@@ -884,6 +884,18 @@ fn flag_slow(execution: &mut CheckExecution, slow_step: f64, timeout_s: u64) {
 /// The reason of a check a lost machine ended (`DM-05`, `P-07`, `P-09`): the machine, how it was
 /// lost, its exit code and its crash dumps, copied into the run folder.
 fn lost_reason(folder: &Path, machine: &str, lost: &super::session::LostRecord) -> Reason {
+    // A client the check's code sent to another server is the author's mistake (SEC-05, DM-04).
+    if lost.reason == "foreign-server" {
+        return Reason {
+            kind: "check-error".into(),
+            message: format!(
+                "{}. The session is broken: restart its game with `shakedown reload`, or stop it with `shakedown session stop`.",
+                lost.message
+            ),
+            machine: Some(machine.into()),
+            at: lost.at.clone(),
+        };
+    }
     let dumps = copy_dumps(folder, machine, &lost.dumps);
     let dumps = match (lost.reason, dumps.is_empty()) {
         ("exited", true) => "; it left no crash dump in its profile folder".to_string(),
@@ -922,7 +934,8 @@ fn unhealthy_reason(flag: &super::session::FlagInterval) -> Reason {
 }
 
 /// `DM-06`: of the causes of `invalid` the runner saw and the cause the check ended with, the
-/// first in wall-clock time decides. A check that passed, or ended for a cause that came later,
+/// first in wall-clock time decides. A runner's cause of kind `check-error`, a client sent to
+/// another server (`SEC-05`), ends the check `fail`. A check that passed, or ended for a cause that came later,
 /// takes the first of the runner's causes; a `machine-lost` the check saw itself gives way to
 /// the runner's own record of that loss, which names the exit code and the dumps.
 fn decide(execution: &mut CheckExecution, causes: Vec<Reason>) {
@@ -935,7 +948,7 @@ fn decide(execution: &mut CheckExecution, causes: Vec<Reason>) {
             .as_ref()
             .is_some_and(|r| r.at < first.at && r.kind != "machine-lost");
     if !keep {
-        execution.outcome = "invalid".into();
+        execution.outcome = if first.kind == "check-error" { "fail" } else { "invalid" }.into();
         execution.reason = Some(first);
     }
 }
@@ -1982,6 +1995,42 @@ mod tests {
         let mut e = sample("pass").checks.remove(0);
         decide(&mut e, vec![]);
         assert_eq!(e.outcome, "pass");
+    }
+
+    /// `US-088` 1, `SEC-05`, `DM-04`: a client the runner ended for joining another server ends
+    /// the check `fail` / `check-error`, and the result with it lost that way is valid.
+    #[test]
+    fn us_088_sec_05_a_client_on_another_server_fails_the_check_as_check_error() {
+        let lost = super::super::session::LostRecord {
+            reason: "foreign-server",
+            at: "2026-11-12T12:00:02.000Z".into(),
+            instant: Instant::now(),
+            exit_code: None,
+            message: "p2 joined the server \"other\", which is not the session's own (\"shakedown s-1\"), so the runner ended its process: a client may join only the session's own server".into(),
+            dumps: vec![],
+            searching: false,
+        };
+        let r = lost_reason(Path::new("unused"), "p2", &lost);
+        assert_eq!(r.kind, "check-error");
+        let mut e = sample("pass").checks.remove(0);
+        decide(&mut e, vec![r]);
+        assert_eq!(e.outcome, "fail");
+        assert!(
+            e.reason
+                .as_ref()
+                .unwrap()
+                .message
+                .contains("a client may join only the session's own server")
+        );
+        let mut result = sample("fail");
+        result.session.machines[0].end_state = "lost".into();
+        result.session.machines[0].lost = Some(shakedown_protocol::result::Lost {
+            reason: "foreign-server".into(),
+            at: lost.at.clone(),
+            exit_code: None,
+            dumps: vec![],
+        });
+        validate(&result);
     }
 
     /// `US-016` 2, `US-043` 2, `RES-05`: a lost machine's dumps are copied into the run folder as
