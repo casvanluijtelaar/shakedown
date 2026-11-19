@@ -3,7 +3,7 @@ type: Finding
 id: m15-1
 milestone: M15
 title: The look-for box covers the action menu
-description: In p1's window the box titled Shakedown: look for lies over the game's action menu, so the manual tester cannot see which action they select.
+description: "In p1's window the box titled Shakedown: look for lies over the game's action menu, so the manual tester cannot see which action they select."
 raised_by: developer
 for: developer
 checks:
