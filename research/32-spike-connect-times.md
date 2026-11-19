@@ -48,6 +48,6 @@ The second singleplayer start of the series never connected. Its RPT ends 30 s a
 - `US-087`'s first criterion is the start ceiling.
 - `DEF-28` stays open, with a fourth option: connecting the extension from a `preStart` function, at the end of the engine's start, so a connect ceiling would cover only that phase. It is measured again before any ceiling is set.
 
-[^script]: The M16 developer round's measurement script, run 2026-11-19 from 21:03 to 21:44 UTC.
+[^script]: The M16 developer round's measurement script, run 2026-11-19 from 21:03 to 21:42 UTC.
 [^rpt]: The RPTs of sessions `s-20261119-210355` (cold), `s-20261119-210517` (slowest), `s-20261119-210650` (hung) and `s-20261119-211138` (warm).
 [^def28]: `DEF-28`, a client that hangs in its start holds `session start` for the whole start ceiling.

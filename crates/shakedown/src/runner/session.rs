@@ -2572,7 +2572,7 @@ pub fn start_failed(session: &Value) -> CliError {
         session["id"].as_str().unwrap_or("?"),
         reason["message"].as_str().unwrap_or("the start failed"),
         if lines.is_empty() {
-            String::new()
+            format!(" {} wrote no RPT line.", reason["machine"].as_str().unwrap_or("?"))
         } else {
             format!(
                 " The last lines of {}'s RPT:\n{}",

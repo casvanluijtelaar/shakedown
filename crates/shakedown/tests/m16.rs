@@ -283,7 +283,11 @@ fn us_087_ses_10_a_hung_client_fails_the_start_and_the_reason_is_kept() {
     assert_eq!(code, 4, "{out} {err}");
     assert!(took < Duration::from_secs(ceiling + 20), "the start took {took:?}");
     assert!(err.contains("p2 was launched"), "{err}");
-    assert!(err.contains("The last lines of p2's RPT"), "{err}");
+    // A process suspended at once may not have written its RPT yet; the reason says which.
+    assert!(
+        err.contains("The last lines of p2's RPT") || err.contains("p2 wrote no RPT line."),
+        "{err}"
+    );
     assert!(!game_pids().contains(&p2), "p2's process still runs");
     let (_, status, _) = cmd(&dir, &["status"]);
     let reason = status["session"]["reason"].clone();
@@ -298,4 +302,153 @@ fn us_087_ses_10_a_hung_client_fails_the_start_and_the_reason_is_kept() {
         end["reason"], reason,
         "session.json does not hold the reason status gave"
     );
+}
+
+/// A second dedicated server outside the session, on loopback, named `other`, with a copy of the
+/// session's mission; stopped by its id and its mission copy removed when dropped.
+struct OtherServer {
+    pid: u32,
+    mission: PathBuf,
+}
+
+impl Drop for OtherServer {
+    fn drop(&mut self) {
+        kill(self.pid);
+        let _ = std::fs::remove_dir_all(&self.mission);
+    }
+}
+
+const GAME: &str = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3";
+
+fn other_server(session_folder: &Path, port: u16) -> OtherServer {
+    let game = PathBuf::from(GAME);
+    let source = std::fs::read_dir(session_folder.join("mission"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let name = "skd_m16_other.VR";
+    let mission = game.join("MPMissions").join(name);
+    std::fs::create_dir_all(&mission).unwrap();
+    for f in ["mission.sqm", "description.ext"] {
+        std::fs::copy(source.join(f), mission.join(f)).unwrap();
+    }
+    let profile = session_folder.join("other-server");
+    std::fs::create_dir_all(&profile).unwrap();
+    let cfg = profile.join("server.cfg");
+    std::fs::write(
+        &cfg,
+        format!(
+            "hostname = \"other\";\nloopback = 1;\nBattlEye = 0;\nverifySignatures = 0;\nkickDuplicate = 0;\nallowedFilePatching = 2;\npersistent = 1;\nmaxPlayers = 4;\nclass Missions\n{{\n    class m\n    {{\n        template = \"skd_m16_other\";\n        difficulty = \"Regular\";\n    }};\n}};\n"
+        ),
+    )
+    .unwrap();
+    let child = Command::new(game.join("arma3server_x64.exe"))
+        .current_dir(&game)
+        .args([
+            format!("-port={port}"),
+            format!("-config={}", cfg.display()),
+            format!("-profiles={}", profile.display()),
+            format!(
+                "-mod={};{}",
+                game.join("@skd_fixture").display(),
+                game.join("@shakedown").display()
+            ),
+            "-filePatching".into(),
+            "-autoInit".into(),
+        ])
+        .spawn()
+        .unwrap();
+    let server = OtherServer {
+        pid: child.id(),
+        mission,
+    };
+    // Up once its RPT says the mission runs, within 120 s.
+    for _ in 0..240 {
+        let up = std::fs::read_dir(&profile)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|e| e.path().extension().is_some_and(|x| x == "rpt"))
+            .any(|e| {
+                std::fs::read_to_string(e.path())
+                    .unwrap_or_default()
+                    .contains("Game started")
+            });
+        if up {
+            return server;
+        }
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    panic!("the other server did not start its mission within 120 s");
+}
+
+/// `US-088` 1 and 2, `SEC-05`, `DM-04`, `NFR-LG-02`: code sent to `p2` that makes it join another
+/// server ends `p2`'s process once its agent starts there, the check ends `fail` / `check-error`
+/// saying a client may join only the session's own server, the session is `broken` with that
+/// reason, and a `game-restart` reload brings every machine back.
+#[test]
+#[ignore]
+fn us_088_sec_05_a_client_sent_to_another_server_is_ended() {
+    steam_runs();
+    let port = 2432u16;
+    let check = format!(
+        "// @check US-088 p2 is sent to another server\n// @setups other\n// @timeout 200\n[\"p2\", {{ connectToServer [\"127.0.0.1\", {port}, \"\"]; true }}] call skd_fnc_on;\n[\"server\", {{ false }}, [], 180] call skd_fnc_waitUntil;\n"
+    );
+    let dir = project(
+        "other",
+        |t| t + "\n[setups.other]\nmode = \"dedicated\"\nclients = 2\nmods = [\"fixture\"]\n",
+        &[("US-088-other-server", check.as_str())],
+    );
+    let _stop = Stop(dir.clone());
+    let (code, out, err) = cmd(&dir, &["session", "start", "--setup", "other"]);
+    assert_eq!(code, 0, "{out} {err}");
+    let id = out["id"].as_str().unwrap().to_string();
+    let p2 = session_pids(&dir)[2];
+    let _other = other_server(&dir.join(".shakedown").join("sessions").join(&id), port);
+
+    let t = Instant::now();
+    let (code, run, err) = cmd(&dir, &["run", "US-088-other-server"]);
+    println!("run: exit {code} in {:.1} s", t.elapsed().as_secs_f64());
+    let file = run["result_file"]
+        .as_str()
+        .unwrap_or_else(|| panic!("no result: {run} {err}"));
+    let result: Value = serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+    let c = &result["checks"][0];
+    assert_eq!(c["outcome"], "fail", "{c:#}");
+    assert_eq!(c["reason"]["kind"], "check-error", "{c:#}");
+    assert_eq!(c["reason"]["machine"], "p2", "{c:#}");
+    let message = c["reason"]["message"].as_str().unwrap();
+    assert!(
+        message.contains("a client may join only the session's own server") && message.contains("\"other\""),
+        "{message}"
+    );
+    let lost = result["session"]["machines"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["name"] == "p2")
+        .unwrap()["lost"]
+        .clone();
+    assert_eq!(lost["reason"], "foreign-server", "{lost}");
+    assert_eq!(code, 1);
+    assert!(!game_pids().contains(&(p2)), "p2's process still runs");
+    let (_, status, _) = cmd(&dir, &["status"]);
+    assert_eq!(status["session"]["state"], "broken", "{status}");
+    assert!(
+        status["session"]["reason"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("a client may join only the session's own server"),
+        "{status}"
+    );
+
+    let (code, out, err) = cmd(&dir, &["reload"]);
+    assert_eq!(code, 0, "{out} {err}");
+    let (_, status, _) = cmd(&dir, &["status"]);
+    assert_eq!(status["session"]["state"], "ready", "{status}");
+    for m in status["session"]["machines"].as_array().unwrap() {
+        assert_eq!(m["state"], "ready", "{m}");
+    }
 }
