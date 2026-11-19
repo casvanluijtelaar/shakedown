@@ -40,7 +40,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | M13 | [Every setup, repeated](milestones/m13.md) | `run --each-setup --repeat 5` runs arma-grappling-hook's suite in all three setups and shows `US-064-1`'s spread in `sp-cba-ace`. |
 | M14 | [Reload without a game restart](milestones/m14.md) | A changed arma-grappling-hook function reaches a running session by a mission restart, the rerun check's verdict under 30 s from the save in singleplayer, and every machine of a dedicated session with the server kept, as `SPK-19` found. |
 | M15 | [Hand over to the manual tester](milestones/m15.md) | A check puts `p1` on a rope 10 m up and hands over, with three things to look for in `p1`'s window, and the session stays up. |
-| M16 | [A start that explains itself](milestones/m16.md) | Every gap of a start named at once, a wrong ACE version refused, a hung client failing the start within the connect ceiling, its reason kept. |
+| M16 | [A start that explains itself](milestones/m16.md) | Every gap of a start named at once, a wrong ACE version refused, a hung client failing the start at the start ceiling, its reason kept. |
 | M17 | [ACE interaction and real keys](milestones/m17.md) | `p1` gets on a rope through ACE interaction, and a real let-go key sent to `p1`'s window in the background takes it off. |
 | M18 | [The full health watch](milestones/m18.md) | A client starved of CPU makes its check `invalid` / `unhealthy` naming its frame rate. |
 
@@ -133,7 +133,7 @@ A feature story's failure stories land with it, except these, whose failure stor
 | CR | Requirement | Delivered in | Note |
 |---|---|---|---|
 | `CR-04` | Join, leave, rejoin | M11 | Game clients only; restarting the server waits (`DEF-31`). |
-| `CR-06` | Check the environment before a run | M16 | With `SES-10`, the connect ceiling, if `SPK-20` passes. |
+| `CR-06` | Check the environment before a run | M16 | `SPK-20` failed, so `SES-10` keeps the reason of a failed start without a connect ceiling (`DEF-28`). |
 | `CR-12` | ACE interaction actions (`ACT-04`) | M17 | |
 | `CR-15` | Real key input | M17 | Only if `SPK-11` passes; otherwise dropped. |
 | `CR-21` | The mod's and the engine's events | M12 | CBA events and mission events. |
@@ -154,7 +154,7 @@ Phase 3 is not planned yet; its stories are written when a milestone takes a req
 
 ## Deferred work
 
-Work found while planning that no story promises is in [deferred/](deferred/). Phase 2 takes up `DEF-04` (M11), `DEF-27` (M12), `DEF-21` (M14), and `DEF-28` and `DEF-29` (M16). The rest stay deferred:
+Work found while planning that no story promises is in [deferred/](deferred/). Phase 2 takes up `DEF-04` (M11), `DEF-27` (M12), `DEF-21` (M14), and `DEF-29` (M16); `DEF-28` stays open after `SPK-20` failed in M16. The rest stay deferred:
 
 - `DEF-26` (`skd_fnc_pressKey` returns no handler value) waits for a second mod that needs it; M17's real keys read the pass-through from the game.
 - `DEF-30` (a release on GitHub with winget, a script or by hand) waits until the repository is public and has a licence, which is the owner's call; arma-grappling-hook installs from a clone.
