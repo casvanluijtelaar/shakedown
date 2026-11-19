@@ -17,32 +17,46 @@ Build the scene as in any check, then call `skd_fnc_handOver` with the game clie
 // @check US-083 The owner is handed p1 in front of the fixture's crate, with three things to look for
 // @setups dedicated
 private _crate = ["build the scene", {
-    ["p1", AGLToASL [100, 100, 0], 0] call skd_fnc_place;
-    ["skdfx_Crate", AGLToASL [100, 103, 0], 180] call skd_fnc_create
+    ["p1", AGLToASL [130, 130, 0], 0] call skd_fnc_place;
+    ["p1", { player removeItems "FirstAidKit"; { _x == "FirstAidKit" } count items player }] call skd_fnc_on;
+    ["skdfx_Crate", AGLToASL [130, 132, 0], 180] call skd_fnc_create
+}] call skd_fnc_step;
+
+["p1 can open the crate", {
+    ["p1", {
+        params ["_crate"];
+        !isNull _crate
+            && { (actionIDs _crate) findIf { ((_crate actionParams _x) select 0) isEqualTo "Open crate" } >= 0 }
+            && { (player distance _crate) < 3 }
+    }, "the crate reached p1 with its action Open crate in reach", 10, [_crate]] call skd_fnc_waitUntil;
 }] call skd_fnc_step;
 
 ["p1", [
-    "An ammo crate stands 3 m in front of you.",
+    "An ammo crate stands 2 m in front of you.",
     "Looking at it, the action menu (mouse wheel) offers Open crate.",
-    "Opening it puts a first aid kit in your inventory."
+    "You carry no first aid kit; opening the crate puts one in your inventory."
 ]] call skd_fnc_handOver;
 ```
 
-Write each item for a person who knows the game and not SQF: what they will see, and where to look. `skd_fnc_handOver` does not return: the body ends there, and every step still running is closed as passed. The check's outcome is then decided as for any check whose body reached its end, so a script error raised earlier still fails it.
+Write each item for a person who knows the game and not SQF: what they will see, and where to look. Make each item true before the hand over, and check what can be checked: the person judges how it looks and feels, not whether the scene was built. Three things in the scene above serve that:
+
+- An action shows in the action menu only while the player is within its radius, measured from the player to the object's centre, so `p1` stands 2 m from a crate whose action has a radius of 3 m, not at the edge of it. The step before the hand over waits on `p1` until the action is there and in reach.
+- Every game client starts near the same spot, so a player placed there stands inside another. Place the player away from it.
+- What the person is to notice must change on screen: `p1`'s loadout carries a first aid kit, so the scene takes it out and the one from the crate is the only one. The reset puts the loadout back. `skd_fnc_handOver` does not return: the body ends there, and every step still running is closed as passed. The check's outcome is then decided as for any check whose body reached its end, so a script error raised earlier still fails it.
 
 ## What the person finds
 
 When the check passes, it is **handed over**:
 
-- In the client's window, at the top left, a box titled `Shakedown: look for` lists the items, numbered. The list is also written to that client's RPT.
+- In the client's window, at the top centre, a box titled `Shakedown: look for` lists the items, numbered. It stands in the column Arma 3's default HUD layout leaves free, between the vehicle info at the top left and the weapon info at the top right, so it covers neither the action menu and the communication menu on the left nor the weapon info, stance, stamina bar and hints on the right, at any aspect ratio or interface size; it grows downwards with its items. A HUD layout changed in the game's options is not followed. The list is also written to that client's RPT.
 - The player stands where the check put it, and everything the check created is there: no reset follows the check.
 - `shakedown run` prints the check's line with `handed over to p1`, the summary, and then:
 
 ```
 Handed over to p1 by handover/US-083-crate. Look through p1's window for:
-  1. An ammo crate stands 3 m in front of you.
+  1. An ammo crate stands 2 m in front of you.
   2. Looking at it, the action menu (mouse wheel) offers Open crate.
-  3. Opening it puts a first aid kit in your inventory.
+  3. You carry no first aid kit; opening the crate puts one in your inventory.
 Session s-20261118-152104 stays up for you. End it with `shakedown session stop`.
 ```
 

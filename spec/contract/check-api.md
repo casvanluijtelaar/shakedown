@@ -230,7 +230,9 @@ A check sets up a situation for a person to judge by eye and hands it over (`MAN
 |---|---|---|---|
 | `skd_fnc_handOver` | `[machine, items]` - `machine` a game client, `"p1"` to `"pN"`; `items` an Array of 1 to 10 Strings that are not empty, each one thing to look for, written for a person who knows the game and not SQF. | Does not return: the body ends there. | `fail` / `check-error` for `server` or a headless client on a dedicated session, naming the game clients it can hand over to (`DM-04`), and for `items` of the wrong form; `fail` / `wait-ceiling` when the list is not on the client's screen within 10 s. |
 
-`skd_fnc_handOver` shows the list on the client's screen, at its top left under the title `Shakedown: look for`, numbered in the order given, and writes it to that client's RPT; then it ends the body, closing every step still running as `passed`. In singleplayer `"server"` names `p1`, as everywhere. The check's outcome is then fixed as for a body that reached its end, so a script error raised earlier still ends it `fail` / `script-error`.
+`skd_fnc_handOver` shows the list on the client's screen under the title `Shakedown: look for`, numbered in the order given, and writes it to that client's RPT; then it ends the body, closing every step still running as `passed`. In singleplayer `"server"` names `p1`, as everywhere. The check's outcome is then fixed as for a body that reached its end, so a script error raised earlier still ends it `fail` / `script-error`.
+
+The list lies at the top centre of the screen, in the column the game's default HUD layout leaves free, so it covers none of the HUD the person uses to judge the situation, whatever its height. Arma 3 lays its HUD out in units of its GUI grid, anchored to the edges of the safe zone: a grid unit is `((safeZoneW / safeZoneH) min 1.2) / 40` wide and `(((safeZoneW / safeZoneH) min 1.2) / 1.2) / 25` high, so the layout holds at every aspect ratio and interface size. In the default layout the action menu and the communication menu stand in the left column, up to 6 units from the safe zone's left edge, and the vehicle info at the top left up to 10.5 units; the weapon info, the stamina bar, the stance and the hints stand in the right column, from 14.3 units left of its right edge. The list starts half a unit below the safe zone's top edge and spans the space between 11.5 units from the left edge and 15.3 units from the right edge, at most 24 units wide and centred in it, and grows downwards with its items. A layout the person changed in the game's options is not followed.
 
 A check that ends `pass` is **handed over**:
 
@@ -245,12 +247,11 @@ The next `run`, `reset`, `reload` or `session stop` takes the session back as us
 ```sqf
 // @check US-083 The owner looks at the crate the fixture adds
 // @setups dedicated
-private _crate = ["skdfx_Crate", AGLToASL [100, 103, 0], 180] call skd_fnc_create;
-["p1", AGLToASL [100, 100, 0], 0] call skd_fnc_place;
+private _crate = ["skdfx_Crate", AGLToASL [130, 132, 0], 180] call skd_fnc_create;
+["p1", AGLToASL [130, 130, 0], 0] call skd_fnc_place;
 ["p1", [
-    "An ammo crate stands 3 m in front of you.",
-    "Looking at it, the action menu offers Open crate.",
-    "Opening it puts a first aid kit in your inventory."
+    "An ammo crate stands 2 m in front of you.",
+    "Looking at it, the action menu offers Open crate."
 ]] call skd_fnc_handOver;
 ```
 
