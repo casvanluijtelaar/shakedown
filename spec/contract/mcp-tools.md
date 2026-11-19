@@ -32,7 +32,7 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-05T09:26:08+01:00 }]
   | `session-exists` | A session already runs. |
   | `session-busy` | The session is running a run, a reload or a reset. |
   | `session-broken` | The session is `broken`; the reason follows. |
-  | `precondition-failed` | A precondition of `SES-03` failed; what is missing follows. |
+  | `precondition-failed` | A precondition of `SES-03` or `ENV-01` failed; every gap found follows, in one message, as `session start` gives it. |
   | `runner-unreachable` | The runner `runner.json` names runs but does not answer, or runs another version; its process id, and its version when it answered, follow (`P-01`). |
 
 ## Shared shapes

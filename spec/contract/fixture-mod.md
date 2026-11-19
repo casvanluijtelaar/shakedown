@@ -17,6 +17,8 @@ This file is the whole of what the fixtures promise. A check against them is wri
 | `@skd_fixture` | `fixtures\@skd_fixture`, with its extension `skdfx_x64.dll` | nothing but the game | `skdfx_main` | `skdfx` |
 | `@skd_fixture_cba` | `fixtures\@skd_fixture_cba` | CBA_A3, and `@skd_fixture` | `skdfx_cba` | `skdfx_cba` |
 
+Each CfgPatches class has a `versionStr`: `skdfx_main` reads `0.0.6`, `skdfx_cba` reads `0.0.4`, so a check or a project file can name the version a machine loads (`mods.<name>.version`, `ENV-01`).
+
 The two are separate mods so a setup without CBA loads `@skd_fixture` alone; a dedicated server would stop at a missing-addon warning if a CBA-dependent addon were loaded without CBA.
 
 ## Where the fixtures are installed
