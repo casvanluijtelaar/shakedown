@@ -138,7 +138,7 @@
           "additionalProperties": false,
           "required": ["reason", "at", "exit_code", "dumps"],
           "properties": {
-            "reason": { "enum": ["exited", "no-answer"] },
+            "reason": { "description": "exited: its process ended unasked; no-answer: it stopped answering; foreign-server: the runner ended it because it joined a server that is not the session's own (SEC-05).", "enum": ["exited", "no-answer", "foreign-server"] },
             "at": { "description": "Wall clock when the process exited or its runner ceiling passed (RES-05).", "$ref": "#/$defs/Time" },
             "exit_code": { "type": ["integer", "null"] },
             "dumps": { "description": "Crash dumps copied into the run folder, under dumps/<machine>/.", "type": "array", "items": { "$ref": "#/$defs/RelativePath" } }
