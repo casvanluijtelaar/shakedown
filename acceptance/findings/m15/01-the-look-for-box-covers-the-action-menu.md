@@ -10,7 +10,8 @@ checks:
   - "crates/shakedown/tests/m15.rs us_083_m15_1_m15_2_man_01_the_box_leaves_the_action_menu_free_and_p1_opens_the_crate"
 stories: [US-083]
 generated: { by: "claude-code/developer", at: 2026-11-19T12:25:01-08:00 }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-19T12:35:20-08:00, note: "Commits 9e490e1 and 06ec6f5: the box stands at the top centre, between the default layout's vehicle info and weapon info in Arma 3's GUI grid units (from 11.5 units off the safe zone's left edge to 15.3 off its right, at most 24 wide), clear of the action menu, communication menu, weapon info, stance, stamina bar and hints at any aspect ratio and height; MAN-01, spec/contract/check-api.md and docs/handing-over.md say so. crates/shakedown/tests/m15.rs us_083_m15_1_m15_2_man_01_the_box_leaves_the_action_menu_free_and_p1_opens_the_crate proves it on p1 in a dedicated session." }
 verified: []
 ---
 
