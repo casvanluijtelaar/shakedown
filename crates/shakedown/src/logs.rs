@@ -77,6 +77,20 @@ impl Redactor {
     }
 }
 
+/// Whether Steam's login file names an account: the entry `INT-STM-04` reads has an
+/// `AccountName` (`ENV-01`). The name itself stays in the redactor.
+pub fn steam_account_named() -> bool {
+    let Some(steam) = steam_path() else { return false };
+    let text = std::fs::read(steam.join("config").join("loginusers.vdf"))
+        .map(|b| String::from_utf8_lossy(&b).into_owned())
+        .unwrap_or_default();
+    account_named(&text)
+}
+
+fn account_named(vdf: &str) -> bool {
+    !most_recent_names(vdf).is_empty()
+}
+
 #[cfg(windows)]
 fn steam_path() -> Option<PathBuf> {
     let out = std::process::Command::new("reg")

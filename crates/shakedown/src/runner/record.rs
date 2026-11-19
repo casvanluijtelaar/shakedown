@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Value, json};
 
 use crate::paths;
 
@@ -97,8 +97,10 @@ pub fn remove_session(session: &str) {
 }
 
 /// Writes a session's end into its folder, as `session.json`: its id, end state (`stopped`, or
-/// `failed` for a start that failed), reason and time.
-pub fn write_end(folder: &Path, id: &str, state: &str, reason: Option<&str>) {
+/// `failed` for a start that failed), reason and time. The reason is `runner-died` for a session
+/// the recovery ended, the reason of `SES-04` (`message`, `machine`, `rpt_tail`) for a start that
+/// failed or a session that broke, and null otherwise (`SES-10`).
+pub fn write_end(folder: &Path, id: &str, state: &str, reason: Value) {
     let end = json!({
         "id": id,
         "state": state,
@@ -137,7 +139,7 @@ fn recover_at(file: &Path) -> Vec<String> {
             }
         }
         if s.folder.is_dir() {
-            write_end(&s.folder, &s.id, "stopped", Some("runner-died"));
+            write_end(&s.folder, &s.id, "stopped", json!("runner-died"));
         }
         done.push(format!("recovery: {}: stopped, reason runner-died", s.id));
     }

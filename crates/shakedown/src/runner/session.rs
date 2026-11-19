@@ -1157,7 +1157,11 @@ impl Session {
             let _ = std::fs::remove_dir_all(copy);
         }
         let end = self.state();
-        super::record::write_end(&self.folder, &self.id, end.as_str(), None);
+        // The reason of a start that failed, or of a session that broke, stays in the session
+        // folder once the runner forgets it (SES-10).
+        let mut reason = self.inner.lock().unwrap().reason.clone().unwrap_or(Value::Null);
+        runner.redactor().redact_value(&mut reason);
+        super::record::write_end(&self.folder, &self.id, end.as_str(), reason);
         super::record::remove_session(&self.id);
         // Every RPT of the session's machines, redacted once nothing writes it any more (LOG-02).
         let redactor = runner.redactor();
@@ -1463,6 +1467,11 @@ pub async fn start(
         return Ok(session);
     }
     session.versions().await;
+    if let Some((machine, cause)) = session.wrong_versions() {
+        session.fail(runner, &machine, cause);
+        session.stop(runner).await;
+        return Ok(session);
+    }
     session.load_library(&session.machine_names()).await;
     session.take_snapshot();
     session.set_state(SessionState::Ready);
@@ -1662,6 +1671,20 @@ impl Session {
                 })
                 .collect();
         }
+    }
+
+    /// The first machine that loaded a mod in another version than its `version` key names, and
+    /// a cause naming every such mod and machine with the version found and the version wanted
+    /// (`ENV-01`, `INT-STM-03`).
+    fn wrong_versions(&self) -> Option<(String, String)> {
+        let inner = self.inner.lock().unwrap();
+        let reported: Vec<(String, Vec<ModVersion>)> = inner
+            .machines
+            .iter()
+            .map(|m| (m.name.clone(), m.mods.clone()))
+            .collect();
+        drop(inner);
+        version_gaps(&self.spec.mods, &reported)
     }
 
     /// Holds new orders to `names`, then waits up to 10 s for the orders already sent to them to
@@ -2336,9 +2359,13 @@ fn preconditions(runner: &Runner, spec: &SetupSpec) -> Result<(), CliError> {
             ));
         }
     }
-    if !win::steam_running() {
-        missing.push("a running Steam client of this user (start Steam and log in)".to_string());
-    }
+    let state = paths::project_state_dir(&spec.project).unwrap_or_else(|_| spec.project.clone());
+    missing.extend(steam_and_disk_gaps(
+        win::steam_running(),
+        crate::logs::steam_account_named() && win::steam_active_user() != Some(false),
+        win::free_bytes(&state),
+        &state,
+    ));
     for m in &spec.mods {
         if !m.path.is_dir() {
             missing.push(format!("the folder {} of mod {}", m.path.display(), m.name));
@@ -2380,6 +2407,73 @@ fn preconditions(runner: &Runner, spec: &SetupSpec) -> Result<(), CliError> {
         ))
         .tag("precondition-failed"))
     }
+}
+
+/// `ENV-01`: of the versions each machine reported, those that differ from the mod's `version`
+/// key; the first such machine and a cause naming each mod, machine, version found and version
+/// wanted. A mod whose patch a machine did not load counts as found in no version.
+fn version_gaps(mods: &[crate::config::Mod], reported: &[(String, Vec<ModVersion>)]) -> Option<(String, String)> {
+    let mut first = None;
+    let mut gaps = Vec::new();
+    for m in mods {
+        let Some(wanted) = &m.version else { continue };
+        for (machine, versions) in reported {
+            let found = versions
+                .iter()
+                .find(|v| v.mod_name == m.name)
+                .and_then(|v| v.version.clone());
+            if found.as_deref() == Some(wanted.as_str()) {
+                continue;
+            }
+            first.get_or_insert_with(|| machine.clone());
+            gaps.push(format!(
+                "mod {} on {machine} is {}, and shakedown.toml wants version {wanted}",
+                m.name,
+                match found {
+                    Some(v) => format!("version {v}"),
+                    None => format!(
+                        "in no version (its CfgPatches class {} is not loaded)",
+                        m.patch.as_deref().unwrap_or("?")
+                    ),
+                }
+            ));
+        }
+    }
+    first.map(|machine| {
+        (
+            machine,
+            format!(
+                "a mod was loaded in another version than the project names: {}. Install the version wanted, or set mods.<name>.version in shakedown.toml to the version found",
+                gaps.join("; ")
+            ),
+        )
+    })
+}
+
+/// The free space a start needs on the drive of the project's `.shakedown` folder (`ENV-01`).
+pub const MIN_FREE: u64 = 2 * 1024 * 1024 * 1024;
+
+/// The gaps of `ENV-01` beside the folders and ports of `SES-03`: Steam running, Steam logged in,
+/// and 2 GB free on the drive of `state`, the project's `.shakedown` folder. A free space that
+/// cannot be read is no gap.
+fn steam_and_disk_gaps(running: bool, logged_in: bool, free: Option<u64>, state: &Path) -> Vec<String> {
+    let mut gaps = Vec::new();
+    if !running {
+        gaps.push("a running Steam client of this user (start Steam and log in)".to_string());
+    } else if !logged_in {
+        gaps.push(
+            "an account logged in to Steam: Steam runs, but no account is logged in (log in to Steam)".to_string(),
+        );
+    }
+    if let Some(free) = free.filter(|f| *f < MIN_FREE) {
+        let shown = state.display().to_string();
+        let drive: String = shown.trim_start_matches(r"\\?\").chars().take(2).collect();
+        gaps.push(format!(
+            "2 GB free on drive {drive}, which holds {shown}; it has {:.2} GB free (free space on it)",
+            free as f64 / (1024.0 * 1024.0 * 1024.0)
+        ));
+    }
+    gaps
 }
 
 /// Makes `link` a directory junction to `target`: created when missing, pointed at `target`
@@ -2612,6 +2706,89 @@ mod tests {
         );
         assert_eq!((e.at.tick, e.at.time, e.at.frame), (12.5, 3.25, 120));
         assert_eq!(e.args[0]["netId"], "2:5");
+    }
+
+    fn fixture_mod(version: Option<&str>) -> crate::config::Mod {
+        crate::config::Mod {
+            name: "fixture".into(),
+            path: PathBuf::from("f"),
+            patch: Some("skdfx_main".into()),
+            version: version.map(String::from),
+            source: None,
+            prefix: None,
+            rebuild: None,
+        }
+    }
+
+    fn reported(machine: &str, version: Option<&str>) -> (String, Vec<ModVersion>) {
+        (
+            machine.into(),
+            vec![ModVersion {
+                mod_name: "fixture".into(),
+                patch: "skdfx_main".into(),
+                version: version.map(String::from),
+            }],
+        )
+    }
+
+    #[test]
+    fn us_086_env_01_a_mod_in_another_version_names_the_mod_the_version_found_and_wanted() {
+        let gaps = version_gaps(
+            &[fixture_mod(Some("9.9.9"))],
+            &[
+                reported("server", Some("0.0.6")),
+                reported("p1", Some("9.9.9")),
+                reported("p2", None),
+            ],
+        )
+        .unwrap();
+        assert_eq!(gaps.0, "server");
+        assert!(
+            gaps.1
+                .contains("mod fixture on server is version 0.0.6, and shakedown.toml wants version 9.9.9"),
+            "{}",
+            gaps.1
+        );
+        assert!(
+            gaps.1
+                .contains("mod fixture on p2 is in no version (its CfgPatches class skdfx_main is not loaded)"),
+            "{}",
+            gaps.1
+        );
+        assert!(!gaps.1.contains("on p1"), "{}", gaps.1);
+    }
+
+    #[test]
+    fn us_086_env_01_the_right_version_or_no_version_key_passes() {
+        assert!(version_gaps(&[fixture_mod(Some("0.0.6"))], &[reported("p1", Some("0.0.6"))]).is_none());
+        assert!(version_gaps(&[fixture_mod(None)], &[reported("p1", Some("0.0.6"))]).is_none());
+    }
+
+    #[test]
+    fn us_085_env_01_steam_logged_out_and_a_full_drive_are_each_a_gap() {
+        let state = Path::new(r"C:\p\.shakedown");
+        assert!(steam_and_disk_gaps(true, true, Some(MIN_FREE), state).is_empty());
+        assert!(steam_and_disk_gaps(true, true, None, state).is_empty());
+        let gaps = steam_and_disk_gaps(true, false, Some(MIN_FREE / 4), state);
+        assert_eq!(gaps.len(), 2, "{gaps:?}");
+        assert!(gaps[0].contains("no account is logged in"), "{gaps:?}");
+        assert!(
+            gaps[1].contains("drive C:") && gaps[1].contains("0.50 GB free"),
+            "{gaps:?}"
+        );
+        let gaps = steam_and_disk_gaps(false, false, Some(MIN_FREE), state);
+        assert_eq!(
+            gaps,
+            vec!["a running Steam client of this user (start Steam and log in)".to_string()]
+        );
+    }
+
+    #[test]
+    fn int_stm_01_active_user_zero_is_no_account() {
+        let reg = "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\ActiveProcess\n    ActiveUser    REG_DWORD    0x0\n";
+        assert_eq!(win::active_user_set(reg), Some(false));
+        assert_eq!(win::active_user_set(&reg.replace("0x0", "0x1a2b")), Some(true));
+        assert_eq!(win::active_user_set("ERROR: not found"), None);
     }
 
     #[test]

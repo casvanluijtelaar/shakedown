@@ -18,6 +18,15 @@ pub struct Child {
 #[cfg(windows)]
 pub use imp::*;
 
+/// Reads `reg query`'s answer for `ActiveUser`: whether its DWORD is not 0; None when the answer
+/// holds no such value.
+pub(crate) fn active_user_set(reg: &str) -> Option<bool> {
+    let line = reg.lines().find(|l| l.contains("ActiveUser"))?;
+    let value = line.split("REG_DWORD").nth(1)?.trim();
+    let n = u64::from_str_radix(value.trim_start_matches("0x"), 16).ok()?;
+    Some(n != 0)
+}
+
 #[cfg(windows)]
 mod imp {
     use super::Child;
@@ -550,6 +559,28 @@ mod imp {
         sid
     }
 
+    /// The bytes free to the current user on the drive that holds `path` (`ENV-01`).
+    pub fn free_bytes(path: &Path) -> Option<u64> {
+        use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+        let wide: Vec<u16> = path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        let mut free = 0u64;
+        unsafe { GetDiskFreeSpaceExW(PCWSTR(wide.as_ptr()), Some(&mut free), None, None) }.ok()?;
+        Some(free)
+    }
+
+    /// Whether Steam has an account logged in: the value `ActiveUser` under
+    /// `HKCU\Software\Valve\Steam\ActiveProcess` is not 0 (`ENV-01`, `INT-STM-01`). Only that
+    /// comparison leaves this function; the value itself is the account's number and is kept
+    /// nowhere. None when the value cannot be read.
+    pub fn steam_active_user() -> Option<bool> {
+        let out = std::process::Command::new("reg")
+            .args([r"query", r"HKCU\Software\Valve\Steam\ActiveProcess", "/v", "ActiveUser"])
+            .output()
+            .ok()?;
+        let text = String::from_utf8_lossy(&out.stdout);
+        super::active_user_set(&text)
+    }
+
     pub fn steam_running() -> bool {
         unsafe {
             let mut own_session = 0u32;
@@ -856,6 +887,14 @@ mod imp {
         file.write_all(bytes)?;
         drop(file);
         std::fs::rename(&tmp, path)
+    }
+
+    pub fn free_bytes(_path: &Path) -> Option<u64> {
+        None
+    }
+
+    pub fn steam_active_user() -> Option<bool> {
+        None
     }
 
     pub fn steam_running() -> bool {

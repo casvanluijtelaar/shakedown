@@ -35,6 +35,9 @@ pub struct Mod {
     pub name: String,
     pub path: PathBuf,
     pub patch: Option<String>,
+    /// The `versionStr` of `patch` every machine must load, the key `version` (`ENV-01`).
+    #[serde(default)]
+    pub version: Option<String>,
     pub source: Option<PathBuf>,
     pub prefix: Option<String>,
     /// The command a game-restart reload runs while no game process runs, which makes the
@@ -93,6 +96,7 @@ struct RawProject {
 struct RawMod {
     path: Spanned<String>,
     patch: Option<String>,
+    version: Option<Spanned<String>>,
     source: Option<Spanned<String>>,
     prefix: Option<String>,
     rebuild: Option<String>,
@@ -246,6 +250,15 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
                 format!("mods.{}.prefix is required with source.", name.get_ref()),
             ));
         }
+        if let (Some(version), None) = (&m.version, &m.patch) {
+            return Err(fail(
+                version.span(),
+                format!(
+                    "mods.{}.patch is required with version: the version is the versionStr of that CfgPatches class.",
+                    name.get_ref()
+                ),
+            ));
+        }
         let name = name.into_inner();
         mods.insert(
             name.clone(),
@@ -253,6 +266,7 @@ pub fn parse(root: &Path, text: &str) -> Result<Project, CliError> {
                 name,
                 path: resolve(m.path.get_ref()),
                 patch: m.patch,
+                version: m.version.map(Spanned::into_inner),
                 source: m.source.map(|s| resolve(s.get_ref())),
                 prefix: m.prefix,
                 rebuild: m.rebuild,
@@ -482,6 +496,34 @@ mods = []
             e.message
         );
         assert!(e.message.contains("line 15"), "{}", e.message);
+    }
+
+    #[test]
+    fn us_086_env_01_a_mod_names_the_version_of_its_patch() {
+        let p = parse(
+            &root(),
+            &GOOD.replace(
+                "patch = \"cba_main\"",
+                "patch = \"cba_main\"
+version = \"3.19.0\"",
+            ),
+        )
+        .unwrap();
+        assert_eq!(p.mods["cba"].version.as_deref(), Some("3.19.0"));
+        assert_eq!(parse(&root(), GOOD).unwrap().mods["cba"].version, None);
+    }
+
+    #[test]
+    fn us_086_env_01_cfg_01_a_version_without_a_patch_is_refused_with_its_line() {
+        let text = GOOD.replace("patch = \"cba_main\"", "version = \"3.19.0\"");
+        let e = parse(&root(), &text).unwrap_err();
+        assert_eq!(e.code, 3);
+        assert!(
+            e.message.contains("mods.cba.patch is required with version"),
+            "{}",
+            e.message
+        );
+        assert!(e.message.contains("line 7"), "{}", e.message);
     }
 
     #[test]
