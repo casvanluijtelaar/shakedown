@@ -125,6 +125,9 @@ mod tests {
         assert_eq!(p[79], r"skd_release\l79\release.txt");
     }
 
+    /// Windows only: the game file is a path in the Windows game folder, compared and built as
+    /// Windows paths, and a reload runs only in a session, which starts only on Windows.
+    #[cfg(windows)]
     #[test]
     fn p_08_the_game_file_of_a_changed_file_is_below_the_prefix() {
         let f = game_file(
