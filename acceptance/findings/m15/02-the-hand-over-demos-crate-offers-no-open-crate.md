@@ -8,11 +8,13 @@ raised_by: developer
 for: developer
 checks:
   - "crates/shakedown/tests/m15.rs us_083_m15_1_m15_2_man_01_the_box_leaves_the_action_menu_free_and_p1_opens_the_crate"
+  - "US-083 MAN-01 m15-2 each of the three items holds on p1 at the hand over: one crate stands 2 m in front of p1, its action Open crate has p1 in its radius, p1 carries no first aid kit, and firing Open crate as the action menu does puts one first aid kit in p1's inventory"
 stories: [US-083]
 generated: { by: "claude-code/developer", at: 2026-11-19T12:25:01-08:00 }
 addressed:
   - { by: "claude-code/developer", at: 2026-11-19T12:35:20-08:00, note: "Commits 9e490e1 and 06ec6f5: the framework and fixture were right (the action is on p1); the demo check stood p1 3.01 m from the crate, past the action's 3 m radius, on the clients' shared start spot, with a first aid kit already in its loadout. e2e/tests/handover/US-083-crate.sqf now stands p1 2 m from the crate away from the start spot, takes its kit out, waits on p1 for the action in reach, and lists items that hold; docs/handing-over.md says how. crates/shakedown/tests/m15.rs us_083_m15_1_m15_2_man_01_the_box_leaves_the_action_menu_free_and_p1_opens_the_crate fires the action on p1 and sees the kit arrive." }
-verified: []
+verified:
+  - { by: "claude-code/tester", at: 2026-11-19T12:50:05-08:00 }
 ---
 
 # The hand-over demo's crate offers no Open crate and gives no first aid kit
