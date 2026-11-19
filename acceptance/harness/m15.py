@@ -40,9 +40,9 @@ CRATE, AFTER, BASE = "US-083-crate", "US-083-after", "US-083-baseline"
 SERVER, HC1 = "US-084-server", "US-084-hc1"
 EACH, DEDONLY = "US-083-each", "US-083-dedonly"
 ITEMS = [
-    "An ammo crate stands 3 m in front of you.",
+    "An ammo crate stands 2 m in front of you.",
     "Looking at it, the action menu (mouse wheel) offers Open crate.",
-    "Opening it puts a first aid kit in your inventory.",
+    "You carry no first aid kit; opening the crate puts one in your inventory.",
 ]
 STOP = "shakedown session stop"
 RESULT = re.compile(r"Result: (\S.*?result\.json)")
@@ -153,6 +153,51 @@ def scene(sh):
     return {"pos": pos, "crates": crates}
 
 
+# Every control on p1's displays whose text starts with the box's title, with its position and parent group, the
+# safe zone, and the default layout's HUD elements from the game's own config (CfgUIGrids, preset Arma3).
+BOX_SQF = (
+    'private _hit = []; { { if ((ctrlText _x) find "Shakedown: look for" == 0) then { _hit pushBack '
+    '[ctrlPosition _x, str (ctrlParentControlsGroup _x), ctrlShown _x] } } forEach allControls _x } forEach allDisplays; '
+    'private _v = configFile >> "CfgUIGrids" >> "IGUI" >> "Presets" >> "Arma3" >> "Variables"; '
+    'private _hud = []; { private _a = getArray (_v >> _x); if (count _a > 0) then { _hud pushBack [_x, '
+    '(_a select 0) apply { if (_x isEqualType "") then { call compile _x } else { _x } }] } } forEach '
+    '["grid_menu", "grid_comm", "grid_vehicle", "grid_weapon", "grid_stance", "grid_stamina", "grid_hint"]; '
+    '[_hit, [safeZoneX, safeZoneY, safeZoneW, safeZoneH], _hud]'
+)
+# The three items of the hand over as p1 sees them: the crate, its distance and direction, its action Open crate
+# with the action's radius, and p1's first aid kits.
+ITEMS_SQF = (
+    'private _c = nearestObjects [player, ["skdfx_Crate"], 10]; '
+    'if (count _c == 0) exitWith { [0] }; private _crate = _c select 0; '
+    'private _ids = (actionIDs _crate) select { ((_crate actionParams _x) select 0) isEqualTo "Open crate" }; '
+    '[count _c, player distance _crate, player getRelDir _crate, _ids, '
+    'if (count _ids > 0) then { (_crate actionParams (_ids select 0)) select 8 } else { -1 }, '
+    '{ _x == "FirstAidKit" } count items player]'
+)
+# Fires the crate's action Open crate as the action menu does when the player selects it.
+FIRE_SQF = (
+    'private _crate = (nearestObjects [player, ["skdfx_Crate"], 10]) select 0; '
+    'private _id = (actionIDs _crate) select ((actionIDs _crate) findIf '
+    '{ ((_crate actionParams _x) select 0) isEqualTo "Open crate" }); player action ["User", _crate, _id]; _id'
+)
+KITS_SQF = '{ _x == "FirstAidKit" } count items player'
+
+
+def on_p1(sh, code):
+    return value_of(sh("exec", "--machine", "p1", "--code", code, "--json", ceiling=60), "p1")
+
+
+def items_part(sh):
+    """Reads each item on p1, fires Open crate and polls p1's first aid kits, at most 20 times over about 10 s."""
+    out = {"before": on_p1(sh, ITEMS_SQF), "fired": on_p1(sh, FIRE_SQF), "kits": []}
+    for _ in range(20):
+        out["kits"].append(on_p1(sh, KITS_SQF))
+        if out["kits"][-1] >= 1:
+            break
+        time.sleep(0.5)
+    return out
+
+
 def dist2d(pos, x, y):
     return ((pos[0] - x) ** 2 + (pos[1] - y) ** 2) ** 0.5
 
@@ -171,6 +216,10 @@ def ded_part(ctx):
         out["game_after_first"] = driver.game_pids()
         out["scene_first"] = scene(sh)
         out["logs"] = sh("logs", "--machine", "p1", "--grep", "crate|first aid", "--last", "100", ceiling=60)
+        # m15-1 and m15-2: the box's place, then the three items, on p1 in the situation handed over.
+        out["box_first"] = on_p1(sh, BOX_SQF)
+        out["items"] = items_part(sh)
+        ctx.log(f"M15 ded box {out['box_first']}\nitems {out['items']}")
         ctx.log(f"M15 ded first: {out['first']['answer'].stdout}\np1's log lines: {out['logs'].stdout[-1500:]}")
         # US-083 4: the next run takes the session back.
         out["base_run"] = result_of(sh("run", BASE, "--json", ceiling=600))
@@ -190,6 +239,7 @@ def ded_part(ctx):
         # US-083 4: reset takes it back.
         out["reset"] = sh("reset", "--json", ceiling=120)
         out["scene_reset"] = scene(sh)
+        out["box_reset"] = on_p1(sh, BOX_SQF)
         # run --json hands over; then reload takes it back.
         out["json_run"] = result_of(sh("run", CRATE, AFTER, "--json", ceiling=600))
         out["reload"] = sh("reload", "--json", ceiling=400)
@@ -224,6 +274,7 @@ def each_part(ctx):
             pids |= session_pids(out["status"])
             out["scene"] = value_of(sh("exec", "--machine", "p1", "--code", "getPosASL player", "--json",
                                        ceiling=60), "p1")
+            out["box"] = on_p1(sh, BOX_SQF)
         finally:
             procs.stop()
         out["procs"] = procs
@@ -454,6 +505,68 @@ def us083_each(ctx):
         f"sp's not_run {sp[0]['not_run']}"
     assert e["stop"].code == 0 and e["status_stopped"].get("session") is None, \
         f"session stop after the command: {e['stop']}; status {e['status_stopped'].get('session')}"
+
+
+HUD = {"grid_menu", "grid_comm", "grid_vehicle", "grid_weapon", "grid_stance", "grid_stamina", "grid_hint"}
+
+
+def box_in_column(box, what):
+    """Judges the box against MAN-01's place in grid units and against the default layout's HUD elements."""
+    hits, (sx, sy, sw, sh_), hud = box
+    assert len(hits) == 1, f"{what}: {len(hits)} controls on p1's displays start with 'Shakedown: look for': {hits}"
+    (x, y, w, h), parent, shown = hits[0]
+    assert shown, f"{what}: the box is not shown"
+    assert parent == "No control", f"{what}: the box lies in a controls group {parent}; its position is relative"
+    ar = min(sw / sh_, 1.2)
+    gw, gh = ar / 40, ar / 1.2 / 25
+    tol = 0.1 * gw
+    left, right = sx + 11.5 * gw, sx + sw - 15.3 * gw
+    space = right - left
+    want_w = min(space, 24 * gw)
+    want_x = left + (space - want_w) / 2
+    assert x >= left - tol and x + w <= right + tol, (
+        f"{what}: the box spans x {x:.4f} to {x + w:.4f}, outside the column {left:.4f} to {right:.4f} (11.5 units "
+        f"off the safe zone's left edge, 15.3 off its right; grid unit {gw:.5f})")
+    assert w <= 24 * gw + tol, f"{what}: the box is {w / gw:.2f} units wide, more than 24"
+    assert abs(x - want_x) <= tol and abs(w - want_w) <= tol, (
+        f"{what}: the box at x {x:.4f} wide {w:.4f} is not centred in the column: expected x {want_x:.4f} "
+        f"wide {want_w:.4f}")
+    assert abs(y - (sy + 0.5 * gh)) <= 0.1 * gh, (
+        f"{what}: the box's top {y:.4f} is not half a unit below the safe zone's top {sy:.4f} (unit {gh:.5f})")
+    names = {n for n, _ in hud}
+    assert names == HUD, f"{what}: the game's config gives the default layout's {sorted(names)}, not {sorted(HUD)}"
+    for name, (hx, hy, hw, hh) in hud:
+        # Apart in x is apart at any height of the box; the box grows downwards with its items.
+        apart = x + w <= hx + 1e-4 or hx + hw <= x + 1e-4
+        assert apart, (f"{what}: the box x {x:.4f} to {x + w:.4f} overlaps the default layout's {name} "
+                       f"x {hx:.4f} to {hx + hw:.4f}")
+
+
+@check("US-083 MAN-01 m15-1 the look-for box on p1's screen, read through exec, lies in MAN-01's top-centre column: from 11.5 grid units off the safe zone's left edge to 15.3 off its right, at most 24 wide and centred, half a unit below the top, apart from the default layout's action menu, communication menu, vehicle info, weapon info, stance, stamina bar and hints, in dedicated and in singleplayer; the reset removes it", "start", repeat=True)
+def us083_box(ctx):
+    d = ded(ctx)
+    ctx.log(f"m15-1 box after run --setup ded: {d['box_first']}")
+    box_in_column(d["box_first"], "dedicated, after run --setup")
+    assert d["box_reset"][0] == [], f"the box is still on p1's screen after shakedown reset: {d['box_reset'][0]}"
+    e = each(ctx)
+    ctx.log(f"m15-1 box after run --each-setup in sp: {e['box']}")
+    box_in_column(e["box"], "singleplayer, after run --each-setup")
+
+
+@check("US-083 MAN-01 m15-2 each of the three items holds on p1 at the hand over: one crate stands 2 m in front of p1, its action Open crate has p1 in its radius, p1 carries no first aid kit, and firing Open crate as the action menu does puts one first aid kit in p1's inventory", "start", repeat=True)
+def us083_items_hold(ctx):
+    d = ded(ctx)
+    it = d["items"]
+    b = it["before"]
+    assert b[0] == 1, f"p1 sees {b[0]} skdfx_Crate within 10 m: {b}"
+    _, dist, rel, ids, radius, kits = b
+    assert 1.5 <= dist <= 2.5, f"item 1: the crate stands {dist:.2f} m from p1, not 2 m"
+    assert rel <= 30 or rel >= 330, f"item 1: the crate is {rel:.0f} degrees off p1's facing, not in front"
+    assert len(ids) == 1, f"item 2: the crate carries {len(ids)} actions titled Open crate on p1: {ids}"
+    assert dist < radius, f"item 2: p1 stands {dist:.2f} m from the crate, outside the action's radius {radius}"
+    assert kits == 0, f"item 3: p1 carries {kits} first aid kits before opening the crate"
+    assert it["kits"] and it["kits"][-1] == 1, (
+        f"item 3: after firing Open crate p1 carries first aid kits {it['kits']} (polled about every 0.5 s)")
 
 
 # ================================================================ US-084
