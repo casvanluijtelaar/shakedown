@@ -43,6 +43,7 @@ A project with no mod declares `mods = []` in its setup and no `[mods.*]` table;
 | `slow_step` | no, default 10 | Seconds a step may take before the result file and the run's lines flag it `slow`, a number above 0 such as `15` or `2.5` ([Every setup, repeats and slow steps](every-setup-and-repeats.md#slow-steps-and-slow-checks)). |
 | `mods.<name>.path` | yes, for each mod | The mod's folder, such as a Workshop folder or a `@mod` folder. |
 | `mods.<name>.patch` | no | A `CfgPatches` class of the mod; the result file records its `versionStr` as the game loaded it. |
+| `mods.<name>.version` | no, needs `patch` | The `versionStr` of `patch` every machine must load, as the exact string the result file records. A start in which a machine loaded another version fails before any check runs ([When a start is refused or fails](starting-and-failed-starts.md#a-mod-in-another-version)). Without it any version is taken. |
 | `mods.<name>.source` | no | The folder of your own files of the mod, the one holding its addon folders, which `reload` watches ([Reloading](reloading.md)). |
 | `mods.<name>.prefix` | with `source` | The game path of `source`, such as `'z\agh\addons'`. |
 | `mods.<name>.rebuild` | no | A command line that makes the build the game loads from your files, such as `hemtt build`. A `game-restart` reload runs it with `cmd /C` in the project folder, after every game process has ended and before any starts again, and a `mission-restart` reload once no game process holds a changed file, while the game still holds the mod's PBOs, so a rebuild that serves both writes only the loose files that changed ([Reloading](reloading.md#setting-a-mod-up-for-reload)); it must end within 120 s with exit code 0. It is read fresh at each reload. |
@@ -69,6 +70,12 @@ A file that names the check folder with `checks` is refused the same way, as an 
 
 ```
 shakedown.toml, line 2: unknown field `checks`, expected one of `game`, `tests`, `lib`, `base_port`, `slow_step`, `mods`, `setups`. Fix the key as contract/cli.md describes the project file.
+```
+
+A `version` without a `patch` is refused the same way, since the version is that class's `versionStr`:
+
+```
+shakedown.toml, line 8: mods.ace.patch is required with version: the version is the versionStr of that CfgPatches class.
 ```
 
 A setup name the file does not declare is refused with the setups it does declare.

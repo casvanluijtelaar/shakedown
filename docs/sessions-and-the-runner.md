@@ -56,7 +56,7 @@ Every session folder, `.shakedown\sessions\<session id>\` in the project, gets a
 }
 ```
 
-`reason` is `runner-died` for a session the recovery ended, and `null` for one stopped with `session stop`; `state` is `failed` for a start that failed.
+`reason` is `runner-died` for a session the recovery ended, and `null` for one stopped with `session stop` while it was `ready`. For a start that failed, `state` is `failed` and `reason` is the reason `session start` printed and `status` showed, with its `message`, `machine` and `rpt_tail`, redacted; a session that broke and was then stopped keeps its reason the same way ([When a start is refused or fails](starting-and-failed-starts.md#the-reason-stays-in-sessionjson)).
 
 ## A command cannot reach the runner
 
