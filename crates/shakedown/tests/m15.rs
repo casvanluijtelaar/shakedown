@@ -188,7 +188,7 @@ fn us_083_us_084_man_01_run_04_a_hand_over_keeps_the_session_for_the_manual_test
     assert_eq!(screen[0], true, "US-083 2: {screen}");
     let (x, y) = (screen[1][0].as_f64().unwrap(), screen[1][1].as_f64().unwrap());
     assert!(
-        (x - 100.0).abs() < 0.5 && (y - 100.0).abs() < 0.5,
+        (x - 130.0).abs() < 0.5 && (y - 130.0).abs() < 0.5,
         "US-083 2: p1 at {screen}"
     );
 
@@ -204,8 +204,8 @@ fn us_083_us_084_man_01_run_04_a_hand_over_keeps_the_session_for_the_manual_test
     assert_eq!(code, 0, "{out} {err}");
     for want in [
         "Handed over to p1",
-        "1. An ammo crate stands 3 m in front of you.",
-        "3. Opening it puts a first aid kit in your inventory.",
+        "1. An ammo crate stands 2 m in front of you.",
+        "3. You carry no first aid kit; opening the crate puts one in your inventory.",
         "shakedown session stop",
     ] {
         assert!(out.contains(want), "US-083 1: {want:?} in\n{out}");
@@ -221,4 +221,108 @@ fn us_083_us_084_man_01_run_04_a_hand_over_keeps_the_session_for_the_manual_test
         status["session"].is_null(),
         "US-083 4: session stop ended it: {status:#}"
     );
+}
+
+/// Reads `code` on p1 through `exec` and returns its value.
+fn on_p1(dir: &Path, code: &str) -> Value {
+    let (exit, r, err) = cmd(dir, &["exec", "--machine", "p1", "--code", code]);
+    assert_eq!(exit, 0, "{r} {err}");
+    r["results"]["p1"]["value"].clone()
+}
+
+/// Where the box lies on p1's screen against the game's default HUD layout, in screen units:
+/// [the box [x, y, w, h], the safe zone [x, y, w, h], the boxes of the action menu, the
+/// communication menu, the vehicle info, the weapon info, the stance, the stamina bar and the
+/// hints as the layout macros of the game's `a3\ui_f\hpp\defineCommonGrids.inc` give them].
+const LAYOUT: &str = "private _c = uiNamespace getVariable ['skd_handOver', controlNull]; \
+private _gw = ((safeZoneW / safeZoneH) min 1.2) / 40; \
+private _gh = (((safeZoneW / safeZoneH) min 1.2) / 1.2) / 25; \
+private _r = safeZoneX + safeZoneW; \
+[ctrlPosition _c, [safeZoneX, safeZoneY, safeZoneW, safeZoneH], [\
+ ['menu', safeZoneX + 1.5 * _gw, safeZoneY + 5 * _gh, 4.5 * _gw, 13.5 * _gh], \
+ ['comm', safeZoneX, safeZoneY + 5 * _gh, 1.5 * _gw, 15 * _gh], \
+ ['vehicle', safeZoneX + 0.5 * _gw, safeZoneY + 0.5 * _gh, 10 * _gw, 4.5 * _gh], \
+ ['weapon', _r - 14.3 * _gw, safeZoneY + 0.5 * _gh, 10 * _gw, 4.5 * _gh], \
+ ['stance', _r - 4.2 * _gw, safeZoneY + 0.5 * _gh, 3.7 * _gw, 3.7 * _gh], \
+ ['stamina', _r - 14.3 * _gw, safeZoneY + 4.05 * _gh, 10 * _gw, 1 * _gh], \
+ ['hint', _r - 13 * _gw, safeZoneY + 6 * _gh, 12 * _gw, 8 * _gh]]]";
+
+/// The crate as p1 sees it: [p1 knows it, its action titles on p1, p1's distance to it, its open
+/// flag, p1's first aid kits, the crate is local to p1, the other players within 1.5 m of p1].
+const CRATE: &str = "private _crate = (nearestObjects [player, ['skdfx_Crate'], 20]) param [0, objNull]; \
+[!isNull _crate, (actionIDs _crate) apply { (_crate actionParams _x) select 0 }, player distance _crate, \
+ _crate getVariable ['skdfx_open', false], { _x == 'FirstAidKit' } count items player, local _crate, \
+ count (allPlayers select { _x != player && { (_x distance player) < 1.5 } })]";
+
+/// Fires the crate's action on p1 as the action menu does.
+const FIRE: &str = "private _crate = (nearestObjects [player, ['skdfx_Crate'], 20]) param [0, objNull]; \
+private _ids = actionIDs _crate; \
+private _id = _ids select (_ids findIf { ((_crate actionParams _x) select 0) isEqualTo 'Open crate' }); \
+player action ['User', _crate, _id]; _id";
+
+/// `US-083` 2 with `m15-1` and `m15-2`: after the owner's command, the box on p1's screen lies in
+/// the safe zone and in columns no element of the default HUD uses, so it covers none of them
+/// whatever its height; on p1 the crate carries `Open crate` with p1 inside its 3 m radius, no
+/// other player stands on p1, p1 carries no first aid kit, and firing the action as the action menu
+/// does puts one in p1's inventory.
+#[test]
+#[ignore = "starts a dedicated session of Arma 3"]
+fn us_083_m15_1_m15_2_man_01_the_box_leaves_the_action_menu_free_and_p1_opens_the_crate() {
+    steam_runs();
+    let dir = project("look", &[]);
+    let stop = Stop(dir.clone());
+    let (code, run, err) = cmd(&dir, &["run", "--setup", "dedicated", "handover/US-083-crate"]);
+    assert_eq!(code, 0, "{run} {err}");
+    assert_eq!(run["handed_over"]["machine"], "p1", "US-083 1: {run:#}");
+
+    // m15-1: the box against the safe zone and the default HUD layout.
+    let l = on_p1(&dir, LAYOUT);
+    println!("box, safe zone and layout on p1: {l}");
+    let f = |v: &Value, i: usize| v[i].as_f64().unwrap();
+    let (bx, by, bw) = (f(&l[0], 0), f(&l[0], 1), f(&l[0], 2));
+    let (sx, sy, sw) = (f(&l[1], 0), f(&l[1], 1), f(&l[1], 2));
+    assert!(
+        bw > 0.0 && bx >= sx && bx + bw <= sx + sw && by >= sy,
+        "m15-1: the box {} lies in the safe zone {}",
+        l[0],
+        l[1]
+    );
+    for hud in l[2].as_array().unwrap() {
+        let (hx, hw) = (f(hud, 1), f(hud, 3));
+        assert!(
+            bx >= hx + hw || bx + bw <= hx,
+            "m15-1: the box {} shares columns with the {} {hud}, so it covers it at some height",
+            l[0],
+            hud[0]
+        );
+    }
+
+    // m15-2: the crate and its action, as p1 sees them.
+    let c = on_p1(&dir, CRATE);
+    println!("the crate on p1: {c}");
+    assert_eq!(c[0], true, "m15-2: p1 knows the crate: {c}");
+    assert!(
+        c[1].as_array().unwrap().iter().any(|t| t == "Open crate"),
+        "m15-2: the action is on p1's side: {c}"
+    );
+    assert!(f(&c, 2) < 3.0, "m15-2: p1 is within the action's 3 m radius: {c}");
+    assert_eq!(c[3], false, "m15-2: the crate is not open, so the condition holds: {c}");
+    assert_eq!(c[4], 0, "m15-2: p1 carries no first aid kit before: {c}");
+    assert_eq!(c[6], 0, "m15-2: no other player stands on p1: {c}");
+
+    // Fire the action as the action menu does, and poll p1's inventory for the kit.
+    on_p1(&dir, FIRE);
+    let mut seen = Value::Null;
+    for _ in 0..40 {
+        seen = on_p1(&dir, CRATE);
+        if seen[4] == 1 && seen[3] == true {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
+    assert!(
+        seen[4] == 1 && seen[3] == true,
+        "m15-2: opening the crate gave p1 one first aid kit: {seen}"
+    );
+    drop(stop);
 }
