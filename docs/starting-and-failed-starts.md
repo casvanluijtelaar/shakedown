@@ -44,19 +44,19 @@ version = "3.21.2"
 
 ```
 $ shakedown session start --setup sp-fixture
-Session s-20261119-221502 failed: a mod was loaded in another version than the project names: mod fixture on p1 is version 0.0.6, and shakedown.toml wants version 9.9.9. Install the version wanted, or set mods.<name>.version in shakedown.toml to the version found. Every process it started was stopped.
+Session s-20261119-221502 failed: a mod was loaded in another version than the project names: mod fixture on p1 is version 0.0.6, and shakedown.toml wants version 9.9.9. Install the version wanted, or set mods.<name>.version in shakedown.toml to the version found. Every process it started was stopped. The last lines of p1's RPT:
+...
 ```
 
 Shakedown does not download or pin a Workshop version: it only refuses a version you did not name. Without the key any version is taken, and the result file still records the one each machine loaded (`INT-STM-03`).
 
 ## A client that hangs
 
-A start has a ceiling, 180 s from the first launch unless the setup's `start_timeout` says otherwise (`SES-04`). A process that exits during the start fails it at once. A process that runs but never gets anywhere, hung or suspended, fails it at the ceiling: the reason names the machine that got least far, a machine still `launched`, whose extension never connected, before one that did, and lists every machine that was not `ready` with its state, followed by that machine's last 20 RPT lines. Every process the start launched is stopped.
+A start has a ceiling, 180 s from the first launch unless the setup's `start_timeout` says otherwise (`SES-04`). A process that exits during the start fails it at once. A process that runs but never gets anywhere, hung or suspended, fails it at the ceiling: the reason names the machine that got least far, a machine still `launched`, whose extension never connected, before one that did, and lists every machine that was not `ready` with its state, followed by that machine's last 20 RPT lines, or, for a process that wrote none, such as one suspended at its launch, a line saying it wrote no RPT line. Every process the start launched is stopped.
 
 ```
 $ shakedown session start --setup hung
-Session s-20261119-223010 failed: the session was not ready within the start ceiling of 90 s: p2 was launched. Every process it started was stopped. The last lines of p2's RPT:
-...
+Session s-20261119-223010 failed: the session was not ready within the start ceiling of 90 s: p2 was launched. Every process it started was stopped. p2 wrote no RPT line.
 ```
 
 There is no earlier ceiling per machine: the time a client takes from its launch to its extension's connect is too close to the start ceiling for one to help (`SES-10`, research [32-spike-connect-times.md](../research/32-spike-connect-times.md)). A start that hangs costs its whole `start_timeout`; a setup that starts quickly can set a shorter one, with room for the slowest start you have seen.
@@ -82,10 +82,12 @@ So a start that failed because the game could not read one of its own files (`Er
 
 ## A client sent to another server
 
-Every server the framework starts is the session's own: `loopback = 1`, BattlEye off, named `shakedown <session id>`, and every client is told to connect to it alone (`SEC-05`). The one way left to reach another server is code a check sends, such as `connectToServer`. A client that does that leaves its mission, and the runner gives it 90 s without a heartbeat to start its next one instead of the usual 10 s; when its agent starts in a mission whose server has another name, the runner ends that client's process at once. The check ends `fail` / `check-error`, as the author's mistake:
+Every server the framework starts is the session's own: `loopback = 1`, BattlEye off, named `shakedown <session id>`, and every client is told to connect to it alone (`SEC-05`). The one way left to reach another server is code a check sends: `connectToServer` acts only outside a mission, so such code first takes the client out of its mission, as the multiplayer pause menu's Abort does (research [33-client-to-another-server.md](../research/33-client-to-another-server.md)). A client that leaves its mission and the runner gives it 90 s without a heartbeat to start its next one instead of the usual 10 s; when its agent starts in a mission whose server has another name, the runner ends that client's process at once. The check ends `fail` / `check-error`, as the author's mistake:
+
+The reason's message reads:
 
 ```
-FAIL US-088-other-server (12.4 s) check-error: p2 joined the server "other", which is not the session's own ("shakedown s-20261119-224400"), so the runner ended its process: a client may join only the session's own server. The session is broken: restart its game with `shakedown reload`, or stop it with `shakedown session stop`.
+p2 joined the server "other", which is not the session's own ("shakedown s-20261119-224400"), so the runner ended its process: a client may join only the session's own server. The session is broken: restart its game with `shakedown reload`, or stop it with `shakedown session stop`.
 ```
 
 The session is `broken` with that reason; in the result file the machine is `lost` with reason `foreign-server`. `shakedown reload` restarts the game and brings every machine back ([Outcomes and a broken session](outcomes-and-broken-sessions.md)).

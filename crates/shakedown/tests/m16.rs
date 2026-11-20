@@ -390,13 +390,19 @@ fn other_server(session_folder: &Path, port: u16) -> OtherServer {
 /// server ends `p2`'s process once its agent starts there, the check ends `fail` / `check-error`
 /// saying a client may join only the session's own server, the session is `broken` with that
 /// reason, and a `game-restart` reload brings every machine back.
+///
+/// The check's code aborts `p2` to the main menu through the multiplayer pause menu and joins the
+/// other server from there, since `connectToServer` does nothing inside a mission (research
+/// `33-client-to-another-server.md`). Without the owner connected through Shadow PC, so that the
+/// client windows render, the abort did nothing on the test machine and the test fails at the
+/// wait; it is an owner look.
 #[test]
 #[ignore]
 fn us_088_sec_05_a_client_sent_to_another_server_is_ended() {
     steam_runs();
     let port = 2432u16;
     let check = format!(
-        "// @check US-088 p2 is sent to another server\n// @setups other\n// @timeout 200\n[\"p2\", {{ connectToServer [\"127.0.0.1\", {port}, \"\"]; true }}] call skd_fnc_on;\n[\"server\", {{ false }}, \"p2 to be ended\", 180] call skd_fnc_waitUntil;\n"
+        "// @check US-088 p2 is sent to another server\n// @setups other\n// @timeout 200\n[\"p2\", {{ with uiNamespace do {{ [_this select 0] spawn {{ params [\"_port\"]; private _t = diag_tickTime; waitUntil {{ getClientStateNumber < 9 || {{ diag_tickTime - _t > 60 }} }}; connectToServer [\"127.0.0.1\", _port, \"\"]; }}; }}; createDialog \"RscDisplayMPInterrupt\"; ctrlActivate ((findDisplay 49) displayCtrl 104); true }}, [{port}]] call skd_fnc_on;\n[\"server\", {{ false }}, \"p2 to be ended\", 180] call skd_fnc_waitUntil;\n"
     );
     let dir = project(
         "other",
