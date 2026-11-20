@@ -307,13 +307,14 @@ fn us_087_ses_10_a_hung_client_fails_the_start_and_the_reason_is_kept() {
 /// A second dedicated server outside the session, on loopback, named `other`, with a copy of the
 /// session's mission; stopped by its id and its mission copy removed when dropped.
 struct OtherServer {
-    pid: u32,
+    child: std::process::Child,
     mission: PathBuf,
 }
 
 impl Drop for OtherServer {
     fn drop(&mut self) {
-        kill(self.pid);
+        let _ = self.child.kill();
+        let _ = self.child.wait();
         let _ = std::fs::remove_dir_all(&self.mission);
     }
 }
@@ -339,9 +340,7 @@ fn other_server(session_folder: &Path, port: u16) -> OtherServer {
     let cfg = profile.join("server.cfg");
     std::fs::write(
         &cfg,
-        format!(
-            "hostname = \"other\";\nloopback = 1;\nBattlEye = 0;\nverifySignatures = 0;\nkickDuplicate = 0;\nallowedFilePatching = 2;\npersistent = 1;\nmaxPlayers = 4;\nclass Missions\n{{\n    class m\n    {{\n        template = \"skd_m16_other.VR\";\n        difficulty = \"Regular\";\n    }};\n}};\n"
-        ),
+                    "hostname = \"other\";\nloopback = 1;\nBattlEye = 0;\nverifySignatures = 0;\nkickDuplicate = 0;\nallowedFilePatching = 2;\npersistent = 1;\nmaxPlayers = 4;\nclass Missions\n{{\n    class m\n    {{\n        template = \"skd_m16_other.VR\";\n        difficulty = \"Regular\";\n    }};\n}};\n",
     )
     .unwrap();
     let child = Command::new(game.join("arma3server_x64.exe"))
@@ -362,10 +361,7 @@ fn other_server(session_folder: &Path, port: u16) -> OtherServer {
         .stderr(std::process::Stdio::null())
         .spawn()
         .unwrap();
-    let server = OtherServer {
-        pid: child.id(),
-        mission,
-    };
+    let server = OtherServer { child, mission };
     // Up once its RPT says the mission runs, within 120 s.
     for _ in 0..240 {
         let up = std::fs::read_dir(&profile)
