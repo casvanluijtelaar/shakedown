@@ -24,7 +24,7 @@ slow_step = 10         # default 10 seconds: a step that takes longer is flagged
 [mods.cba]
 path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997'
 patch = "cba_main"     # optional: the CfgPatches class whose version the result records
-version = "3.19.0"     # optional, with patch: the versionStr every machine must load (ENV-01)
+version = "3.19.0.260808"  # optional, with patch: the exact versionStr every machine must load (ENV-01)
 
 [mods.agh]
 path = '.hemttout\build'   # the build the game loads, made from the developer's files

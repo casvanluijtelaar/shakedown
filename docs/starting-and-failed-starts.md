@@ -37,7 +37,7 @@ Workshop mods update themselves, and a check that passed against one version of 
 [mods.ace]
 path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\463939057'
 patch = "ace_main"
-version = "3.21.2"
+version = "3.21.2.113"
 ```
 
 `version` is the `versionStr` of the `patch` class, the exact string the result file records under `session.machines[].mods` for that mod, so the way to find it is to run once without the key and copy it from there. Once every machine is up, the start asks each for the versions it loaded; a machine that loaded another version, or does not load the class at all, fails the start before any check runs, and every process is stopped (`ENV-01`):
