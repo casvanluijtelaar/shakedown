@@ -340,7 +340,7 @@ fn other_server(session_folder: &Path, port: u16) -> OtherServer {
     let cfg = profile.join("server.cfg");
     std::fs::write(
         &cfg,
-                    "hostname = \"other\";\nloopback = 1;\nBattlEye = 0;\nverifySignatures = 0;\nkickDuplicate = 0;\nallowedFilePatching = 2;\npersistent = 1;\nmaxPlayers = 4;\nclass Missions\n{{\n    class m\n    {{\n        template = \"skd_m16_other.VR\";\n        difficulty = \"Regular\";\n    }};\n}};\n",
+        "hostname = \"other\";\nloopback = 1;\nBattlEye = 0;\nverifySignatures = 0;\nkickDuplicate = 0;\nallowedFilePatching = 2;\npersistent = 1;\nmaxPlayers = 4;\nclass Missions\n{\n    class m\n    {\n        template = \"skd_m16_other.VR\";\n        difficulty = \"Regular\";\n    };\n};\n",
     )
     .unwrap();
     let child = Command::new(game.join("arma3server_x64.exe"))
