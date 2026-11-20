@@ -340,7 +340,7 @@ fn other_server(session_folder: &Path, port: u16) -> OtherServer {
     std::fs::write(
         &cfg,
         format!(
-            "hostname = \"other\";\nloopback = 1;\nBattlEye = 0;\nverifySignatures = 0;\nkickDuplicate = 0;\nallowedFilePatching = 2;\npersistent = 1;\nmaxPlayers = 4;\nclass Missions\n{{\n    class m\n    {{\n        template = \"skd_m16_other\";\n        difficulty = \"Regular\";\n    }};\n}};\n"
+            "hostname = \"other\";\nloopback = 1;\nBattlEye = 0;\nverifySignatures = 0;\nkickDuplicate = 0;\nallowedFilePatching = 2;\npersistent = 1;\nmaxPlayers = 4;\nclass Missions\n{{\n    class m\n    {{\n        template = \"skd_m16_other.VR\";\n        difficulty = \"Regular\";\n    }};\n}};\n"
         ),
     )
     .unwrap();
@@ -358,6 +358,8 @@ fn other_server(session_folder: &Path, port: u16) -> OtherServer {
             "-filePatching".into(),
             "-autoInit".into(),
         ])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
         .unwrap();
     let server = OtherServer {
@@ -374,7 +376,7 @@ fn other_server(session_folder: &Path, port: u16) -> OtherServer {
             .any(|e| {
                 std::fs::read_to_string(e.path())
                     .unwrap_or_default()
-                    .contains("Game started")
+                    .contains("Mission id:")
             });
         if up {
             return server;
@@ -394,7 +396,7 @@ fn us_088_sec_05_a_client_sent_to_another_server_is_ended() {
     steam_runs();
     let port = 2432u16;
     let check = format!(
-        "// @check US-088 p2 is sent to another server\n// @setups other\n// @timeout 200\n[\"p2\", {{ connectToServer [\"127.0.0.1\", {port}, \"\"]; true }}] call skd_fnc_on;\n[\"server\", {{ false }}, [], 180] call skd_fnc_waitUntil;\n"
+        "// @check US-088 p2 is sent to another server\n// @setups other\n// @timeout 200\n[\"p2\", {{ connectToServer [\"127.0.0.1\", {port}, \"\"]; true }}] call skd_fnc_on;\n[\"server\", {{ false }}, \"p2 to be ended\", 180] call skd_fnc_waitUntil;\n"
     );
     let dir = project(
         "other",
