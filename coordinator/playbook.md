@@ -188,6 +188,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 ## Knowledge about the tooling
 
+- 2026-11-19: In the M16 build a second dedicated server started outside the framework printed the cached Steam ID once to the developer's tool output; it reached no file, commit or report, and the owner is told. A round that starts a server outside the framework discards its output.
 - 2026-11-19: The M15 close round opened a coordinator commit's diff in `coordinator/playbook.md` to confirm the owner's demo. A close round's prompt gives the owner's words and the date, and says not to open the playbook or its commits; the coordinator's word is the evidence.
 - 2026-11-19: CI's Rust job on ubuntu-latest had failed on `main` since M12 (`library::tests::api_06_below_and_same_compare_paths_by_their_text`, a test of Windows paths). Read `gh run list` after each push, and give a red gate to a developer round that starts no game.
 - 2026-11-16: A run folder's `audit.jsonl` holds the code each check sent, so a developer who opens a tester's run folder reads part of the suite's source. The `m12-1` fix round did so while chasing the failure (it reported it and says it did not use it). Tell every developer: do not open the tester's scratch folders or acceptance run folders; reproduce a failure in your own project instead.
