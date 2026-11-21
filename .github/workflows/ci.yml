@@ -37,7 +37,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # The action reads GITHUB_TOKEN from the environment to list HEMTT's releases with an
+      # authenticated request, which keeps it clear of the unauthenticated API rate limit.
       - uses: arma-actions/hemtt@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           version: v1.23.1
       - run: hemtt check
