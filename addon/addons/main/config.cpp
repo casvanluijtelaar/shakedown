@@ -49,6 +49,7 @@ class CfgFunctions {
             class runPoll {};
             class unitOf {};
             class useActionLocal {};
+            class useAceActionLocal {};
             class pressKeyLocal {};
             class reset {};
             class context {};
@@ -88,6 +89,7 @@ class CfgFunctions {
             class setDate {};
             class setWeather {};
             class useAction {};
+            class useAceAction {};
             class pressKey {};
             class join {};
             class leave {};

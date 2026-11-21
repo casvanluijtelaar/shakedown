@@ -43,3 +43,19 @@ mode = "dedicated"
 clients = 2
 headless = 1
 mods = ["cba", "fixture", "fixture-cba"]
+
+# ACE3 from the Steam Workshop, for ACE interaction (ACT-04); its patch key puts the version each
+# machine loaded in the result file (US-089).
+[mods.ace]
+path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\463939057'
+patch = "ace_main"
+
+[setups.sp-ace]
+mode = "singleplayer"
+mods = ["cba", "ace", "fixture", "fixture-cba"]
+
+[setups.dedicated-ace]
+mode = "dedicated"
+clients = 2
+headless = 1
+mods = ["cba", "ace", "fixture", "fixture-cba"]

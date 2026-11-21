@@ -97,6 +97,8 @@ Registered after the mission starts on every machine with an interface where ACE
 | `["ACE_SelfActions", "skdfx_aceSignal"]` | the class `CAManBase` with its kinds, the player's own menu | `Fixture ACE signal` | always true | adds 1 to `skdfx_aceSignals` on the player's unit, public |
 | `["ACE_SelfActions", "skdfx_aceNever"]` | the class `CAManBase` with its kinds, the player's own menu | `Fixture ACE never` | always false | adds 1 to `skdfx_aceNever` on the player's unit, public; it never runs through ACE |
 
+With ACE medical loaded, ACE turns the `FirstAidKit` the crate gives into its own medical items, so with ACE a check reads an opened crate from `skdfx_open` and `skdfx_openCount`, not from the caller's items.
+
 `skdfx_aceSignals` and `skdfx_aceNever` start at `0` on a unit that has never used the action, and are read with `unit getVariable ["skdfx_aceSignals", 0]`.
 
 ### A reload target, a final CBA function (`RLD-02`)

@@ -9,8 +9,8 @@ class CfgPatches {
         requiredVersion = 2.18;
         requiredAddons[] = {"cba_main", "skdfx_main"};
         version = 0.0;
-        versionStr = "0.0.4";
-        versionAr[] = {0, 0, 4};
+        versionStr = "0.0.5";
+        versionAr[] = {0, 0, 5};
     };
 };
 
