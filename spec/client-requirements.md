@@ -148,6 +148,12 @@ A working MVP early beats a careful product late. The plan puts a usable framewo
 | CR-60 | Accept control only from the local machine, with a token per run. | Everyone | must |
 | CR-61 | Refuse to run with BattlEye on or against a public server. | Everyone | should |
 
+### Distribution
+
+| ID | Requirement | For | Priority |
+|---|---|---|---|
+| CR-70 | Install, upgrade and remove a released version of the framework on Windows without building it or cloning its source. | Test author, mod developer | should |
+
 ## 6. Key scenarios
 
 ### When things go as planned
@@ -179,7 +185,7 @@ A working MVP early beats a careful product late. The plan puts a usable framewo
 - The game's EULA and Bohemia Interactive's rules for tools and mods apply.
 - Checks must not depend on the mod's source. The framework may load the mod and call its public functions, events and actions.
 - The framework is for non-commercial mod testing only. The Arma 3 EULA allows the game's use for entertainment and recreation, and Bohemia's tools license names testing non-commercial content as its purpose.
-- The project is private. It may be open-sourced later, so code copied from another project must carry a license that allows that. Reading any project, whatever its license or lack of one, and writing our own implementation of its ideas is allowed.
+- The project is open source under GPL-2.0-or-later, the licence family of HEMTT, CBA and ACE3. Code copied from another project must carry a license compatible with it. Reading any project, whatever its license or lack of one, and writing our own implementation of its ideas is allowed. The licence covers the framework's code; the use of the game stays bound by the constraint above.
 - The project is named Shakedown, after a ship's first test voyage. Its name contains no Bohemia Interactive trademark; "Arma 3" appears only to say which game it tests. The repository carries the name before anything is published.
 - The extension is written in Rust with `arma-rs`, the library Arma extensions are commonly built with.
 - Every dependency version is looked up at install time, not recalled.

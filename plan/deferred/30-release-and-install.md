@@ -3,8 +3,8 @@ type: Deferred
 title: "Shakedown installs only by building it from this repository"
 description: "tools/install.py builds the framework with cargo, HEMTT and Python, so a test author needs the whole toolchain and a clone to install it; a release is to ship as a zip on GitHub Releases, installed by winget, by a one-line script or by hand, as HEMTT does."
 id: DEF-30
-state: open
-milestone: null
+state: planned
+milestone: M19
 status: stable
 ---
 
@@ -16,7 +16,7 @@ The only way to install Shakedown is `python tools/install.py` in a clone of thi
 
 ## Current behaviour
 
-`tools/install.py` runs `cargo build --release` and `hemtt build` for the addon and the fixture mods, and assembles the install layout of `spec/07-tech-stack.md` into `target\shakedown\`: `shakedown.exe`, `@shakedown\` with `addons\shakedown_main.pbo` and `shakedown_x64.dll`, and `fixtures\`. The binary finds `@shakedown` next to itself. The user puts the folder on `PATH` by hand. Upgrading means pulling and running the script again. Nothing is published: the repository is private, it has no `LICENSE` file, and `.github/workflows/ci.yml` runs only the gates that need no game.
+`tools/install.py` runs `cargo build --release` and `hemtt build` for the addon and the fixture mods, and assembles the install layout of `spec/07-tech-stack.md` into `target\shakedown\`: `shakedown.exe`, `@shakedown\` with `addons\shakedown_main.pbo` and `shakedown_x64.dll`, and `fixtures\`. The binary finds `@shakedown` next to itself. The user puts the folder on `PATH` by hand. Upgrading means pulling and running the script again. Nothing is released: the repository on GitHub is public but has no `LICENSE` file, and `.github/workflows/ci.yml` runs only the gates that need no game.
 
 ## The gap
 
@@ -42,12 +42,13 @@ Looked up on 2026-11-13.
 
 ## Recommendation
 
-The first. It is the route HEMTT takes, and the three ways in share one artifact: the release zip. Leave out the launcher until releases come often enough that a winget pull request per version is a burden. The release zip leaves out `fixtures\`: the fixture mods serve this repository's own tests, and `tools/install.py` keeps building them for that. `tools/install.py` stays as the install from source.
+The first, for Windows only, with the winget pull request opened by the release workflow (the owner's decision of 2026-11-21). It is the route HEMTT takes, and the three ways in share one artifact: the release zip. On macOS and Linux the binary stays built with cargo until a user asks for a download. Leave out the launcher until releases come often enough that a winget pull request per version is a burden. The release zip leaves out `fixtures\`: the fixture mods serve this repository's own tests, and `tools/install.py` keeps building them for that. `tools/install.py` stays as the install from source.
 
 Before the first release:
 
-- the repository is public, since winget, the script and a manual download all need a URL that needs no login;
-- the repository has a `LICENSE`, which the winget manifest requires and which `spec/client-requirements.md` section 7 already keeps open;
+- the repository is public, since winget, the script and a manual download all need a URL that needs no login; it is;
+- the repository has a `LICENSE`, which the winget manifest requires: GPL-2.0-or-later, the owner's choice of 2026-11-21, which `rmcp`'s Apache-2.0 allows through GPLv3 (research `34-release-and-licence.md`);
+- the first winget version is submitted by the owner, since the release workflow can only update a package that winget already lists;
 - the binaries are unsigned, as HEMTT's are, so Windows SmartScreen warns on the first run of a download. Code signing waits until users show it matters.
 
 The versions of every action and tool the workflow uses, and the winget manifest schema, are looked up when the work is done.
@@ -59,5 +60,4 @@ The versions of every action and tool the workflow uses, and the winget manifest
 3. On the same kind of machine, the PowerShell one-liner installs the latest release with the same result as winget, refuses a download whose hash does not match, and run again replaces the installed version.
 4. Unpacking the zip by hand into a folder on `PATH` gives the same result.
 5. After each of the three, `shakedown run --setup sp` on a project runs its checks, which shows the binary found `@shakedown\` next to itself.
-6. On macOS and Linux, `install.sh` installs a `shakedown` binary that serves `list`, `status`, `guide` and the MCP server's start (`NFR-PT-02`).
-7. `docs/install.md`, the root `README.md` and `spec/07-tech-stack.md` describe the three routes first and the install from source last.
+6. `docs/install.md`, the root `README.md` and `spec/07-tech-stack.md` describe the three routes first and the install from source last.

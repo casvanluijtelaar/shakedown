@@ -54,7 +54,8 @@ Each requirement has an ID of the form `NFR-<area>-nn` and says how it is measur
 
 - **NFR-LG-01** (must) The framework uses only documented engine interfaces: SQF, `callExtension` and its callback, start options and server configuration. It never hooks, patches or scans the game's memory or files (PRD section 7; research `20-licenses-and-rules.md`).
 - **NFR-LG-02** (must) Every game process runs from the one installed copy of the game, with BattlEye off, on the local machine only (PRD section 7).
-- **NFR-LG-03** (must) No code is copied from CBA, ACE3, HEMTT or any project without a license that allows this project to be open-sourced later. Code taken under such a license records its source and license in the file it lands in (PRD section 7).
+- **NFR-LG-03** (must) No code is copied from CBA, ACE3, HEMTT or any project without a license compatible with GPL-2.0-or-later. Code taken under such a license records its source and license in the file it lands in (PRD section 7).
+- **NFR-LG-04** (should) The framework is licensed GPL-2.0-or-later: the repository's `LICENSE` holds the GPL version 2 text with the grant of later versions, and every crate of the workspace declares `license = "GPL-2.0-or-later"`. Every release zip carries `LICENSE` and `THIRD-PARTY-LICENSES.txt`, which holds the licence text, copyright notice and any `NOTICE` file of every package compiled into `shakedown.exe` or `shakedown_x64.dll`. A dependency is added only under a licence that lets the binary it lands in be distributed under GPLv2 or GPLv3; `shakedown.exe` holds `rmcp`, Apache-2.0 only, and so is distributed under GPLv3 (PRD section 7, `CR-70`; research `34-release-and-licence.md`).
 
 ## Maintainability
 

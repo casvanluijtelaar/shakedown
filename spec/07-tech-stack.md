@@ -45,6 +45,7 @@ Versions were looked up on 2026-11-04 from crates.io, GitHub releases, `static.r
 | `regex` | 1.13.1 | The `logs` filter and the RPT error scan. | crates.io |
 | `jsonschema` | 0.60.2, tests only | Validating every result file the tests produce against `result.schema.json`. | crates.io |
 | SQF | the game's | The in-game agent and the check API. | - |
+| Komac | 2.17.2 (2026-11-03, looked up 2026-11-21) | Opening the pull request to `microsoft/winget-pkgs` for each release after the first (`DST-02`). | GitHub release |
 | Python 3 and PyYAML 6.0.3 | as in CI | The bundle check (`tools/okf_check.py`), and the install script (`tools/install.py`) that builds the binary, the extension and the addon and assembles the install folder. | `.github/workflows/ci.yml` |
 
 What is written in the project instead of taken as a dependency: the FNV-1a hash for file snapshots, the redaction of Steam IDs, the `-autotest` and `mission.sqm` generators, the newline-delimited JSON framing between the runner and the extension.
@@ -54,7 +55,7 @@ What is written in the project instead of taken as a dependency: the FNV-1a hash
 - **One binary, `shakedown.exe`**: `shakedown runner` (the long-lived runner), `shakedown mcp` (the stdio MCP server), and every other subcommand as a thin client that talks to the runner over loopback. One binary means one version: a client refuses a runner of another version and tells the user to stop it.
 - **The extension, `shakedown_x64.dll`**: a `cdylib` with `arma-rs`, the three calls of `INT-AR-03`, and a thread holding the connection to the runner.
 - **The addon, `@shakedown`**: one PBO, `shakedown_main.pbo`, with the in-game agent and the check API as `CfgFunctions` functions with the tag `skd` (`skd_fnc_*`), compiled without `compileFinal` so they can be recompiled in a running mission. The agent starts in `postInit`.
-- **Install layout**: one folder holding `shakedown.exe`, `@shakedown\` (with `addons\shakedown_main.pbo` and `shakedown_x64.dll`) and `fixtures\` (an installed copy of the fixture mods with the fixture's extension, [contract/fixture-mod.md](contract/fixture-mod.md)). The binary finds `@shakedown` next to itself. The project's `.mcp.json` calls `shakedown`, so the folder is on `PATH`. On macOS and Linux, where no session starts, the `shakedown` binary alone is the install: it serves `list`, `status`, `guide` and the MCP server's start with no game (`NFR-PT-02`), and is built with cargo without HEMTT.
+- **Install layout**: one folder holding `shakedown.exe`, `@shakedown\` (with `addons\shakedown_main.pbo` and `shakedown_x64.dll`) and `fixtures\` (an installed copy of the fixture mods with the fixture's extension, [contract/fixture-mod.md](contract/fixture-mod.md)). The binary finds `@shakedown` next to itself. The project's `.mcp.json` calls `shakedown`, so the folder is on `PATH`. A release's zip is this layout without `fixtures\`, with `LICENSE` and `THIRD-PARTY-LICENSES.txt` (`DST-01`). On macOS and Linux, where no session starts, the `shakedown` binary alone is the install: it serves `list`, `status`, `guide` and the MCP server's start with no game (`NFR-PT-02`), and is built with cargo without HEMTT.
 
 ## How each choice serves each principle
 
@@ -114,8 +115,11 @@ The framework developer owns these. The test developer opens none of them.
 | `fixtures/` | The source of the fixture mods `@skd_fixture` and `@skd_fixture_cba`, HEMTT projects whose behaviour is [contract/fixture-mod.md](contract/fixture-mod.md), and the crate of the fixture's extension `skdfx_x64.dll` (`FIX-01`), a member of the workspace. |
 | `e2e/` | The framework developer's end-to-end project: a `shakedown.toml` and SQF checks against the fixture mods, run on the test machine by the ignored tests in `crates/shakedown/tests/`. |
 | `tools/install.py` | Builds the framework and assembles the install folder, by default `target/shakedown/`. |
+| `tools/install.ps1` | The one-line install of a release (`DST-03`), published with each release. |
+| `.github/workflows/` | `ci.yml`, the gates below; `release.yml`, the release built from a tag (`DST-01`, `DST-02`). |
+| `LICENSE` | GPL-2.0-or-later (`NFR-LG-04`). |
 
-GitHub Actions runs, besides the bundle check: `cargo fmt --check`, `cargo clippy -- -D warnings` and `cargo test` on Windows and Linux, and `hemtt check` on the addon. Nothing there starts the game.
+GitHub Actions runs, besides the bundle check: `cargo fmt --check`, `cargo clippy -- -D warnings` and `cargo test` on Windows and Linux, and `hemtt check` on the addon. Nothing there starts the game. On a tag `v<version>` it builds the release on `windows-latest` with cargo and HEMTT and publishes it, and submits the version to winget with a classic token of the owner's in the repository secret `WINGET_TOKEN`, used by that job only.
 
 ## Contract files
 

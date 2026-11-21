@@ -15,10 +15,10 @@ This plan turns the specification and the user stories into milestones. Each mil
 | Phase | What it holds | Milestones |
 |---|---|---|
 | 1 | The MVP of PRD section 9 and nothing more: every `must` requirement and every user story, each story in exactly one milestone. It ends with release 0.1.0. | M0 to M10 |
-| 2 | The `should` requirements: `MCH-01` (`CR-04`), `ENV-01` (`CR-06`), `ACT-04` (`CR-12`), `ACT-05` with spike `SPK-11` (`CR-15`), `EVT-01` (`CR-21`), `HLT-01` (`CR-30`), `OUT-02` (`CR-32`), `RUN-07` (`CR-41`), `TIM-01` (`CR-42`), `MAN-01` (`CR-52`) and `SEC-05` (`CR-61`); and the deferred work the M10 port and the test rounds showed matters: late joiners (`DEF-04`), shared helper code (`DEF-27`, `API-06`), a reload without a game restart (`DEF-21`), a hung client and a failed start's reason (`DEF-28`, `DEF-29`, `SES-10`). It ends with release 0.2.0. | M11 to M18 |
+| 2 | The `should` requirements: `MCH-01` (`CR-04`), `ENV-01` (`CR-06`), `ACT-04` (`CR-12`), `ACT-05` with spike `SPK-11` (`CR-15`), `EVT-01` (`CR-21`), `HLT-01` (`CR-30`), `OUT-02` (`CR-32`), `RUN-07` (`CR-41`), `TIM-01` (`CR-42`), `MAN-01` (`CR-52`) and `SEC-05` (`CR-61`); and the deferred work the M10 port and the test rounds showed matters: late joiners (`DEF-04`), shared helper code (`DEF-27`, `API-06`), a reload without a game restart (`DEF-21`), a hung client and a failed start's reason (`DEF-28`, `DEF-29`, `SES-10`). It ends with the first public release, 0.2.0 (`CR-70`, `DEF-30`). | M11 to M19 |
 | 3 | The `could` requirements: `RSM-01` (`CR-07`), `CHT-01` (`CR-13`), `FLT-01` (`CR-14`), `SHT-01` (`CR-25`), `PRF-01` (`CR-26`), `OUT-03` (`CR-33`) and `OUT-04` (`CR-34`). | Unplanned; placed coarsely below |
 
-Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section 2, "How we build it"): the M10 port, its findings, the deferred work they raised, and what that repository's own plan asks of the framework next. Its stories are `US-066` to `US-094` (no `US-079`). Phase 3's stories are written when a milestone takes a `could` up.
+Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section 2, "How we build it"): the M10 port, its findings, the deferred work they raised, and what that repository's own plan asks of the framework next. Its stories are `US-066` to `US-098` (no `US-079`). Phase 3's stories are written when a milestone takes a `could` up.
 
 ## The order
 
@@ -43,6 +43,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | M16 | [A start that explains itself](milestones/m16.md) | Every gap of a start named at once, a wrong ACE version refused, a hung client failing the start at the start ceiling, its reason kept. |
 | M17 | [ACE interaction and real keys](milestones/m17.md) | `p1` gets on a rope through ACE interaction, and a real let-go key sent to `p1`'s window in the background takes it off. |
 | M18 | [The full health watch](milestones/m18.md) | A client starved of CPU makes its check `invalid` / `unhealthy` naming its frame rate. |
+| M19 | [The first public release](milestones/m19.md) | On a Windows machine with no build tools, `winget install` gives `shakedown` 0.2.0, which runs a passing check, and the one-line script refuses an upgrade while its runner runs. |
 
 ## The rules behind the order
 
@@ -59,10 +60,10 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 11. **Infrastructure in the first milestone that needs it, never ahead.** `skd_fnc_useAction` is built in M1 for its demo, while its stories land in M2; `status` comes in M2 for `US-004`; the `logs` command in M3 and its tool in M4; the session state `broken` in M6; each fixture behaviour with the first story or demo that uses it.
 12. **Spikes before the work that depends on them.** Each spike of `spec/06-open-questions.md` runs in the milestone that first needs it, before the work that depends on it, or ahead of it as rule 18 says, and its result goes into `research/` with the spec edited in place. Where its pass condition spans a setup or feature that comes later, that part runs in the milestone that brings it, which names it.
 13. **Each milestone ends on the test machine.** Its last exit criterion is the owner running its demo on the Windows test machine. Where a demo needs a look in the game, the session sets up the situation and tells the owner what to look for.
-14. **After the MVP, use orders the work.** Each place in phase 2 is grounded in the M10 report, its findings, a deferred concept, or what arma-grappling-hook's own plan needs next, never in taste. What blocks retiring arma-grappling-hook's PowerShell suite comes first (M11), then what the port had to copy or measure by hand (M12, M13), then the gaps against a PRD goal (M14 for G2), then what makes the owner's and the test rounds' work cheaper (M15, M16), then what arma-grappling-hook needs only in its later milestones (M17), and last what no use has shown yet (M18). A requirement whose use does not show moves down; one that use shows matters moves up.
+14. **After the MVP, use orders the work.** Each place in phase 2 is grounded in the M10 report, its findings, a deferred concept, or what arma-grappling-hook's own plan needs next, never in taste. What blocks retiring arma-grappling-hook's PowerShell suite comes first (M11), then what the port had to copy or measure by hand (M12, M13), then the gaps against a PRD goal (M14 for G2), then what makes the owner's and the test rounds' work cheaper (M15, M16), then what arma-grappling-hook needs only in its later milestones (M17), then what no use has shown yet (M18), and last the release that lets a test author install all of it without building it (M19), which changes none of the framework's code and so is specified beside M16 to M18. A requirement whose use does not show moves down; one that use shows matters moves up.
 15. **One failure story per two feature stories, after the MVP.** A phase 2 milestone has at least one story of another kind for every two `feature` stories it holds, rounded up, each for the way a feature of the milestone most plausibly fails (the owner's decision of 2026-11-13). `malicious intent` stories still wait for the `CR-13` work.
-16. **Deferred work rides with the milestone whose path it lies on.** A deferred concept is taken up by a phase 2 milestone when it is that milestone's demo (`DEF-04`), removes what the demo works around (`DEF-27`), or lies in the code the milestone changes (`DEF-28`, `DEF-29`). The rest stay deferred until use shows they matter.
-17. **A patch version per milestone, a minor version per phase.** As in phase 1, each milestone of a phase raises the patch version and the phase's last milestone raises the minor: M11 to M17 are 0.1.1 to 0.1.7, and M18 is release 0.2.0 (the owner's decision of 2026-11-13).
+16. **Deferred work rides with the milestone whose path it lies on.** A deferred concept is taken up by a phase 2 milestone when it is that milestone's demo (`DEF-04`, `DEF-30`), removes what the demo works around (`DEF-27`), or lies in the code the milestone changes (`DEF-28`, `DEF-29`). The rest stay deferred until use shows they matter.
+17. **A patch version per milestone, a minor version per phase.** As in phase 1, each milestone of a phase raises the patch version and the phase's last milestone raises the minor: M11 to M18 are 0.1.1 to 0.1.8, and M19 is release 0.2.0 (the owner's decisions of 2026-11-13 and 2026-11-21).
 18. **A spike that decides whether a milestone is built runs as a research round ahead of it.** `SPK-19` runs beside M11, so M14 is built against its result or closed without work before its place comes (the owner's decision of 2026-11-13).
 
 ## Where each spike lands
@@ -143,6 +144,7 @@ A feature story's failure stories land with it, except these, whose failure stor
 | `CR-42` | The time of every step | M13 | Recorded since M0; flagged in M13. |
 | `CR-52` | Hand over to a manual tester | M15 | |
 | `CR-61` | No BattlEye, no other server | M16 | By construction since M0 (`NFR-LG-02`); a check that sends a client elsewhere in M16. |
+| `CR-70` | Install a release without building it | M19 | Windows only, by winget, the one-line script or the zip by hand; macOS and Linux build with cargo (`NFR-PT-02`). |
 
 ## Where the could requirements go
 
@@ -154,9 +156,8 @@ Phase 3 is not planned yet; its stories are written when a milestone takes a req
 
 ## Deferred work
 
-Work found while planning that no story promises is in [deferred/](deferred/). Phase 2 takes up `DEF-04` (M11), `DEF-27` (M12), `DEF-21` (M14), and `DEF-29` (M16); `DEF-28` stays open after `SPK-20` failed in M16. The rest stay deferred:
+Work found while planning that no story promises is in [deferred/](deferred/). Phase 2 takes up `DEF-04` (M11), `DEF-27` (M12), `DEF-21` (M14), `DEF-29` (M16) and `DEF-30` (M19); `DEF-28` stays open after `SPK-20` failed in M16. The rest stay deferred:
 
 - `DEF-26` (`skd_fnc_pressKey` returns no handler value) waits for a second mod that needs it; M17's real keys read the pass-through from the game.
-- `DEF-30` (a release on GitHub with winget, a script or by hand) waits until the repository is public and has a licence, which is the owner's call; arma-grappling-hook installs from a clone.
 - `DEF-31` (restarting the server during a session) waits for a mod's story that needs it.
 - `DEF-24` (ceilings count a paused runner), `DEF-14`, `DEF-22`, `DEF-23` and `DEF-25` (the reset around a player's death and a stop), `DEF-01`, `DEF-02`, `DEF-03`, `DEF-07`, `DEF-08`, `DEF-11`, `DEF-13`, `DEF-15` to `DEF-20`: no run of the port met them; each moves into a milestone when use shows it matters.
