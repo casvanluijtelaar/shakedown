@@ -15,7 +15,7 @@ As a test author, I want each machine's frame rate and answer time at a glance, 
 
 ## Acceptance criteria
 
-1. `status` lists, for each machine of a dedicated session with two clients, its frame rate over the last 5 s and its last answer time beside the clocks of its last heartbeat.
+1. `status` lists, for each machine of a dedicated session with two clients, its frame rate over the last 5 s and its answer time, how long it takes to answer the runner's ping, beside the clocks of its last heartbeat.
 2. `status` through MCP gives the same fields.
 
 ## Next to

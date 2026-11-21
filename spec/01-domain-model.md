@@ -30,7 +30,7 @@ Run     1──1 ResultFile
 | **Project** | Root folder; the `shakedown.toml` file; the tests folder, which holds the check files (default `tests/`); the `.shakedown/` folder. | As long as the repository. |
 | **Setup** | Name; mode (`singleplayer` or `dedicated`); `clients` (game clients, 1 in singleplayer); `headless` (headless clients, 0 in singleplayer); `late` (game clients the session does not start, which a check makes join, 0 by default, `MCH-01`); `mods` (ordered list of mod folders); `world` (default `VR`). | In the project file. |
 | **Session** | Id (`s-` plus a UTC timestamp `YYYYMMDD-HHMMSS`); setup; token; state; session folder; game port; start time; the machines; the mission start count; the reset baseline. | From `session start` to `session stop`. |
-| **Machine** | Name (`server`, `pN`, `hcN`); kind (`server`, `client`, `headless`); start number (1 for the first start of that role in a session); process id and process start time; profile folder; state; last answer time; health flag and the clocks of its last heartbeat (`HLT-02`); loaded versions (game build, each mod's `CfgPatches` version). | One per start of a role. |
+| **Machine** | Name (`server`, `pN`, `hcN`); kind (`server`, `client`, `headless`); start number (1 for the first start of that role in a session); process id and process start time; profile folder; state; last answer time; health flag, frame rate, answer time and the clocks of its last heartbeat (`HLT-02`, `HLT-01`); loaded versions (game build, each mod's `CfgPatches` version). | One per start of a role. |
 | **Check** | Id; name; tags; setups (all when not given); timeout (default 120 s); reset mode (`in-place` or `mission`); source text. | In the tests folder. Read fresh for every execution. |
 | **Run** | Id (`r-` plus a UTC timestamp and a counter); session; selection (ids, tags); repeat count; state; start and end time; run folder. | From start to its result file. |
 | **CheckExecution** | Check id; repeat index; state; outcome; reason; start and end time; steps; script errors; evidence; reload state of the code it ran on. | Inside a run. |
@@ -126,7 +126,7 @@ pending ──▶ preparing ──▶ executing ──▶ done(outcome)
   - `reset-failed` - the reset before the check did not complete.
   - `reload-failed` - the reload the check needed did not complete.
   - `run-stopped` - the run was stopped by hand or by its runner ceiling.
-  - `unhealthy` - the clock watch (`HLT-02`) flagged a machine during the check: its mission time or its frame number stopped while it still answered.
+  - `unhealthy` - the health watch flagged a machine during the check while it still answered: its mission time or its frame number stopped (`HLT-02`), its frame rate fell under its floor, or its answers lagged (`HLT-01`); the reason names the machine and the measure.
   - `explicit` - the check called `skd_fnc_invalid`.
 - **DM-06** When causes for both `fail` and `invalid` are present in one check execution, `invalid` wins only if its cause came first in wall-clock time; otherwise the first cause decides. A machine lost after an assertion already failed does not hide the failure, and a failure that follows a lost machine is not trusted (`CR-31`, G3).
 - **DM-07** A wait that reaches its in-game ceiling is `fail`. A wait that reaches its runner ceiling with no answer from the machine is `invalid` with reason kind `machine-lost` (`CR-20`, `CR-31`; gap H5).
