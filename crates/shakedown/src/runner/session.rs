@@ -251,12 +251,22 @@ fn stopped_clock(beats: &[Beat]) -> Option<Crossed> {
     // It crossed by the first beat that shows it: the end of the first bad step of the run of bad
     // steps that ends at the newest beat. A cause in the check before that beat came first
     // (DM-06), so a failure is never hidden by a crossing the beats only show later.
-    let mut from = newest.utc.clone();
-    for pair in beats.windows(2).rev() {
+    let mut first = beats.len() - 1;
+    for (j, pair) in beats.windows(2).enumerate().rev() {
         if healthy(&pair[0], &pair[1]) {
             break;
         }
-        from = pair[1].utc.clone();
+        first = j + 1;
+    }
+    let from = beats[first].utc.clone();
+    // Mission time falls behind real time on a machine starved of frames, as the engine caps the
+    // simulation step of each frame: when the steps since it crossed ran under the floor, the
+    // frame rate is named, as the cause.
+    let since = &beats[first.saturating_sub(1)];
+    let span = newest.tick - since.tick;
+    if clock == "mission-time" && span > 0.0 && (newest.frame - since.frame) / span < FRAME_RATE_MIN {
+        let slow = (newest.frame - since.frame) / span;
+        return Some(("frame-rate", from, (mission, real), (slow, answer)));
     }
     Some((clock, from, (mission, real), (rate, answer)))
 }
@@ -2815,6 +2825,27 @@ mod tests {
             stopped_clock(&slow).unwrap().0,
             "frame-rate",
             "named before mission time"
+        );
+        // Mission time that fell behind over a window whose frame rate held its floor, while the
+        // steps since it crossed ran under it, names the frame rate; with frames at full rate,
+        // mission time.
+        let mut behind = beats(&[1.0, 1.0, 1.0, 1.0, 1.0, 0.1, 0.1, 0.1]);
+        for (i, b) in behind.iter_mut().enumerate() {
+            b.frame = 1000.0
+                + if i <= 5 {
+                    i as f64 * 60.0
+                } else {
+                    300.0 + (i - 5) as f64 * 3.0
+                };
+        }
+        let (measure, from, _, (rate, _)) = stopped_clock(&behind).unwrap();
+        assert_eq!((measure, from.as_str()), ("frame-rate", "2026-11-12T12:00:06.000Z"));
+        assert!(rate < FRAME_RATE_MIN, "{rate}");
+        assert_eq!(
+            stopped_clock(&beats(&[1.0, 1.0, 1.0, 1.0, 1.0, 0.1, 0.1, 0.1]))
+                .unwrap()
+                .0,
+            "mission-time"
         );
         let mut floor = beats(&[1.0; 8]);
         for (i, b) in floor.iter_mut().enumerate() {

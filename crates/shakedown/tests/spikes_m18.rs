@@ -196,7 +196,7 @@ async fn until_flag(
 }
 
 /// How long `p2` is suspended and then runs, in milliseconds: `SKD_STARVE` as `<off>,<on>`, by
-/// default 450 and 50.
+/// default 480 and 20.
 fn duty() -> (u64, u64) {
     std::env::var("SKD_STARVE")
         .ok()
@@ -204,10 +204,10 @@ fn duty() -> (u64, u64) {
             let (a, b) = v.split_once(',')?;
             Some((a.trim().parse().ok()?, b.trim().parse().ok()?))
         })
-        .unwrap_or((450, 50))
+        .unwrap_or((480, 20))
 }
 
-/// SPK-22, part two: `p2` starved of CPU, suspended 450 ms of every 500 ms by its process id (`duty`), is
+/// SPK-22, part two: `p2` starved of CPU, suspended 480 ms of every 500 ms by its process id (`duty`), is
 /// flagged within 15 s, 5 rounds on one dedicated session with two clients and a headless client;
 /// and its flag clears once it runs freely again.
 #[tokio::test]

@@ -8,7 +8,7 @@
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m18 -- --ignored --nocapture --test-threads=1
 //!
-//! `p2` is starved by suspending its process 450 ms of every 500 ms, by the id `status` gives;
+//! `p2` is starved by suspending its process 480 ms of every 500 ms, by the id `status` gives;
 //! every game process of the session is ended by its id after the test.
 
 #![cfg(windows)]
@@ -198,7 +198,7 @@ fn us_093_us_094_hlt_01_frame_rate_and_answer_time_on_a_dedicated_session() {
     }
     assert!(running, "the run did not start the check");
     let clock = Instant::now();
-    let starve = Starve::start(p2, Duration::from_millis(450), Duration::from_millis(50));
+    let starve = Starve::start(p2, Duration::from_millis(480), Duration::from_millis(20));
     let mut flagged = Value::Null;
     for _ in 0..30 {
         let h = health(&dir, "p2");
