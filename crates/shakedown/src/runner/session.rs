@@ -91,8 +91,13 @@ pub struct Machine {
     beats: Vec<Beat>,
     /// When the last heartbeat came, or the machine became ready.
     last_beat: Option<Instant>,
-    /// The clock the watch flagged, while it is flagged (`HLT-02`).
+    /// The measure the watch flagged, while it is flagged (`HLT-02`, `HLT-01`).
     flag: Option<FlagInterval>,
+    /// The ping the runner sent with the last heartbeat and has no answer to yet, with its id and
+    /// when it was sent; one at a time (`HLT-01`).
+    ping: Option<(String, Instant)>,
+    /// How long the last answered ping took, in seconds (`HLT-01`).
+    answered_s: Option<f64>,
     /// When its agent said its mission display closed, until it is ready again: a client between
     /// two missions sends no heartbeat, and the watch gives it `LEAVE_CEILING` to start its agent
     /// again, so a client sent to another server is ended for that (`SEC-05`), not as `no-answer`.
@@ -116,17 +121,20 @@ pub struct LostRecord {
     pub searching: bool,
 }
 
-/// One heartbeat's clocks (`OBS-05`).
+/// One heartbeat's clocks (`OBS-05`), and the machine's answer time when it came (`HLT-01`).
 #[derive(Debug, Clone)]
 struct Beat {
     utc: String,
     tick: f64,
     time: f64,
     frame: f64,
+    /// The answer time of `answer_time` when the heartbeat came, in seconds.
+    answer: f64,
 }
 
-/// An interval in which the clock watch flagged a machine (`HLT-02`): which clock stopped, the
-/// wall-clock time it stopped advancing, the time the flag was raised and the time it cleared.
+/// An interval in which the health watch flagged a machine (`HLT-02`, `HLT-01`): which measure
+/// crossed its threshold (`frame`, `frame-rate`, `mission-time` or `answer-time`), the
+/// wall-clock time it crossed, the time the flag was raised and the time it cleared.
 #[derive(Debug, Clone)]
 pub struct FlagInterval {
     pub machine: String,
@@ -136,12 +144,19 @@ pub struct FlagInterval {
     pub cleared: Option<String>,
     /// How much mission time and real time passed over the window that raised it.
     pub advanced: (f64, f64),
+    /// The frame rate over that window, and the smallest answer time in it, in seconds.
+    pub measured: (f64, f64),
 }
 
 /// The real time over which the clock watch judges a machine's clocks (`HLT-02`).
 pub const WATCH_WINDOW_S: f64 = 5.0;
 /// Below this share of real time, mission time is said to have stopped (`HLT-02`).
 pub const WATCH_RATIO: f64 = 0.5;
+/// Below this many frames a second over the window, the frame rate has collapsed (`HLT-01`,
+/// `SPK-22`).
+pub const FRAME_RATE_MIN: f64 = 10.0;
+/// Answers slower than this, in seconds, over the whole window lag (`HLT-01`, `SPK-22`).
+pub const ANSWER_MAX_S: f64 = 2.0;
 /// A machine whose heartbeat has not come for this long has stopped answering (`HLT-02`, `P-07`).
 pub const HEARTBEAT_GAP: Duration = Duration::from_secs(10);
 /// How long a client whose mission display closed may go without a heartbeat before it is
@@ -177,6 +192,8 @@ impl Machine {
             beats: Vec::new(),
             last_beat: None,
             flag: None,
+            ping: None,
+            answered_s: None,
             left_mission: None,
         }
     }
@@ -202,25 +219,38 @@ fn describe(order: &Value) -> String {
     }
 }
 
-/// The clock watch over a machine's heartbeats (`HLT-02`): the clock that stopped over the last
-/// `WATCH_WINDOW_S` of real time, with the time it stopped and how much mission time and real
-/// time passed over the window, or `None` while both clocks move. A history shorter than the
-/// window is judged once it is long enough.
-fn stopped_clock(beats: &[Beat]) -> Option<(&'static str, String, (f64, f64))> {
+/// What the health watch flagged over a machine's heartbeats.
+type Crossed = (&'static str, String, (f64, f64), (f64, f64));
+
+/// The health watch over a machine's heartbeats (`HLT-02`, `HLT-01`): the measure that crossed its
+/// threshold over the last `WATCH_WINDOW_S` of real time, with the time it crossed, how much
+/// mission time and real time passed over the window, and the window's frame rate and smallest
+/// answer time; or `None` while every measure holds. A history shorter than the window is judged
+/// once it is long enough. A frame number that stands still is named before a frame rate under
+/// `FRAME_RATE_MIN`, that before mission time under `WATCH_RATIO` of real time, and that before
+/// answers slower than `ANSWER_MAX_S` over the whole window.
+fn stopped_clock(beats: &[Beat]) -> Option<Crossed> {
     let newest = beats.last()?;
-    let start = beats.iter().rev().find(|b| newest.tick - b.tick >= WATCH_WINDOW_S)?;
+    let i = beats.iter().rposition(|b| newest.tick - b.tick >= WATCH_WINDOW_S)?;
+    let start = &beats[i];
     let real = newest.tick - start.tick;
     let mission = newest.time - start.time;
+    let rate = (newest.frame - start.frame) / real;
+    let answer = beats[i..].iter().map(|b| b.answer).fold(f64::INFINITY, f64::min);
     let clock = if newest.frame <= start.frame {
         "frame"
+    } else if rate < FRAME_RATE_MIN {
+        "frame-rate"
     } else if mission < WATCH_RATIO * real {
         "mission-time"
+    } else if answer > ANSWER_MAX_S {
+        "answer-time"
     } else {
         return None;
     };
-    // It stopped by the first beat that shows it: the end of the first stopped step of the run
-    // of stopped steps that ends at the newest beat. A cause in the check before that beat came
-    // first (DM-06), so a failure is never hidden by a stop the beats only show later.
+    // It crossed by the first beat that shows it: the end of the first bad step of the run of bad
+    // steps that ends at the newest beat. A cause in the check before that beat came first
+    // (DM-06), so a failure is never hidden by a crossing the beats only show later.
     let mut from = newest.utc.clone();
     for pair in beats.windows(2).rev() {
         if healthy(&pair[0], &pair[1]) {
@@ -228,12 +258,40 @@ fn stopped_clock(beats: &[Beat]) -> Option<(&'static str, String, (f64, f64))> {
         }
         from = pair[1].utc.clone();
     }
-    Some((clock, from, (mission, real)))
+    Some((clock, from, (mission, real), (rate, answer)))
 }
 
-/// Whether both clocks moved between two heartbeats.
+/// Whether every measure held between two heartbeats: both clocks moved, the frame rate stayed at
+/// or above its floor and the later answer time at or under its ceiling.
 fn healthy(a: &Beat, b: &Beat) -> bool {
-    b.frame > a.frame && b.time - a.time >= WATCH_RATIO * (b.tick - a.tick)
+    let real = b.tick - a.tick;
+    b.frame > a.frame
+        && b.time - a.time >= WATCH_RATIO * real
+        && b.frame - a.frame >= FRAME_RATE_MIN * real
+        && b.answer <= ANSWER_MAX_S
+}
+
+/// A machine's frame rate over the last `WATCH_WINDOW_S` of its heartbeats, or over all of them
+/// while they span less, from 1 s on (`HLT-01`, `INS-04`).
+fn frame_rate(beats: &[Beat]) -> Option<f64> {
+    let newest = beats.last()?;
+    let start = beats
+        .iter()
+        .rev()
+        .find(|b| newest.tick - b.tick >= WATCH_WINDOW_S)
+        .or_else(|| beats.first())?;
+    let real = newest.tick - start.tick;
+    (real >= 1.0).then(|| (newest.frame - start.frame) / real)
+}
+
+/// A machine's answer time now (`HLT-01`): how long its last answered ping took, or how long the
+/// ping it has not answered has waited, whichever is longer; `None` before its first ping.
+fn answer_time(m: &Machine) -> Option<f64> {
+    let waiting = m.ping.as_ref().map(|(_, sent)| sent.elapsed().as_secs_f64());
+    match (m.answered_s, waiting) {
+        (None, None) => None,
+        (a, w) => Some(a.unwrap_or(0.0).max(w.unwrap_or(0.0))),
+    }
 }
 
 /// An event message of an agent as the result file records it (`EVT-01`); the clocks travel as
@@ -255,7 +313,7 @@ fn recorded_event(m: &Value) -> Option<shakedown_protocol::result::RecordedEvent
     })
 }
 
-/// Whether both clocks moved over the whole of the last `WATCH_WINDOW_S`, which clears a flag.
+/// Whether every measure held over the whole of the last `WATCH_WINDOW_S`, which clears a flag.
 fn moving_again(beats: &[Beat]) -> bool {
     let Some(newest) = beats.last() else { return false };
     let Some(i) = beats.iter().rposition(|b| newest.tick - b.tick >= WATCH_WINDOW_S) else {
@@ -396,6 +454,14 @@ impl Drop for CancelOnDrop<'_> {
     }
 }
 
+fn round1(x: f64) -> f64 {
+    (x * 10.0).round() / 10.0
+}
+
+fn round3(x: f64) -> f64 {
+    (x * 1000.0).round() / 1000.0
+}
+
 fn machine_view(m: &Machine) -> Value {
     json!({
         "name": m.name,
@@ -409,6 +475,8 @@ fn machine_view(m: &Machine) -> Value {
         "health": {
             "flag": m.flag.as_ref().map(|f| f.clock),
             "since": m.flag.as_ref().map(|f| f.since.clone()),
+            "frame_rate": frame_rate(&m.beats).map(round1),
+            "answer_s": answer_time(m).map(round3),
             "heartbeat": m.beats.last().map(|b| json!({"utc": b.utc, "tick": b.tick, "time": b.time, "frame": b.frame as u64})),
         },
     })
@@ -799,6 +867,10 @@ impl Session {
         }
         if let Some(m) = inner.machines.iter_mut().find(|m| m.name == machine) {
             m.last_answer_at = Some(shakedown_protocol::time::now());
+            // The answer to the runner's ping: the machine's answer time (HLT-01).
+            if kind == "pong" && m.ping.as_ref().is_some_and(|(id, _)| message["ping"] == id.as_str()) {
+                m.answered_s = m.ping.take().map(|(_, sent)| sent.elapsed().as_secs_f64());
+            }
             if kind == "heartbeat" {
                 m.last_beat = Some(Instant::now());
                 let c = &message["clocks"];
@@ -811,6 +883,7 @@ impl Session {
                         tick,
                         time,
                         frame,
+                        answer: answer_time(m).unwrap_or(0.0),
                     });
                     // The window that is judged, and the steps before it to find when a clock
                     // stopped.
@@ -825,6 +898,8 @@ impl Session {
                 m.left_mission = None;
                 m.beats.clear();
                 m.flag = None;
+                m.ping = None;
+                m.answered_s = None;
                 m.last_beat = Some(Instant::now());
                 m.agent_ready = true;
                 // A dedicated client is ready once the server sees it at client state 10, which
@@ -839,7 +914,20 @@ impl Session {
             }
         }
         match kind.as_str() {
+            "pong" => return,
             "heartbeat" => {
+                // Each heartbeat of a watched machine sends it a ping, one at a time, which its
+                // agent answers through the path of every order: its answer time (HLT-01).
+                let id = format!("ping{}", self.orders.fetch_add(1, Ordering::SeqCst) + 1);
+                if let Some(m) = inner.machines.iter_mut().find(|m| m.name == machine)
+                    && m.ping.is_none()
+                    && m.state == "ready"
+                    && !m.held
+                    && let Some(tx) = &m.tx
+                    && tx.send(json!({"id": id, "kind": "ping"}).to_string()).is_ok()
+                {
+                    m.ping = Some((id, Instant::now()));
+                }
                 let changed = watch_clocks(&mut inner, machine);
                 drop(inner);
                 if changed {
@@ -2074,9 +2162,9 @@ impl Session {
     }
 }
 
-/// The clock watch of `HLT-02` on one heartbeat of `machine`: raises its flag when a clock stopped
-/// over the last window, and clears it once both clocks moved over a whole window again. True
-/// when the flag changed. Only a `ready` machine that is not held is watched.
+/// The health watch of `HLT-02` and `HLT-01` on one heartbeat of `machine`: raises its flag when a
+/// measure crossed its threshold over the last window, and clears it once every measure held over
+/// a whole window again. True when the flag changed. Only a `ready` machine that is not held is watched.
 fn watch_clocks(inner: &mut Inner, machine: &str) -> bool {
     let Some(i) = inner.machines.iter().position(|m| m.name == machine) else {
         return false;
@@ -2086,7 +2174,7 @@ fn watch_clocks(inner: &mut Inner, machine: &str) -> bool {
         return false;
     }
     if m.flag.is_none() {
-        let Some((clock, from, advanced)) = stopped_clock(&m.beats) else {
+        let Some((clock, from, advanced, measured)) = stopped_clock(&m.beats) else {
             return false;
         };
         let flag = FlagInterval {
@@ -2096,6 +2184,7 @@ fn watch_clocks(inner: &mut Inner, machine: &str) -> bool {
             since: shakedown_protocol::time::now(),
             cleared: None,
             advanced,
+            measured,
         };
         inner.machines[i].flag = Some(flag.clone());
         inner.flags.push(flag);
@@ -2656,6 +2745,7 @@ mod tests {
             tick: 100.0,
             time: 50.0,
             frame: 1000.0,
+            answer: 0.01,
         }];
         for (i, rate) in rates.iter().enumerate() {
             let last = out.last().unwrap().clone();
@@ -2664,6 +2754,7 @@ mod tests {
                 tick: last.tick + 1.0,
                 time: last.time + rate,
                 frame: last.frame + 60.0,
+                answer: 0.01,
             });
         }
         out
@@ -2676,7 +2767,8 @@ mod tests {
     fn us_059_hlt_02_a_stopped_mission_time_is_flagged_from_when_it_stopped() {
         assert!(stopped_clock(&beats(&[1.0; 8])).is_none());
         assert!(stopped_clock(&beats(&[0.0; 4])).is_none());
-        let (clock, from, (mission, real)) = stopped_clock(&beats(&[1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])).unwrap();
+        let (clock, from, (mission, real), _) =
+            stopped_clock(&beats(&[1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])).unwrap();
         assert_eq!(clock, "mission-time");
         assert_eq!(from, "2026-11-12T12:00:04.000Z");
         assert_eq!(real, 5.0);

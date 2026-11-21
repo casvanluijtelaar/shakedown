@@ -27,6 +27,11 @@ switch (_order get "kind") do {
     case "exec": { [_order] call skd_fnc_runExec };
     case "check": { [_order] call skd_fnc_runCheck };
     case "poll": { [_order] call skd_fnc_runPoll };
+    // The runner's ping, sent with a heartbeat: the time this answer takes through the path of
+    // every order is the machine's answer time (HLT-01).
+    case "ping": {
+        [createHashMapFromArray [["kind", "pong"], ["machine", skd_machine], ["ping", _order get "id"]]] call skd_fnc_send;
+    };
     // The runner's request for an exec order went away before its answer (AGT-04), or the run
     // of a check order was stopped (RUN-05): its code stops here.
     case "cancel": {

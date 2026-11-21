@@ -66,8 +66,10 @@
         "health": {
           "type": "object",
           "properties": {
-            "flag": {"enum": [null, "mission-time", "frame"]},
+            "flag": {"enum": [null, "mission-time", "frame", "frame-rate", "answer-time"]},
             "since": {"type": ["string", "null"]},
+            "frame_rate": {"type": ["number", "null"], "minimum": 0},
+            "answer_s": {"type": ["number", "null"], "minimum": 0},
             "heartbeat": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/Clocks"}]}
           }
         }

@@ -917,16 +917,34 @@ fn lost_reason(folder: &Path, machine: &str, lost: &super::session::LostRecord) 
 
 /// The reason of a check that overlapped an interval the clock watch flagged (`HLT-02`).
 fn unhealthy_reason(flag: &super::session::FlagInterval) -> Reason {
-    let what = if flag.clock == "frame" {
-        "frame number"
-    } else {
-        "mission time"
+    let (mission, real) = flag.advanced;
+    let (rate, answer) = flag.measured;
+    let what = match flag.clock {
+        "frame" => format!(
+            "{}'s frame number stopped at {} while it still answered: over {real:.1} s of real time its mission time advanced {mission:.2} s",
+            flag.machine, flag.from
+        ),
+        "frame-rate" => format!(
+            "{}'s frame rate fell to {rate:.1} frames a second at {} while it still answered, under the floor of {} over {real:.1} s of real time",
+            flag.machine,
+            flag.from,
+            super::session::FRAME_RATE_MIN
+        ),
+        "answer-time" => format!(
+            "{}'s answer time rose to {answer:.1} s at {} while it still answered, over the ceiling of {} s for {real:.1} s of real time",
+            flag.machine,
+            flag.from,
+            super::session::ANSWER_MAX_S
+        ),
+        _ => format!(
+            "{}'s mission time stopped at {} while it still answered: over {real:.1} s of real time its mission time advanced {mission:.2} s",
+            flag.machine, flag.from
+        ),
     };
     Reason {
         kind: "unhealthy".into(),
         message: format!(
-            "{}'s {what} stopped at {} while it still answered: over {:.1} s of real time its mission time advanced {:.2} s. The environment failed, not the mod; the check runs again once the machine's clocks move.",
-            flag.machine, flag.from, flag.advanced.1, flag.advanced.0
+            "{what}. The environment failed, not the mod; the check runs again once the machine is healthy."
         ),
         machine: Some(flag.machine.clone()),
         at: flag.from.clone(),

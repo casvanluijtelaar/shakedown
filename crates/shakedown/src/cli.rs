@@ -892,6 +892,27 @@ fn print_inspect(v: &Value) {
 }
 
 /// `status` for a person: the runner, the session and one line per machine.
+/// A machine's health as `status` prints it under the machine, once it sent a heartbeat: its frame
+/// rate, its answer time, the clocks of its last heartbeat and its flag (`INS-04`, `HLT-01`).
+fn health_line(health: &Value) -> Option<String> {
+    let beat = health["heartbeat"].as_object()?;
+    let num = |v: &Value, digits: usize| v.as_f64().map_or("-".to_string(), |x| format!("{x:.digits$}"));
+    let mut line = format!(
+        "health: {} frames a second, answers in {} s, mission time {} s, frame {}",
+        num(&health["frame_rate"], 1),
+        num(&health["answer_s"], 3),
+        num(&beat["time"], 1),
+        beat["frame"]
+    );
+    if let Some(flag) = health["flag"].as_str() {
+        line.push_str(&format!(
+            ", flagged {flag} since {}",
+            health["since"].as_str().unwrap_or("?")
+        ));
+    }
+    Some(line)
+}
+
 fn print_status(status: &Value) {
     println!(
         "runner: {}{}",
@@ -925,6 +946,9 @@ fn print_status(status: &Value) {
             m["pid"],
             m["profile"].as_str().unwrap_or("?")
         );
+        if let Some(line) = health_line(&m["health"]) {
+            println!("          {line}");
+        }
     }
     if let Some(run) = status["run"].as_object() {
         println!(
