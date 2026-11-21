@@ -17,7 +17,7 @@ This file is the whole of what the fixtures promise. A check against them is wri
 | `@skd_fixture` | `fixtures\@skd_fixture`, with its extension `skdfx_x64.dll` | nothing but the game | `skdfx_main` | `skdfx` |
 | `@skd_fixture_cba` | `fixtures\@skd_fixture_cba` | CBA_A3, and `@skd_fixture` | `skdfx_cba` | `skdfx_cba` |
 
-Each CfgPatches class has a `versionStr`: `skdfx_main` reads `0.0.6`, `skdfx_cba` reads `0.0.4`, so a check or a project file can name the version a machine loads (`mods.<name>.version`, `ENV-01`).
+Each CfgPatches class has a `versionStr`: `skdfx_main` reads `0.0.6`, `skdfx_cba` reads `0.0.5`, so a check or a project file can name the version a machine loads (`mods.<name>.version`, `ENV-01`).
 
 The two are separate mods so a setup without CBA loads `@skd_fixture` alone; a dedicated server would stop at a missing-addon warning if a CBA-dependent addon were loaded without CBA.
 
@@ -86,6 +86,18 @@ prefix = 'skdfx_cba\addons'
 - Registered on every machine with an interface, with `CBA_fnc_addKeybind`: mod name `skd_fixture`, action name `signal`, display name `Fixture signal`, default key F7 (DIK `65`) with no modifier, not a hold key.
 - Its down code adds 1 to `skdfx_signalDown` on the player's unit; its up code adds 1 to `skdfx_signalUp` on the player's unit. Both are set public, start at `0` on a unit that has never signalled, and are read with `unit getVariable ["skdfx_signalDown", 0]`.
 - Its down code also raises the CBA global event `skdfx_signalled` with `[unit]`, for event recording (`EVT-01`). It is raised on the machine whose key went down and reaches every machine, the server too.
+
+### ACE interaction actions (`ACT-04`)
+
+Registered after the mission starts on every machine with an interface where ACE's interaction menu is loaded (`isClass (configFile >> "CfgPatches" >> "ace_interact_menu")`); where it is not, nothing is registered and nothing fails. Each is made with `ace_interact_menu_fnc_createAction` and added to a class with `ace_interact_menu_fnc_addActionToClass`:
+
+| Path | On | Shown as | Condition | Statement |
+|---|---|---|---|---|
+| `["ACE_MainActions", "skdfx_aceOpen"]` | the class `skdfx_Crate`, an object's menu | `Open crate (ACE)` | the crate is not open (`!(_target getVariable ["skdfx_open", false])`) | sends the same request to the server as the crate's `Open crate` action, with the same outcomes, **Opened** or **Refused**, as [The crate and its action](#skd_fixture) says |
+| `["ACE_SelfActions", "skdfx_aceSignal"]` | the class `CAManBase` with its kinds, the player's own menu | `Fixture ACE signal` | always true | adds 1 to `skdfx_aceSignals` on the player's unit, public |
+| `["ACE_SelfActions", "skdfx_aceNever"]` | the class `CAManBase` with its kinds, the player's own menu | `Fixture ACE never` | always false | adds 1 to `skdfx_aceNever` on the player's unit, public; it never runs through ACE |
+
+`skdfx_aceSignals` and `skdfx_aceNever` start at `0` on a unit that has never used the action, and are read with `unit getVariable ["skdfx_aceSignals", 0]`.
 
 ### A reload target, a final CBA function (`RLD-02`)
 

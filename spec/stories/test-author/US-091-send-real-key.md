@@ -2,7 +2,7 @@
 type: User Story
 title: "Send a real key to one game client's window"
 description: "A check sends a real key press to one game client's window, in the background, without the desktop's focus or input, so a promise about the key itself is tested as a player presses it."
-status: draft
+status: deprecated
 id: US-091
 role: test-author
 kind: feature
@@ -12,6 +12,8 @@ requirements: [ACT-05, NFR-LG-02]
 # US-091 Send a real key to one game client's window
 
 As a test author, I want to press a real key in one client, so that I can test whether the mod consumes a key or passes it on to the game, which calling the keybind's code cannot show.
+
+Deprecated with `ACT-05`: a key posted to the game's window does not reach the game (`SPK-11`, research `35-spikes-ace-and-keys.md`).
 
 ## Acceptance criteria
 

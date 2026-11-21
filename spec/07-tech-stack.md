@@ -30,7 +30,7 @@ Versions were looked up on 2026-11-04 from crates.io, GitHub releases, `static.r
 |---|---|---|---|
 | Arma 3 | 2.22, stable branch, with the mini-update of 2026-09-30 (SPOTREP #00122) | The game under test (`INT-AR-01`). | Steam news for app 107410 |
 | CBA_A3 | 3.19.0 (2026-08-11) | Keybinds, when a mod uses CBA (`INT-CBA-01`). | GitHub release |
-| ACE3 | 3.21.2 (2026-08-18) | Full heal at reset, when ACE medical is loaded (`INT-ACE-02`). | GitHub release |
+| ACE3 | 3.21.2 (2026-08-18; still the latest release on 2026-11-21) | Full heal at reset, when ACE medical is loaded (`INT-ACE-02`); ACE interaction actions by their path (`ACT-04`, `INT-ACE-03`). | GitHub release |
 | HEMTT | 1.23.1 (2026-10-25) | Building the framework's addon; the mod under test's dev build (`INT-HEM-01`). | GitHub release |
 | Rust | 1.99.1 stable (2026-10-15), edition 2024 | The runner, command line, MCP server and extension. | `channel-rust-stable.toml` |
 | `arma-rs` | 1.13.0, taken from crates.io under its declared MIT license (its repository's LICENSE file says GPL-2.0; research `20-licenses-and-rules.md`) | The extension's entry points, callback and retry. | crates.io |

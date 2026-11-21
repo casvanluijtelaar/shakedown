@@ -88,8 +88,8 @@ The exact names, arguments and outputs of the interfaces are in the contract: [c
 - **ACT-01** (must) The check API makes the player of a named machine use an `addAction` action on a target object, found by its title (exact match after stripping structured-text tags). On the acting client it waits, to the wait ceiling, until the action exists, its condition holds with the documented variables, and the player is within its radius; then it fires it with `action ["User", target, id]`. The engine runs an action fired that way whatever its condition and radius (`SPK-10`), so this check of the framework's is the only one. When the ceiling passes it fails with the reason: no action of that title (with the titles that exist), the condition false, or the distance and the radius (`CR-12`).
 - **ACT-02** (must) The check API presses a CBA keybind of a named mod and action on a named machine: it reads the bound key from `CBA_fnc_getKeybind` and calls the keybind's down code, its up code, or both in order, with `[display 46, DIK, shift, ctrl, alt]` (`CR-12`).
 - **ACT-03** (must) A keybind step on a machine without CBA, or for a keybind that is not registered, ends the check `fail` / `check-error` with the keybinds registered for that mod, or, when it has none, the mods that have keybinds, both in lower case as CBA keeps them (`CR-12`, `CR-31`).
-- **ACT-04** (should) Perform an ACE interaction menu action by its path, as ACE's own key-up code does, pinned to the ACE version a run reports (`CR-12`; gap H7, Q6).
-- **ACT-05** (should) Send real key input to one game client window without the foreground or the desktop's input, if spike `SPK-11` passes; otherwise dropped, since handlers cover every key path the MVP needs (`CR-15`; conflict C3).
+- **ACT-04** (should) Perform an ACE interaction menu action, on an object or on the acting player itself, by its path of action names, through ACE's own key-up code, `ace_interact_menu_fnc_keyUp`, on the acting client, pinned to the ACE version `INT-ACE-03` names (`CR-12`; gap H7, Q6; `SPK-21`, research `35-spikes-ace-and-keys.md`).
+- **ACT-05** (should, dropped) Send real key input to one game client window without the foreground or the desktop's input. Dropped: spike `SPK-11` found that a key posted to the game's window reaches neither a key handler nor a CBA keybind, even with the game in the foreground, since the game reads the keyboard through DirectInput (research `35-spikes-ace-and-keys.md`); calling the keybind's code (`ACT-02`) covers every key path the checks need (`CR-15`; conflict C3).
 
 ## Observation
 
@@ -231,7 +231,7 @@ The framework is developed and accepted against fixture mods of its own, whose p
 | CR-12 | must | ACT-01 to ACT-03, API-05; ACT-04 should |
 | CR-13 | could | CHT-01 |
 | CR-14 | could | FLT-01 |
-| CR-15 | should | ACT-05 |
+| CR-15 | should | ACT-05 (dropped, `SPK-11`) |
 | CR-20 | must | OBS-01 to OBS-04, OBS-07, CTL-03, RUN-06, AGT-03 |
 | CR-21 | should | EVT-01 |
 | CR-22 | must | OBS-06, CTL-01, SCN-03 |

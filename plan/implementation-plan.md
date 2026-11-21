@@ -15,7 +15,7 @@ This plan turns the specification and the user stories into milestones. Each mil
 | Phase | What it holds | Milestones |
 |---|---|---|
 | 1 | The MVP of PRD section 9 and nothing more: every `must` requirement and every user story, each story in exactly one milestone. It ends with release 0.1.0. | M0 to M10 |
-| 2 | The `should` requirements: `MCH-01` (`CR-04`), `ENV-01` (`CR-06`), `ACT-04` (`CR-12`), `ACT-05` with spike `SPK-11` (`CR-15`), `EVT-01` (`CR-21`), `HLT-01` (`CR-30`), `OUT-02` (`CR-32`), `RUN-07` (`CR-41`), `TIM-01` (`CR-42`), `MAN-01` (`CR-52`) and `SEC-05` (`CR-61`); and the deferred work the M10 port and the test rounds showed matters: late joiners (`DEF-04`), shared helper code (`DEF-27`, `API-06`), a reload without a game restart (`DEF-21`), a hung client and a failed start's reason (`DEF-28`, `DEF-29`, `SES-10`). It ends with the first public release, 0.2.0 (`CR-70`, `DEF-30`). | M11 to M19 |
+| 2 | The `should` requirements: `MCH-01` (`CR-04`), `ENV-01` (`CR-06`), `ACT-04` (`CR-12`), `ACT-05` with spike `SPK-11` (`CR-15`; dropped, since `SPK-11` failed), `EVT-01` (`CR-21`), `HLT-01` (`CR-30`), `OUT-02` (`CR-32`), `RUN-07` (`CR-41`), `TIM-01` (`CR-42`), `MAN-01` (`CR-52`) and `SEC-05` (`CR-61`); and the deferred work the M10 port and the test rounds showed matters: late joiners (`DEF-04`), shared helper code (`DEF-27`, `API-06`), a reload without a game restart (`DEF-21`), a hung client and a failed start's reason (`DEF-28`, `DEF-29`, `SES-10`). It ends with the first public release, 0.2.0 (`CR-70`, `DEF-30`). | M11 to M19 |
 | 3 | The `could` requirements: `RSM-01` (`CR-07`), `CHT-01` (`CR-13`), `FLT-01` (`CR-14`), `SHT-01` (`CR-25`), `PRF-01` (`CR-26`), `OUT-03` (`CR-33`) and `OUT-04` (`CR-34`). | Unplanned; placed coarsely below |
 
 Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section 2, "How we build it"): the M10 port, its findings, the deferred work they raised, and what that repository's own plan asks of the framework next. Its stories are `US-066` to `US-098` (no `US-079`). Phase 3's stories are written when a milestone takes a `could` up.
@@ -41,7 +41,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | M14 | [Reload without a game restart](milestones/m14.md) | A changed arma-grappling-hook function reaches a running session by a mission restart, the rerun check's verdict under 30 s from the save in singleplayer, and every machine of a dedicated session with the server kept, as `SPK-19` found. |
 | M15 | [Hand over to the manual tester](milestones/m15.md) | A check puts `p1` on a rope 10 m up and hands over, with three things to look for in `p1`'s window, and the session stays up. |
 | M16 | [A start that explains itself](milestones/m16.md) | Every gap of a start named at once, a wrong ACE version refused, a hung client failing the start at the start ceiling, its reason kept. |
-| M17 | [ACE interaction and real keys](milestones/m17.md) | `p1` gets on a rope through ACE interaction, and a real let-go key sent to `p1`'s window in the background takes it off. |
+| M17 | [ACE interaction](milestones/m17.md) | `p1` opens the fixture's crate through its ACE interaction action on a dedicated session, and every machine sees it open. |
 | M18 | [The full health watch](milestones/m18.md) | A client starved of CPU makes its check `invalid` / `unhealthy` naming its frame rate. |
 | M19 | [The first public release](milestones/m19.md) | On a Windows machine with no build tools, `winget install` gives `shakedown` 0.2.0, which runs a passing check, and the one-line script refuses an upgrade while its runner runs. |
 
@@ -80,7 +80,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | `SPK-08` | M6 | Yes, if a changed file does not reach a running machine: every `.sqf` change is level `game-restart` (`RLD-02`, `P-08`, `US-054`, `US-055`, `US-057`, `FIX-03`). Its measurement sets `NFR-PF-02`. |
 | `SPK-09` | With `DEF-32`, if it is taken up | No: mod code keeps no level inside the mission, and a changed `.sqf` reloads by a mission restart (`SPK-19`). |
 | `SPK-10` | M1 | No. |
-| `SPK-11` | M17 | `ACT-05`, a `should`, is dropped. |
+| `SPK-11` | M17; failed (research `35-spikes-ace-and-keys.md`) | `ACT-05`, a `should`, is dropped. |
 | `SPK-12` | M1 | Yes: in singleplayer a net id in a result is the agent's own id (`DM-13`). |
 | `SPK-13` | M3 | Yes: `logs` asked during a check returns lines only up to that check's start. |
 | `SPK-14` | M10 | Only the default numbers of `NFR-PF-06`. |
@@ -90,7 +90,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | `SPK-18` | M11 | Only if a client cannot rejoin under its name: rejoining waits, and `MCH-01` and `US-067` say so. Without a clean leave, a leave ends the process; the promise holds. |
 | `SPK-19` | A research round beside M11, ahead of M14; passed (research `31-spike-reload-release.md`) | Yes: M14 builds nothing, every mod `.sqf` stays level `game-restart`, and `DEF-21`'s third option goes to the owner. |
 | `SPK-20` | M16 | Yes: `SES-10`'s connect ceiling is dropped and `DEF-28` stays open; the reason in `session.json` holds. |
-| `SPK-21` | M17 | No: the framework runs the ACE action's condition and statement itself. |
+| `SPK-21` | M17; passed (research `35-spikes-ace-and-keys.md`) | No: the framework runs the ACE action's condition and statement itself. |
 | `SPK-22` | M18 | Yes: frame rate and answer time show in `status` and flag no check. |
 
 ## Which milestone completes each must requirement of the PRD
@@ -136,7 +136,7 @@ A feature story's failure stories land with it, except these, whose failure stor
 | `CR-04` | Join, leave, rejoin | M11 | Game clients only; restarting the server waits (`DEF-31`). |
 | `CR-06` | Check the environment before a run | M16 | `SPK-20` failed, so `SES-10` keeps the reason of a failed start without a connect ceiling (`DEF-28`). |
 | `CR-12` | ACE interaction actions (`ACT-04`) | M17 | |
-| `CR-15` | Real key input | M17 | Only if `SPK-11` passes; otherwise dropped. |
+| `CR-15` | Real key input | Not delivered | Dropped in M17: `SPK-11` failed, as a key posted to the game's window does not reach the game. |
 | `CR-21` | The mod's and the engine's events | M12 | CBA events and mission events. |
 | `CR-30` | The rest of the health watch | M18 | The clock watch since M9. |
 | `CR-32` | Repeat a check | M13 | |
@@ -158,6 +158,6 @@ Phase 3 is not planned yet; its stories are written when a milestone takes a req
 
 Work found while planning that no story promises is in [deferred/](deferred/). Phase 2 takes up `DEF-04` (M11), `DEF-27` (M12), `DEF-21` (M14), `DEF-29` (M16) and `DEF-30` (M19); `DEF-28` stays open after `SPK-20` failed in M16. The rest stay deferred:
 
-- `DEF-26` (`skd_fnc_pressKey` returns no handler value) waits for a second mod that needs it; M17's real keys read the pass-through from the game.
+- `DEF-26` (`skd_fnc_pressKey` returns no handler value) waits for a second mod that needs it; without real keys (`SPK-11` failed) the documented way round stays.
 - `DEF-31` (restarting the server during a session) waits for a mod's story that needs it.
 - `DEF-24` (ceilings count a paused runner), `DEF-14`, `DEF-22`, `DEF-23` and `DEF-25` (the reset around a player's death and a stop), `DEF-01`, `DEF-02`, `DEF-03`, `DEF-07`, `DEF-08`, `DEF-11`, `DEF-13`, `DEF-15` to `DEF-20`: no run of the port met them; each moves into a milestone when use shows it matters.

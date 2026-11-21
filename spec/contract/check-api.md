@@ -174,6 +174,30 @@ Any script error on any machine whose text contains `text` (case-insensitive), f
 
 `skd_fnc_useAction` matches the title after removing structured-text tags (`<...>`) from the action's title, exactly and case-sensitively. It waits on the acting machine until the action exists, its condition holds and the player is within its radius, then fires it there with `action ["User", target, id]` (`ACT-01`); the target travels by net id and is looked up every frame, so an object the server has just created is found once it reaches the acting machine. The condition is evaluated with `_target` the object carrying the action and `_this` the player; a radius of -1 is no limit. The engine itself runs an action fired that way whatever its condition and radius (`SPK-10`). `skd_fnc_pressKey` calls the code `CBA_fnc_getKeybind` returns with `[findDisplay 46, DIK, shift, ctrl, alt]` for the first bound key (`ACT-02`).
 
+### ACE interaction actions
+
+With ACE3 loaded, a check makes a player use an action of a mod's ACE interaction menu as an ACE player reaches it: by its path of action names, through ACE's own key-up code (`ACT-04`, `INT-ACE-03`).
+
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_useAceAction` | `[machine, target, path, ceiling]` - `machine` the acting player's machine; `target` the object whose menu holds the action, or a machine name for that machine's player; `path` an Array of one or more Strings, the action names from the menu's root; `ceiling` default 10. | `true` once ACE's key-up code ran the action. | At the ceiling, `fail` / `assertion` with the reason: no action of the path's next name, listing the action names that exist at its parent; the condition of an action on the path false, naming it; or the path's last name a folder of actions with no statement of its own, listing its actions; `reason.machine` is the acting machine. `fail` / `check-error` at once when ACE's interaction menu is not loaded on the acting machine, saying ACE is not loaded; when the loaded ACE lacks the internals `INT-ACE-03` names, naming the ACE version the machine loaded and 3.21.2; when the machine has no player; and when `target` is `objNull`, as for `skd_fnc_useAction`. |
+
+The target is the object whose menu the player opens: the menu of an object (ACE's interaction key) for any object, and the player's own menu (ACE's self-interaction key) when the target is the acting machine's own player, named by its machine or by its unit. An action's name is the first element of the array `ace_interact_menu_fnc_createAction` makes, or the class name of an action in config, not the name the menu shows: an object's actions start under `ACE_MainActions` and a player's own under `ACE_SelfActions`, as `["ACE_MainActions", "skdfx_aceOpen"]` and `["ACE_SelfActions", "skdfx_aceSignal"]`. The match is exact and case-sensitive.
+
+On the acting machine it waits, every frame to the ceiling, until every name of the path is found and every action on it has a condition that holds. It walks the path as ACE's menu builds it: at each level the action's class children, the actions added to that one object under it, and the children its insert-children code makes, calling each action's modifier code and condition with `_target`, `_player` and `_actionParams` set as ACE sets them. Then, in the same frame, it selects the last action as ACE's menu does and calls ACE's key-up code, which checks the action's condition again and runs its statement with `this` the target (`SPK-21`). The statement runs on the acting machine; what it does elsewhere is the mod's, and a check reads its effect there with a wait or an assertion. The target travels by net id and is looked up every frame, so an object the server has just created is found once it reaches the acting machine. ACE's key-up code checks neither distance nor line of sight, so neither does this function; a check that promises the player can reach an action asserts the distance itself. The player's real menu stays closed.
+
+```sqf
+// @check US-089 p1 opens the crate through its ACE action
+// @setups dedicated-ace
+private _crate = ["skdfx_Crate", AGLToASL [130, 132, 0], 180] call skd_fnc_create;
+["p1", AGLToASL [130, 130, 0], 0] call skd_fnc_place;
+["p1", _crate, ["ACE_MainActions", "skdfx_aceOpen"]] call skd_fnc_useAceAction;
+["all", { (_this select 0) getVariable ["skdfx_open", false] }, "==", true, "every machine sees the crate open", 10, [_crate]] call skd_fnc_expectEach;
+["p1", "p1", ["ACE_SelfActions", "skdfx_aceSignal"]] call skd_fnc_useAceAction;
+```
+
+The result file records the ACE version each machine loaded when the project's ACE mod has a `patch` key, such as `patch = "ace_main"` ([result-file.md](result-file.md), `session.machines`).
+
 ## Joining and leaving
 
 On a dedicated session a check can make a game client join late, leave, and join again (`MCH-01`). The setup's `late` key names the late clients, which the session does not start ([cli.md](cli.md)): `clients = 2` and `late = 1` give `p1` and `p2` at the start and the late `p3`.
@@ -257,4 +281,4 @@ private _crate = ["skdfx_Crate", AGLToASL [130, 132, 0], 180] call skd_fnc_creat
 
 ## Not in this contract yet
 
-ACE interaction actions (`ACT-04`), real key input (`ACT-05`), screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them.
+Screenshots (`SHT-01`) and failure simulation (`FLT-01`) are added to this file by the milestone that builds them. Real key input (`ACT-05`) is dropped: a key posted to the game's window does not reach the game (`SPK-11`), so a check presses a keybind with `skd_fnc_pressKey`.

@@ -63,7 +63,7 @@ Each integration rule has an ID of the form `INT-<system>-nn`. Versions were loo
 
 - **INT-ACE-01** Shakedown is specified against ACE3 3.21.2. The framework does not depend on ACE (`CR-12`).
 - **INT-ACE-02** When ACE medical is loaded (`isClass (configFile >> "CfgPatches" >> "ace_medical")`), the reset calls `[unit] call ace_medical_treatment_fnc_fullHealLocal` on the machine where the unit is local. That function is marked `Public: No` by ACE, so the framework names the ACE version it was checked against in its docs, and a reset that finds the function missing fails with the ACE version the machine loaded (`CR-02`).
-- **INT-ACE-03** ACE interaction menu actions are a `should` (`ACT-04`). Nothing in the MVP calls ACE's interaction internals (gap H7, Q6).
+- **INT-ACE-03** ACE interaction menu actions (`ACT-04`) are performed through ACE3 3.21.2's interaction internals, each marked `Public: No`: the class action trees `ace_interact_menu_ActNamespace` and `ace_interact_menu_ActSelfNamespace`, an object's own actions in its variables `ace_interact_menu_actions` and `ace_interact_menu_selfActions`, `ace_interact_menu_fnc_compileMenu` and `ace_interact_menu_fnc_compileMenuSelfAction`, the menu state `ace_interact_menu_openedMenuType`, `actionSelected`, `selectedAction` and `selectedTarget`, and `ace_interact_menu_fnc_keyUp`, which checks the action's condition and runs its statement (`SPK-21`, research `35-spikes-ace-and-keys.md`). An ACE that lacks one of them ends the check `fail` / `check-error` naming the ACE version the machine loaded and 3.21.2, the version the framework was checked against (gap H7, Q6).
 
 ## HEMTT
 
