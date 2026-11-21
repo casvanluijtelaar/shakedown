@@ -4,7 +4,7 @@ Each part starts and stops what it needs itself, once per repeat (`--repeat`), w
 in the project `m16` of its own in the work folder. Its `tests\` holds the check of `acceptance/m16/`; its
 `shakedown.toml` sets `base_port = 2602` and names the mod `fixture` (`@skd_fixture`, patch `skdfx_main`, with a
 `version` only where a part writes one) and the mod `gone`, whose folder does not exist. Its setups are `sp`
-(singleplayer), `ded` (a dedicated server with two clients), `hung` (`ded` with `start_timeout = 60`) and `gap`
+(singleplayer), `ded` (a dedicated server with two clients), `hung` (`ded` with `start_timeout = 150`, room for p1 to be ready on a cold machine, so p2 alone is still `launched` at the ceiling) and `gap`
 (a dedicated server with one client loading `fixture` and `gone`), each loading `fixture`.
 
 Per repeat:
@@ -91,7 +91,7 @@ def toml(ctx, version=None):
             f"[mods.gone]\npath = '{ctx.work / 'm16-no-such-mod'}'\n\n"
             "[setups.sp]\nmode = \"singleplayer\"\nmods = [\"fixture\"]\n\n"
             "[setups.ded]\nmode = \"dedicated\"\nclients = 2\nmods = [\"fixture\"]\n\n"
-            "[setups.hung]\nmode = \"dedicated\"\nclients = 2\nstart_timeout = 60\nmods = [\"fixture\"]\n\n"
+            "[setups.hung]\nmode = \"dedicated\"\nclients = 2\nstart_timeout = 150\nmods = [\"fixture\"]\n\n"
             "[setups.gap]\nmode = \"dedicated\"\nclients = 1\nmods = [\"fixture\", \"gone\"]\n")
 
 
@@ -581,14 +581,14 @@ def us086_right(ctx):
 
 # ---------------------------------------------------------------- US-087
 
-@check("US-087 SES-04 SES-10 p2 suspended at its launch fails a dedicated start with start_timeout 60 at the ceiling with exit 4, reason.machine p2, the message naming p2 launched, its last RPT lines or that it wrote none, and no process of the start runs 10 s after it", "start", repeat=True)
+@check("US-087 SES-04 SES-10 p2 suspended at its launch fails a dedicated start with start_timeout 150 at the ceiling with exit 4, reason.machine p2, the message naming p2 launched, its last RPT lines or that it wrote none, and no process of the start runs 10 s after it", "start", repeat=True)
 def us087_hung(ctx):
     h = part(ctx, "hung")
     assert h["p2"], "status never listed p2 with a process id during the start"
     ctx.log(f"US-087: p2 suspended {h['acted']['at']:.1f} s into the start in state {h['acted']['state']}; "
             f"the start returned at {h['took']:.1f} s")
     reason = failed_with(h, "the hung start")
-    assert 58 <= h["took"] <= 100, f"the start returned after {h['took']:.0f} s with a start ceiling of 60 s"
+    assert 148 <= h["took"] <= 190, f"the start returned after {h['took']:.0f} s with a start ceiling of 150 s"
     msg = reason.get("message", "")
     assert reason.get("machine") == "p2", f"reason.machine {reason.get('machine')!r}: {msg!r}"
     assert re.search(r"\bp2\b[^;.]*\blaunched\b", msg), f"the message does not name p2 as launched: {msg!r}"
