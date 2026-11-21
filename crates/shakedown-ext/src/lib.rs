@@ -2,10 +2,12 @@
 //!
 //! It only moves bytes. Orders arrive from the runner on a thread of its own, are queued, and the
 //! in-game agent is told through the extension callback; the agent fetches each order in parts and
-//! sends messages back with `send`, which queues and returns at once. No call does more than that,
+//! sends messages back with `send`, which queues and returns at once. The one other call, `key`, posts a key's window message to the
+//! game's own window (`ACT-05`). No call does more than that,
 //! because the extension cannot be replaced while the game runs (`NFR-MT-01`).
 
 mod bridge;
+mod key;
 
 use std::sync::{Arc, OnceLock};
 
@@ -22,6 +24,7 @@ fn init() -> Extension {
         .command("fetch", fetch)
         .command("send", send)
         .command("status", status)
+        .command("key", key::key)
         .finish()
 }
 
