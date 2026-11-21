@@ -2790,6 +2790,92 @@ mod tests {
         assert!(moving_again(&beats(&[0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0])));
     }
 
+    /// `HLT-01`, `US-094` 1: a frame rate under `FRAME_RATE_MIN` over 5 s flags the machine
+    /// `frame-rate`, from the first beat that shows it, before its mission time; one at the floor
+    /// is not flagged.
+    #[test]
+    fn us_094_hlt_01_a_collapsed_frame_rate_is_flagged_from_when_it_fell() {
+        let mut slow = beats(&[1.0; 8]);
+        for (i, b) in slow.iter_mut().enumerate() {
+            b.frame = 1000.0
+                + if i <= 3 {
+                    i as f64 * 60.0
+                } else {
+                    180.0 + (i - 3) as f64 * 5.0
+                };
+        }
+        let (measure, from, _, (rate, _)) = stopped_clock(&slow).unwrap();
+        assert_eq!(measure, "frame-rate");
+        assert_eq!(from, "2026-11-12T12:00:04.000Z");
+        assert!(rate < FRAME_RATE_MIN, "{rate}");
+        for b in slow.iter_mut() {
+            b.time = 50.0;
+        }
+        assert_eq!(
+            stopped_clock(&slow).unwrap().0,
+            "frame-rate",
+            "named before mission time"
+        );
+        let mut floor = beats(&[1.0; 8]);
+        for (i, b) in floor.iter_mut().enumerate() {
+            b.frame = 1000.0 + i as f64 * FRAME_RATE_MIN;
+        }
+        assert!(stopped_clock(&floor).is_none());
+        assert_eq!(frame_rate(&floor), Some(FRAME_RATE_MIN));
+    }
+
+    /// `HLT-01`, `US-094` 1: answers slower than `ANSWER_MAX_S` over a whole window flag the
+    /// machine `answer-time`; one slow answer in the window does not.
+    #[test]
+    fn us_094_hlt_01_answers_that_lag_over_the_window_are_flagged() {
+        let mut lag = beats(&[1.0; 8]);
+        for b in lag.iter_mut().skip(2) {
+            b.answer = ANSWER_MAX_S + 0.5;
+        }
+        let (measure, from, _, (_, answer)) = stopped_clock(&lag).unwrap();
+        assert_eq!((measure, from.as_str()), ("answer-time", "2026-11-12T12:00:02.000Z"));
+        assert_eq!(answer, ANSWER_MAX_S + 0.5);
+        let mut once = beats(&[1.0; 8]);
+        once[6].answer = 9.0;
+        assert!(stopped_clock(&once).is_none());
+        assert!(
+            !moving_again(&once),
+            "a flag clears only after a whole window under the ceiling"
+        );
+    }
+
+    /// `US-094` 2: a frame-rate flag clears once the frame rate held its floor over a whole window.
+    #[test]
+    fn us_094_hlt_01_the_flag_clears_after_5_s_at_a_sane_frame_rate() {
+        let mut b = beats(&[1.0; 10]);
+        for (i, x) in b.iter_mut().enumerate() {
+            x.frame = 1000.0
+                + if i <= 4 {
+                    i as f64 * 5.0
+                } else {
+                    20.0 + (i - 4) as f64 * 60.0
+                };
+        }
+        assert!(moving_again(&b));
+        b.truncate(9);
+        assert!(!moving_again(&b));
+    }
+
+    /// `HLT-01`, `INS-04`: a machine's answer time is its last answered ping, or the wait of the
+    /// one it has not answered when that is longer; none before its first ping.
+    #[test]
+    fn us_093_hlt_01_answer_time_counts_the_ping_waiting() {
+        let mut m = Machine::new("p1", "client", 1, PathBuf::from("p1-1"));
+        assert_eq!(answer_time(&m), None);
+        m.answered_s = Some(0.02);
+        assert_eq!(answer_time(&m), Some(0.02));
+        m.ping = Some(("ping1".into(), Instant::now() - Duration::from_secs(3)));
+        assert!(answer_time(&m).unwrap() >= 3.0);
+        let view = machine_view(&m);
+        assert!(view["health"]["answer_s"].as_f64().unwrap() >= 3.0);
+        assert!(view["health"]["frame_rate"].is_null());
+    }
+
     /// `HLT-02`, `INS-04`: the watch over a machine's heartbeats raises its flag into the session's
     /// intervals and the machine's health, and clears both; a machine not `ready` is not watched.
     #[test]

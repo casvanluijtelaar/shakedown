@@ -13,6 +13,9 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
+#[cfg(windows)]
+pub mod starve;
+
 /// The ceiling on any one answer of the server: above the 60 s of `AGT-03`.
 const ANSWER_CEILING: Duration = Duration::from_secs(75);
 

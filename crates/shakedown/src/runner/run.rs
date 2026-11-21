@@ -1601,6 +1601,47 @@ pub fn logs(
 mod tests {
     use super::*;
 
+    /// `US-094` 1, `US-059` 1, `DM-05`: an unhealthy reason names the machine and the measure
+    /// that crossed, with the time it crossed.
+    #[test]
+    fn us_094_us_059_dm_05_the_unhealthy_reason_names_the_machine_and_the_measure() {
+        let flag = |clock| super::super::session::FlagInterval {
+            machine: "p2".into(),
+            clock,
+            from: "2026-11-21T12:00:04.000Z".into(),
+            since: "2026-11-21T12:00:09.000Z".into(),
+            cleared: None,
+            advanced: (4.1, 5.0),
+            measured: (6.2, 0.02),
+        };
+        let r = unhealthy_reason(&flag("frame-rate"));
+        assert_eq!(
+            (r.kind.as_str(), r.machine.as_deref(), r.at.as_str()),
+            ("unhealthy", Some("p2"), "2026-11-21T12:00:04.000Z")
+        );
+        assert!(
+            r.message
+                .starts_with("p2's frame rate fell to 6.2 frames a second at 2026-11-21T12:00:04.000Z"),
+            "{}",
+            r.message
+        );
+        assert!(
+            unhealthy_reason(&flag("answer-time"))
+                .message
+                .contains("p2's answer time rose to 0.0 s")
+        );
+        assert!(
+            unhealthy_reason(&flag("mission-time"))
+                .message
+                .contains("p2's mission time stopped")
+        );
+        assert!(
+            unhealthy_reason(&flag("frame"))
+                .message
+                .contains("p2's frame number stopped")
+        );
+    }
+
     /// `US-067`, `P-05` step 3, `RST-01`: a failed reset names the machine that did not verify,
     /// not the lead that drove it.
     #[test]
