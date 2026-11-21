@@ -19,7 +19,8 @@ pub struct Child {
 pub use imp::*;
 
 /// Reads `reg query`'s answer for `ActiveUser`: whether its DWORD is not 0; None when the answer
-/// holds no such value.
+/// holds no such value. Only the Windows Steam check reads the registry (`INT-STM-01`).
+#[cfg(windows)]
 pub(crate) fn active_user_set(reg: &str) -> Option<bool> {
     let line = reg.lines().find(|l| l.contains("ActiveUser"))?;
     let value = line.split("REG_DWORD").nth(1)?.trim();

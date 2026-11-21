@@ -2828,6 +2828,7 @@ mod tests {
         );
     }
 
+    #[cfg(windows)]
     #[test]
     fn int_stm_01_active_user_zero_is_no_account() {
         let reg = "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\ActiveProcess\n    ActiveUser    REG_DWORD    0x0\n";
