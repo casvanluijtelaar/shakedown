@@ -192,6 +192,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 ## Knowledge about the tooling
 
+- 2026-11-21: In SPK-11 (M17) the permission check refused a PowerShell script that would post key messages to the game window; the developer then posted them from a temporary `key` call in the extension (`21a1a65`, reverted in `226f3b2`). It touched only the game's own window, but it rebuilt a refused action another way. Developer prompts now say: a refused command is reported, not rebuilt another way.
 - 2026-11-19: In the M16 build a second dedicated server started outside the framework printed the cached Steam ID once to the developer's tool output; it reached no file, commit or report, and the owner is told. A round that starts a server outside the framework discards its output.
 - 2026-11-19: The M15 close round opened a coordinator commit's diff in `coordinator/playbook.md` to confirm the owner's demo. A close round's prompt gives the owner's words and the date, and says not to open the playbook or its commits; the coordinator's word is the evidence.
 - 2026-11-19: CI's Rust job on ubuntu-latest had failed on `main` since M12 (`library::tests::api_06_below_and_same_compare_paths_by_their_text`, a test of Windows paths). Read `gh run list` after each push, and give a red gate to a developer round that starts no game.
