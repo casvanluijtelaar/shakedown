@@ -1,7 +1,7 @@
 ---
 type: Documentation
 title: The check API by example
-description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions and keybinds, joining and leaving, recorded events, helpers shared from the library folder, cleanups, ending a check and handing over - and what each does when it fails.
+description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions, ACE interaction actions and keybinds, joining and leaving, recorded events, helpers shared from the library folder, cleanups, ending a check and handing over - and what each does when it fails.
 status: draft
 ---
 
@@ -120,6 +120,17 @@ private _passed = ["p1", {
 }] call skd_fnc_on;
 [_passed, "==", false, "off a rope the key passes on to the game"] call skd_fnc_expect;
 ```
+
+A check cannot send a real key to a game window: Arma 3 reads the keyboard through DirectInput, which a key posted to its window does not reach (`SPK-11`), so this is the way to read a key's pass-through.
+
+A mod's ACE interaction action is used by its path of action names, through ACE's own key-up code:
+
+```sqf
+["p1", _crate, ["ACE_MainActions", "skdfx_aceOpen"]] call skd_fnc_useAceAction;
+["p1", "p1", ["ACE_SelfActions", "skdfx_aceSignal"]] call skd_fnc_useAceAction;   // p1's own menu
+```
+
+A missing name or a false condition ends the check `fail` / `assertion` at the ceiling, with the names that exist there; a machine without ACE ends it `fail` / `check-error` at once. [ACE interaction actions](ace-interaction.md) has the whole of it.
 
 ## Joining and leaving
 
