@@ -73,7 +73,7 @@ cd e2e
 shakedown run --setup dedicated handover/US-083-crate
 ```
 
-On the test machine a game client's window renders only while someone is connected through Shadow PC; the session stands either way.
+A game client's window renders only while the machine has a display; the session stands either way.
 
 In `run --each-setup`, a hand over keeps that setup's session up and starts no further setup.
 
