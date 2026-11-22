@@ -75,7 +75,15 @@ def port_project(ctx):
     if project.exists():
         shutil.rmtree(project)
     shutil.copytree(SUITE / "tests", project / "tests")
-    shutil.copy2(SUITE / "shakedown.toml", project / "shakedown.toml")
+    # A mod path relative to the ported project's folder is made absolute against that folder, so the copy loads the
+    # same build (docs/project-file.md: a relative path is relative to the project folder).
+    lines = []
+    for line in (SUITE / "shakedown.toml").read_text(encoding="utf-8").splitlines():
+        m = re.match(r"^(\s*path\s*=\s*)'([^']*)'(.*)$", line)
+        if m and not Path(m.group(2)).is_absolute():
+            line = f"{m.group(1)}'{os.path.normpath(SUITE / m.group(2))}'{m.group(3)}"
+        lines.append(line)
+    (project / "shakedown.toml").write_text("\n".join(lines) + "\n", encoding="utf-8")
     (project / ".mcp.json").write_text(json.dumps(
         {"mcpServers": {"shakedown": {"command": "shakedown", "args": ["mcp"], "timeout": 70000}}}, indent=2),
         encoding="utf-8")
