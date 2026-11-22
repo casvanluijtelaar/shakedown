@@ -806,6 +806,49 @@ mod imp {
             assert_eq!(user_dword(r"Keyboard Layout\Preload", "1"), None);
         }
 
+        /// The runner has no console (`DETACHED_PROCESS`), so a console program it starts
+        /// without `CREATE_NO_WINDOW` opens a window of its own. Every `Command::new` in the
+        /// crates' sources passes that flag, or is built only off Windows.
+        #[test]
+        fn no_console_program_is_started_with_a_window() {
+            let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+            let mut files = vec![];
+            let mut dirs = vec![
+                root.join("shakedown").join("src"),
+                root.join("shakedown-ext").join("src"),
+            ];
+            while let Some(d) = dirs.pop() {
+                for e in std::fs::read_dir(&d).unwrap().flatten() {
+                    let p = e.path();
+                    if p.is_dir() {
+                        dirs.push(p);
+                    } else if p.extension().is_some_and(|x| x == "rs") {
+                        files.push(p);
+                    }
+                }
+            }
+            let mut bare = vec![];
+            for f in files {
+                let text = std::fs::read_to_string(&f).unwrap();
+                let lines: Vec<&str> = text.lines().collect();
+                for (i, l) in lines.iter().enumerate() {
+                    if !l.contains(concat!("Command", "::new(")) || l.trim_start().starts_with("//") {
+                        continue;
+                    }
+                    let off_windows = lines[i.saturating_sub(3)..i]
+                        .iter()
+                        .any(|b| b.contains("cfg(not(windows))"));
+                    let flagged = lines[i..(i + 10).min(lines.len())]
+                        .iter()
+                        .any(|a| a.contains("creation_flags(CREATE_NO_WINDOW)"));
+                    if !off_windows && !flagged {
+                        bare.push(format!("{}:{}", f.display(), i + 1));
+                    }
+                }
+            }
+            assert!(bare.is_empty(), "started without CREATE_NO_WINDOW: {bare:?}");
+        }
+
         #[test]
         fn ses_03_a_bound_udp_port_is_held_and_read_with_its_address() {
             let socket = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
