@@ -51,13 +51,13 @@ function Assert-ShakedownNotRunning([string]$Dir) {
     }
 }
 
-# The PATH value with Dir added at the end, or $null when Dir is in it already.
+# The PATH value with Dir added at the end and the rest left as it is, or $null when Dir is in it.
 function Add-ToPathValue([string]$Current, [string]$Dir) {
-    $parts = @($Current -split ';' | Where-Object { $_ -ne '' })
-    foreach ($part in $parts) {
-        if ($part.TrimEnd('\') -ieq $Dir.TrimEnd('\')) { return $null }
+    foreach ($part in ($Current -split ';')) {
+        if ($part -and $part.TrimEnd('\') -ieq $Dir.TrimEnd('\')) { return $null }
     }
-    ($parts + $Dir) -join ';'
+    if (-not $Current.TrimEnd(';')) { return $Dir }
+    $Current.TrimEnd(';') + ';' + $Dir
 }
 
 # Adds Dir to the user's PATH in the registry, keeping its other entries unexpanded, and tells
@@ -68,7 +68,9 @@ function Add-ShakedownToUserPath([string]$Dir) {
         $current = $key.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
         $new = Add-ToPathValue $current $Dir
         if ($null -ne $new) {
-            $key.SetValue('Path', $new, [Microsoft.Win32.RegistryValueKind]::ExpandString)
+            $kind = [Microsoft.Win32.RegistryValueKind]::ExpandString
+            if ($null -ne $key.GetValue('Path')) { $kind = $key.GetValueKind('Path') }
+            $key.SetValue('Path', $new, $kind)
             if (-not ('Shakedown.SettingChange' -as [type])) {
                 Add-Type -Namespace Shakedown -Name SettingChange -MemberDefinition @'
 [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]

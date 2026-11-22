@@ -66,6 +66,7 @@ try {
     Check 'DST-03 adds the folder to a PATH without it' ((Add-ToPathValue 'C:\a;C:\b' 'C:\S') -eq 'C:\a;C:\b;C:\S')
     Check 'DST-03 leaves a PATH that has the folder' ($null -eq (Add-ToPathValue 'C:\a;c:\s\;C:\b' 'C:\S'))
     Check 'DST-03 adds to an empty PATH' ((Add-ToPathValue '' 'C:\S') -eq 'C:\S')
+    Check 'DST-03 keeps the rest of the PATH as it is' ((Add-ToPathValue 'C:\a;;C:\b;' 'C:\S') -eq 'C:\a;;C:\b;C:\S')
     Check 'DST-03 the latest release by default' ((Get-ShakedownSource '' '') -eq 'https://github.com/casvanluijtelaar/shakedown/releases/latest/download')
     Check 'DST-03 SHAKEDOWN_VERSION names the release' ((Get-ShakedownSource '0.2.0-rc.1' '') -eq 'https://github.com/casvanluijtelaar/shakedown/releases/download/v0.2.0-rc.1')
 
