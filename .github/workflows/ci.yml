@@ -31,6 +31,13 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
+      # The tests of the release packaging and the one-line install (DST-01, DST-03, NFR-LG-04).
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python -m unittest discover -s tools -p "test_*.py"
+      - if: runner.os == 'Windows'
+        run: powershell -NoProfile -File tools/test_install.ps1
 
   hemtt-check:
     name: HEMTT check

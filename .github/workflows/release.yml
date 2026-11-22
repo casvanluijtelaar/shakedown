@@ -1,0 +1,75 @@
+name: Release
+
+# A tag v<version> builds the GitHub release of that version (DST-01) and, for a version with no
+# pre-release part whose package is already in microsoft/winget-pkgs, submits it to winget (DST-02).
+# Runs no game. Versions looked up on 2026-11-21 (spec/07-tech-stack.md).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      # Before anything is built: a tag that differs from the workspace version stops the job.
+      - name: Check the tag against the workspace version
+        shell: pwsh
+        run: |
+          python -c "import sys; sys.path.insert(0, 'tools'); import package; sys.exit(package.check_tag(sys.argv[1], package.workspace_version()))" $env:TAG
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - run: rustup toolchain install 1.99.1 --profile minimal && rustup default 1.99.1
+      - uses: arma-actions/hemtt@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          version: v1.23.1
+      - name: Build and package
+        shell: pwsh
+        run: |
+          # Keeps the runner's own folders out of the paths compiled into the binaries.
+          $env:RUSTFLAGS = "--remap-path-prefix=$env:GITHUB_WORKSPACE=shakedown --remap-path-prefix=$env:USERPROFILE\.cargo=cargo"
+          python tools/package.py --tag $env:TAG
+      - name: Publish the GitHub release
+        shell: pwsh
+        run: |
+          $version = $env:TAG.Substring(1)
+          $flags = @()
+          if ($version.Contains('-')) { $flags += '--prerelease' } else { $flags += '--latest' }
+          $notes = "Shakedown $version for 64-bit Windows. Install it with:`n`n    irm https://github.com/${{ github.repository }}/releases/download/$env:TAG/install.ps1 | iex`n`nor see docs/install.md. Licensed GPL-2.0-or-later; the zip holds LICENSE and THIRD-PARTY-LICENSES.txt."
+          gh release create $env:TAG target/dist/shakedown-windows-x64.zip target/dist/shakedown-windows-x64.zip.sha256 tools/install.ps1 --title "Shakedown $version" --notes $notes --verify-tag @flags
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Submit to winget
+        if: ${{ !contains(github.ref_name, '-') }}
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          gh api repos/microsoft/winget-pkgs/contents/manifests/c/casvanluijtelaar/Shakedown --silent 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Output "::notice::casvanluijtelaar.Shakedown is not in microsoft/winget-pkgs yet, so nothing was submitted. The first version is the owner's to submit with komac new (DST-02)."
+            exit 0
+          }
+          if (-not $env:WINGET_TOKEN) { Write-Output "::error::The repository secret WINGET_TOKEN is not set."; exit 1 }
+          $komac = "komac-2.17.2-x86_64-pc-windows-msvc.exe"
+          gh release download v2.17.2 --repo russellbanks/Komac --pattern $komac --pattern SHA256SUMS
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $want = ((Get-Content SHA256SUMS | Where-Object { $_ -match [regex]::Escape($komac) }) -split '\s+')[0]
+          $got = (Get-FileHash -Algorithm SHA256 $komac).Hash
+          if (-not $want -or $got -ne $want) { Write-Output "::error::$komac has SHA-256 $got, SHA256SUMS says $want."; exit 1 }
+          $version = $env:TAG.Substring(1)
+          & ".\$komac" update casvanluijtelaar.Shakedown --version $version --urls "https://github.com/${{ github.repository }}/releases/download/$env:TAG/shakedown-windows-x64.zip" --submit --token $env:WINGET_TOKEN
+          if ($LASTEXITCODE -ne 0) { exit 1 }
