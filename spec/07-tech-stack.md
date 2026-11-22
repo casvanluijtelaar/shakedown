@@ -46,7 +46,7 @@ Versions were looked up on 2026-11-04 from crates.io, GitHub releases, `static.r
 | `jsonschema` | 0.60.2, tests only | Validating every result file the tests produce against `result.schema.json`. | crates.io |
 | SQF | the game's | The in-game agent and the check API. | - |
 | Komac | 2.17.2 (2026-11-03, looked up 2026-11-21) | Opening the pull request to `microsoft/winget-pkgs` for each release after the first (`DST-02`). | GitHub release |
-| Python 3 and PyYAML 6.0.3 | as in CI | The bundle check (`tools/okf_check.py`), and the install script (`tools/install.py`) that builds the binary, the extension and the addon and assembles the install folder. | `.github/workflows/ci.yml` |
+| Python 3 and PyYAML 6.0.3 | as in CI | The bundle check (`tools/okf_check.py`), the install script (`tools/install.py`) that builds the binary, the extension and the addon and assembles the install folder, and the release packaging (`tools/package.py`). | `.github/workflows/ci.yml` |
 
 What is written in the project instead of taken as a dependency: the FNV-1a hash for file snapshots, the redaction of Steam IDs, the `-autotest` and `mission.sqm` generators, the newline-delimited JSON framing between the runner and the extension.
 
@@ -115,11 +115,12 @@ The framework developer owns these. The test developer opens none of them.
 | `fixtures/` | The source of the fixture mods `@skd_fixture` and `@skd_fixture_cba`, HEMTT projects whose behaviour is [contract/fixture-mod.md](contract/fixture-mod.md), and the crate of the fixture's extension `skdfx_x64.dll` (`FIX-01`), a member of the workspace. |
 | `e2e/` | The framework developer's end-to-end project: a `shakedown.toml` and SQF checks against the fixture mods, run on the test machine by the ignored tests in `crates/shakedown/tests/`. |
 | `tools/install.py` | Builds the framework and assembles the install folder, by default `target/shakedown/`. |
-| `tools/install.ps1` | The one-line install of a release (`DST-03`), published with each release. |
+| `tools/install.ps1` | The one-line install of a release (`DST-03`), published with each release; its tests are `tools/test_install.ps1`. |
+| `tools/package.py` | Checks a release tag against the workspace version, builds the binary, the extension and the addon, writes `THIRD-PARTY-LICENSES.txt` from `Cargo.lock` and `cargo metadata`, and assembles the release zip and its `.sha256` in `target/dist/` (`DST-01`, `NFR-LG-04`); its tests are `tools/test_package.py`. |
 | `.github/workflows/` | `ci.yml`, the gates below; `release.yml`, the release built from a tag (`DST-01`, `DST-02`). |
 | `LICENSE` | GPL-2.0-or-later (`NFR-LG-04`). |
 
-GitHub Actions runs, besides the bundle check: `cargo fmt --check`, `cargo clippy -- -D warnings` and `cargo test` on Windows and Linux, and `hemtt check` on the addon. Nothing there starts the game. On a tag `v<version>` it builds the release on `windows-latest` with cargo and HEMTT and publishes it, and submits the version to winget with a classic token of the owner's in the repository secret `WINGET_TOKEN`, used by that job only.
+GitHub Actions runs, besides the bundle check: `cargo fmt --check`, `cargo clippy -- -D warnings` and `cargo test` on Windows and Linux, the tests of `tools/package.py` there too, the tests of `tools/install.ps1` on Windows, and `hemtt check` on the addon. Nothing there starts the game. On a tag `v<version>` it builds the release on `windows-latest` with cargo and HEMTT and publishes it, and submits the version to winget with a classic token of the owner's in the repository secret `WINGET_TOKEN`, used by that job only.
 
 ## Contract files
 
