@@ -1,7 +1,7 @@
 ---
 type: User Story
 title: "A machine's game clock stops while it still answers"
-description: "When a machine's mission time or frame number stops while it still answers, as when a rendering client's Shadow stream is cut, the checks it overlaps are invalid naming the machine and the clock, not failed."
+description: "When a machine's mission time or frame number stops while it still answers, the checks it overlaps are invalid naming the machine and the clock, not failed."
 status: stable
 id: US-059
 role: test-author
@@ -12,7 +12,7 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 
 # US-059 A machine's game clock stops while it still answers
 
-As a test author, I want to have a check that ran while a machine's game clock stood still reported invalid, naming the machine and the clock, so that a cut stream never reads as a defect in the mod.
+As a test author, I want to have a check that ran while a machine's game clock stood still reported invalid, naming the machine and the clock, so that a stalled machine never reads as a defect in the mod.
 
 ## Acceptance criteria
 

@@ -178,7 +178,7 @@ A working MVP early beats a careful product late. The plan puts a usable framewo
 
 - Arma 3 only, in its current version, on Windows. The dedicated server may run on Windows or Linux.
 - Runs on a developer's machine that has Arma 3 and its mods installed through Steam, logged in to an account that owns the game.
-- Clients render a window. A machine that runs clients needs a display, or a remote stream such as Shadow.
+- Clients render a window. A machine that runs clients needs a display.
 - The framework never takes over the machine's mouse and keyboard, so a person can keep working while a suite runs.
 - BattlEye is off for every test run.
 - Checks are written in SQF. The framework's own internals may use whatever the game requires to talk to it from outside, but a test author never needs another language.
