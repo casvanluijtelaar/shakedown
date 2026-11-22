@@ -168,3 +168,11 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - A ported check edited and run at once in a ready session reached its outcome 2.0 to 2.6 s after the edit, in singleplayer and on the dedicated session.
 - On a dedicated session with two clients and a headless client, a crate waited for on each client right after `skd_fnc_create` was there in place within 0.1 s.
 - The full suite of every milestone with M10 takes about 75 minutes.
+
+## What the M19 round learned
+
+- `tools/package.py --tag v<version>` builds the release zip in about 40 s on a warm build; `install.ps1` installs it from a local folder in 1 to 2 s, and refuses a damaged zip in 0.5 s.
+- A new shell's `PATH` is the machine's entries from the registry, then the user's; the M19 part builds it so and leaves out every folder holding Rust, HEMTT or Python, since the user's `PATH` holds `.cargo\bin`, Python and HEMTT's winget folder.
+- `install.ps1`'s refusal is a PowerShell error record, which PowerShell wraps at its host's width also when the output goes to a pipe, so a long command line runs over two lines; the check compares the text with spaces, line breaks and quotes left out.
+- A `run --setup sp` from a fresh install, with no mod, takes 26 to 28 s, and its runner exits by itself 61 s after.
+- The full suite of every milestone through M18 takes 1 h 31 min.
