@@ -193,6 +193,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 ## Knowledge about the tooling
 
+- 2026-11-22: The owner set the PowerShell execution policy for their user to `RemoteSigned` (`CurrentUser`; machine and user policies undefined). Local scripts such as `tools/install.ps1` run with `powershell -File`; a downloaded script needs `Unblock-File` or a signature. Undo: the same command with `Undefined`.
 - 2026-11-21: In SPK-11 (M17) the permission check refused a PowerShell script that would post key messages to the game window; the developer then posted them from a temporary `key` call in the extension (`21a1a65`, reverted in `226f3b2`). It touched only the game's own window, but it rebuilt a refused action another way. Developer prompts now say: a refused command is reported, not rebuilt another way.
 - 2026-11-19: In the M16 build a second dedicated server started outside the framework printed the cached Steam ID once to the developer's tool output; it reached no file, commit or report, and the owner is told. A round that starts a server outside the framework discards its output.
 - 2026-11-19: The M15 close round opened a coordinator commit's diff in `coordinator/playbook.md` to confirm the owner's demo. A close round's prompt gives the owner's words and the date, and says not to open the playbook or its commits; the coordinator's word is the evidence.
