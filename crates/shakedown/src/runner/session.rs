@@ -2643,20 +2643,8 @@ pub(crate) fn junction(link: &Path, target: &Path) -> Result<(), String> {
         std::fs::remove_dir(link)
             .map_err(|e| format!("the framework's link {} could not be replaced: {e}", link.display()))?;
     }
-    let out = std::process::Command::new("cmd")
-        .args(["/c", "mklink", "/J"])
-        .arg(link)
-        .arg(&want)
-        .output()
-        .map_err(|e| format!("the framework's link {}: {e}", link.display()))?;
-    if !out.status.success() {
-        return Err(format!(
-            "the framework's link {} could not be made: {}",
-            link.display(),
-            String::from_utf8_lossy(&out.stdout).trim()
-        ));
-    }
-    Ok(())
+    win::make_junction(link, &want)
+        .map_err(|e| format!("the framework's link {} could not be made: {e}", link.display()))
 }
 
 /// The error a client reports for a session that ended `failed`.
@@ -3035,15 +3023,6 @@ mod tests {
             gaps,
             vec!["a running Steam client of this user (start Steam and log in)".to_string()]
         );
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn int_stm_01_active_user_zero_is_no_account() {
-        let reg = "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\ActiveProcess\n    ActiveUser    REG_DWORD    0x0\n";
-        assert_eq!(win::active_user_set(reg), Some(false));
-        assert_eq!(win::active_user_set(&reg.replace("0x0", "0x1a2b")), Some(true));
-        assert_eq!(win::active_user_set("ERROR: not found"), None);
     }
 
     #[test]

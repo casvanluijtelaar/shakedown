@@ -18,16 +18,6 @@ pub struct Child {
 #[cfg(windows)]
 pub use imp::*;
 
-/// Reads `reg query`'s answer for `ActiveUser`: whether its DWORD is not 0; None when the answer
-/// holds no such value. Only the Windows Steam check reads the registry (`INT-STM-01`).
-#[cfg(windows)]
-pub(crate) fn active_user_set(reg: &str) -> Option<bool> {
-    let line = reg.lines().find(|l| l.contains("ActiveUser"))?;
-    let value = line.split("REG_DWORD").nth(1)?.trim();
-    let n = u64::from_str_radix(value.trim_start_matches("0x"), 16).ok()?;
-    Some(n != 0)
-}
-
 #[cfg(windows)]
 mod imp {
     use super::Child;
@@ -574,12 +564,146 @@ mod imp {
     /// comparison leaves this function; the value itself is the account's number and is kept
     /// nowhere. None when the value cannot be read.
     pub fn steam_active_user() -> Option<bool> {
-        let out = std::process::Command::new("reg")
-            .args([r"query", r"HKCU\Software\Valve\Steam\ActiveProcess", "/v", "ActiveUser"])
-            .output()
-            .ok()?;
-        let text = String::from_utf8_lossy(&out.stdout);
-        super::active_user_set(&text)
+        user_dword(r"Software\Valve\Steam\ActiveProcess", "ActiveUser").map(|n| n != 0)
+    }
+
+    /// A `REG_DWORD` value under `HKEY_CURRENT_USER`, read in-process; None when the value is
+    /// missing or of another type.
+    pub fn user_dword(key: &str, value: &str) -> Option<u32> {
+        use windows::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW};
+        let key = wide(key);
+        let value = wide(value);
+        let mut data = 0u32;
+        let mut size = std::mem::size_of::<u32>() as u32;
+        let status = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                PCWSTR(key.as_ptr()),
+                PCWSTR(value.as_ptr()),
+                RRF_RT_REG_DWORD,
+                None,
+                Some(&mut data as *mut u32 as *mut _),
+                Some(&mut size),
+            )
+        };
+        status.is_ok().then_some(data)
+    }
+
+    /// A `REG_SZ` value under `HKEY_CURRENT_USER`, read in-process; None when the value is missing
+    /// or of another type.
+    pub fn user_string(key: &str, value: &str) -> Option<String> {
+        use windows::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_SZ, RegGetValueW};
+        let key = wide(key);
+        let value = wide(value);
+        let read = |buf: Option<&mut Vec<u16>>, size: &mut u32| unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                PCWSTR(key.as_ptr()),
+                PCWSTR(value.as_ptr()),
+                RRF_RT_REG_SZ,
+                None,
+                buf.map(|b| b.as_mut_ptr() as *mut _),
+                Some(size),
+            )
+        };
+        // The value can grow between the two calls; a second miss reads it once more.
+        for _ in 0..3 {
+            let mut size = 0u32;
+            if read(None, &mut size).is_err() {
+                return None;
+            }
+            let mut buf = vec![0u16; (size as usize).div_ceil(2)];
+            if read(Some(&mut buf), &mut size).is_ok() {
+                let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+                return Some(String::from_utf16_lossy(&buf[..len]));
+            }
+        }
+        None
+    }
+
+    fn wide(text: &str) -> Vec<u16> {
+        text.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    /// Makes the empty folder `link` a directory junction to `target`, an absolute path, through
+    /// `FSCTL_SET_REPARSE_POINT`: what `mklink /J` does, in-process. `link` is made here and
+    /// removed again when the junction cannot be set.
+    pub fn make_junction(link: &Path, target: &Path) -> std::io::Result<()> {
+        use windows::Win32::Storage::FileSystem::{
+            CreateFileW, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, FILE_GENERIC_WRITE, FILE_SHARE_NONE,
+            OPEN_EXISTING,
+        };
+        use windows::Win32::System::IO::DeviceIoControl;
+        const FSCTL_SET_REPARSE_POINT: u32 = 0x0009_00A4;
+
+        let buffer = mount_point_buffer(target)?;
+        std::fs::create_dir(link)?;
+        let set = (|| {
+            let link_w: Vec<u16> = link.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+            let handle = unsafe {
+                CreateFileW(
+                    PCWSTR(link_w.as_ptr()),
+                    FILE_GENERIC_WRITE.0,
+                    FILE_SHARE_NONE,
+                    None,
+                    OPEN_EXISTING,
+                    FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                    None,
+                )
+            }
+            .map_err(std::io::Error::other)?;
+            let handle = Handle(handle);
+            let mut returned = 0u32;
+            unsafe {
+                DeviceIoControl(
+                    handle.0,
+                    FSCTL_SET_REPARSE_POINT,
+                    Some(buffer.as_ptr() as *const _),
+                    buffer.len() as u32,
+                    None,
+                    0,
+                    Some(&mut returned),
+                    None,
+                )
+            }
+            .map_err(std::io::Error::other)
+        })();
+        if set.is_err() {
+            let _ = std::fs::remove_dir(link);
+        }
+        set
+    }
+
+    /// The `REPARSE_DATA_BUFFER` of a mount point: the tag, the data length, a reserved
+    /// word, the offset and length of the substitute name (`\??\` and the target) and of the
+    /// print name (the target), then both names, each ending in a NUL.
+    fn mount_point_buffer(target: &Path) -> std::io::Result<Vec<u8>> {
+        const IO_REPARSE_TAG_MOUNT_POINT: u32 = 0xA000_0003;
+        let print: Vec<u16> = target.as_os_str().encode_wide().collect();
+        let substitute: Vec<u16> = r"\??\".encode_utf16().chain(print.iter().copied()).collect();
+        let (sub_bytes, print_bytes) = (substitute.len() * 2, print.len() * 2);
+        // Four u16 of name offsets and lengths, then both names with their NULs.
+        let data_len = 8 + sub_bytes + 2 + print_bytes + 2;
+        if data_len > 16 * 1024 - 8 {
+            return Err(std::io::Error::other("the junction's target path is too long"));
+        }
+        let mut buf = Vec::with_capacity(8 + data_len);
+        buf.extend_from_slice(&IO_REPARSE_TAG_MOUNT_POINT.to_le_bytes());
+        buf.extend_from_slice(&(data_len as u16).to_le_bytes());
+        buf.extend_from_slice(&0u16.to_le_bytes());
+        buf.extend_from_slice(&0u16.to_le_bytes());
+        buf.extend_from_slice(&(sub_bytes as u16).to_le_bytes());
+        buf.extend_from_slice(&((sub_bytes + 2) as u16).to_le_bytes());
+        buf.extend_from_slice(&(print_bytes as u16).to_le_bytes());
+        for c in substitute
+            .iter()
+            .chain(std::iter::once(&0))
+            .chain(print.iter())
+            .chain(std::iter::once(&0))
+        {
+            buf.extend_from_slice(&c.to_le_bytes());
+        }
+        Ok(buf)
     }
 
     pub fn steam_running() -> bool {
@@ -653,6 +777,34 @@ mod imp {
     #[cfg(test)]
     mod tests {
         use super::*;
+
+        #[test]
+        fn int_ar_06_a_junction_is_made_in_process_and_reaches_its_target() {
+            let dir = std::env::temp_dir().join(format!("skd-junction-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
+            let target = dir.join("target folder");
+            std::fs::create_dir_all(&target).unwrap();
+            std::fs::write(target.join("f.txt"), b"x").unwrap();
+            let link = dir.join("@link");
+            make_junction(&link, &target).unwrap();
+            assert_eq!(std::fs::read(link.join("f.txt")).unwrap(), b"x");
+            assert_eq!(std::fs::read_link(&link).unwrap(), target);
+            // A second junction where a folder is already fails and leaves that folder alone.
+            assert!(make_junction(&link, &target).is_err());
+            assert!(link.join("f.txt").is_file());
+            std::fs::remove_dir(&link).unwrap();
+            assert!(target.join("f.txt").is_file());
+            std::fs::remove_dir_all(&dir).unwrap();
+        }
+
+        #[test]
+        fn int_stm_01_a_missing_registry_value_reads_as_none() {
+            assert_eq!(user_dword(r"Software\shakedown-no-such-key", "ActiveUser"), None);
+            assert_eq!(user_string(r"Software\shakedown-no-such-key", "SteamPath"), None);
+            // Every user hive has its keyboard layout preload list, a string.
+            assert!(user_string(r"Keyboard Layout\Preload", "1").is_some_and(|v| !v.is_empty()));
+            assert_eq!(user_dword(r"Keyboard Layout\Preload", "1"), None);
+        }
 
         #[test]
         fn ses_03_a_bound_udp_port_is_held_and_read_with_its_address() {
@@ -896,6 +1048,10 @@ mod imp {
 
     pub fn steam_active_user() -> Option<bool> {
         None
+    }
+
+    pub fn make_junction(_link: &Path, _target: &Path) -> std::io::Result<()> {
+        Err(std::io::Error::other("needs Windows"))
     }
 
     pub fn steam_running() -> bool {

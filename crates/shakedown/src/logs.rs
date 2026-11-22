@@ -93,14 +93,7 @@ fn account_named(vdf: &str) -> bool {
 
 #[cfg(windows)]
 fn steam_path() -> Option<PathBuf> {
-    let out = std::process::Command::new("reg")
-        .args(["query", r"HKCU\Software\Valve\Steam", "/v", "SteamPath"])
-        .output()
-        .ok()?;
-    let text = String::from_utf8_lossy(&out.stdout);
-    let line = text.lines().find(|l| l.contains("SteamPath"))?;
-    let value = line.split("REG_SZ").nth(1)?.trim();
-    Some(PathBuf::from(value))
+    crate::win::user_string(r"Software\Valve\Steam", "SteamPath").map(PathBuf::from)
 }
 
 #[cfg(not(windows))]
