@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18  # noqa: E402,F401  (importing a module registers its checks)
+from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19  # noqa: E402,F401  (importing a module registers its checks)
 from harness.core import AFTER_SESSION, BATCHES, CHECKS, SETUPS, Context  # noqa: E402
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
@@ -92,6 +92,10 @@ def main():
     ap.add_argument("--agh", default=os.environ.get("SHAKEDOWN_AGH", DEFAULT_AGH),
                     help="arma-grappling-hook's built mod folder")
     ap.add_argument("--work", help="the folder for the generated project and the report (default: a new temp folder)")
+    ap.add_argument("--skip", action="append", default=[],
+                    help="leave out checks whose name contains this text; repeat for several")
+    ap.add_argument("--dist", default=os.environ.get("SHAKEDOWN_DIST"),
+                    help="the folder holding the release zip and its .sha256 (default: target/dist in the repository)")
     ap.add_argument("--list", action="store_true", help="print the check names and exit")
     args = ap.parse_args()
     sys.stdout.reconfigure(errors="replace")  # an RPT line in a message may hold a character the console cannot show
@@ -100,6 +104,7 @@ def main():
     # when a --check value selects it.
     selected = [c for c in CHECKS if any(f in c.name for f in args.check)
                 or not args.check and c.phase not in ("nosteam", "claude")]
+    selected = [c for c in selected if not any(s in c.name for s in args.skip)]
     if args.list:
         for c in selected:
             where = f" {c.setup}" if c.phase == "session" else ""
@@ -127,6 +132,7 @@ def main():
     project = make_project(work, args.game, exe.parent, args.cba, args.agh)
     ctx = Context(driver.Shakedown(exe, project, log), project, REPO, log)
     ctx.work, ctx.install = work, exe.parent
+    ctx.dist = args.dist
     ctx.repeat_total = args.repeat
     results = []  # (repeat, name, ok, message)
 
