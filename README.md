@@ -3,7 +3,8 @@
 </p>
 
 <p align="center">
-    <img src="https://img.shields.io/badge/Version-0.1.0-blue.svg?style=flat-square" alt="Version 0.1.0">
+    <img src="https://img.shields.io/github/v/release/casvanluijtelaar/shakedown?include_prereleases&style=flat-square&label=Version" alt="Latest release">
+    <img src="https://img.shields.io/badge/License-GPL--2.0--or--later-blue.svg?style=flat-square" alt="GPL-2.0-or-later">
     <img src="https://img.shields.io/badge/Arma%203-2.22+-a3c644.svg?style=flat-square" alt="Arma 3 2.22 or later">
     <img src="https://img.shields.io/badge/Platform-Windows-lightgrey.svg?style=flat-square" alt="Windows">
     <img src="https://img.shields.io/badge/Built%20with-Rust%20%2B%20SQF-orange.svg?style=flat-square" alt="Built with Rust and SQF">
@@ -37,13 +38,21 @@
 
 ### 1. Install
 
-From the root of this repository:
+With winget:
 
 ```
-python tools/install.py
+winget install casvanluijtelaar.Shakedown
 ```
 
-This builds `shakedown.exe`, the `@shakedown` addon and its extension into `target\shakedown\`. Put that folder on `PATH`. Keep `shakedown.exe` and `@shakedown` together. To install somewhere else, give the folder as the first argument: `python tools/install.py C:\Tools\Shakedown`.
+or with the one-line script, in PowerShell:
+
+```
+irm https://github.com/casvanluijtelaar/shakedown/releases/latest/download/install.ps1 | iex
+```
+
+or unpack `shakedown-windows-x64.zip` from the [latest release](https://github.com/casvanluijtelaar/shakedown/releases/latest) into a folder and put that folder on `PATH`. Keep `shakedown.exe` and `@shakedown` together. No Rust, HEMTT or Python is needed. Open a new terminal and check with `shakedown version`.
+
+[docs/install.md](docs/install.md) says how to upgrade and remove it, and how to build it from source.
 
 ### 2. A project file
 
@@ -144,3 +153,9 @@ Start Claude Code in that folder, and the agent can:
 - run SQF on any machine and inspect it live
 - reload changed mod files and rerun a test
 - call `guide` for a short manual on writing and running tests
+
+## License
+
+Shakedown is free software under the [GNU General Public License, version 2 or later](LICENSE). A release carries `LICENSE` and `THIRD-PARTY-LICENSES.txt`, the licences of the packages compiled into it; `shakedown.exe` includes `rmcp`, Apache-2.0 only, and so is distributed under GPL version 3.
+
+The license covers Shakedown's code, not the game. Using Shakedown means running Arma 3, and what you may do with Arma 3 is set by Bohemia Interactive's EULA and its rules for tools and mods. Shakedown is meant for testing non-commercial mods.
