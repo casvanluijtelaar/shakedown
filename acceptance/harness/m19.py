@@ -18,13 +18,16 @@ the change broadcast as Windows does; each install goes into a folder of the wor
 1. `install.ps1` run as a file from a release folder (`SHAKEDOWN_DOWNLOAD`) into `file\Shakedown`; `shakedown version`
    in a new shell. Then two files of the install changed and the script run again (US-096). Then a release folder whose
    zip has one byte changed, run as a file over that install (US-097). Then `run --setup sp` of the README's quickstart
-   check from that install. Then a session started from it and `shakedown mcp` started from it, the one-line route run
-   over it (US-098 1), and once both are stopped, the same command again (US-098 2). The user `PATH` is put back.
+   check from that install. The user `PATH` is put back.
 2. The one-line route, `irm http://127.0.0.1:<port>/install.ps1 | iex`, from an HTTP server inside the harness that
    serves the release folder, into `iex\Shakedown`; `shakedown version` in a new shell; `run --setup sp`. Put back.
 3. A release folder whose zip is cut off at half, run as a file with no install into `cut\Shakedown` (US-097 2).
 4. The zip unpacked by hand into `hand\Shakedown` with Python's `zipfile`, that folder put on the new shell's `PATH`;
    `shakedown version`; `run --setup sp`.
+
+The US-098 checks share a part of their own: `install.ps1` run as a file into `run\Shakedown`, a session started from
+that install and `shakedown mcp` started from it, the one-line route run over it (US-098 1), and once both are stopped,
+the same command again (US-098 2). The user `PATH` is put back.
 
 After each `run --setup sp` and the US-098 session, the part waits up to 75 s for the runner to exit by itself and stops
 it by its id after that. A game start lost to `Error 20 reading file` starts again, at most three times in all.
@@ -457,12 +460,6 @@ def part(ctx):
         except Exception as e:  # noqa: BLE001
             ctx.log(f"M19 file run: {traceback.format_exc()}")
             v["file_run"] = e
-        with Server(good) as server:
-            try:
-                v["us098"] = us098(ctx, server, a)
-            except Exception as e:  # noqa: BLE001
-                ctx.log(f"M19 US-098: {traceback.format_exc()}")
-                v["us098"] = e
     v["path_after_file"] = user_path()
 
     # 2. the one-line route
@@ -507,15 +504,31 @@ def part(ctx):
     return v
 
 
-def once(ctx):
+def part098(ctx):
+    """US-098 in a part of its own: install.ps1 run as a file into `run\\Shakedown`, then `us098` over it."""
+    target = ctx.work / "m19" / "run" / "Shakedown"
+    if target.parent.exists():
+        shutil.rmtree(target.parent)
+    good = release_folder(ctx, "good")
+    v = {"zip": zip_tree(good / ZIP), "folders": {"run": target}, "path_before": user_path()}
+    with UserPath(ctx):
+        r = as_file(ctx, good, target)
+        assert r["code"] == 0, f"install.ps1 into {target} exit {r['code']}: {r['text'][-600:]}"
+        with Server(good) as server:
+            v["us098"] = us098(ctx, server, target)
+    v["path_end"] = user_path()
+    return v
+
+
+def once(ctx, key="part", fn=None):
     store = keep(ctx)
-    if "part" not in store:
+    if key not in store:
         try:
-            store["part"] = part(ctx)
+            store[key] = (fn or part)(ctx)
         except Exception as e:  # noqa: BLE001
-            ctx.log(f"M19 part: {traceback.format_exc()}")
-            store["part"] = e
-    value = store["part"]
+            ctx.log(f"M19 {key}: {traceback.format_exc()}")
+            store[key] = e
+    value = store[key]
     if isinstance(value, Exception):
         raise AssertionError(f"the M19 part failed: {value!r}")
     return value
@@ -563,6 +576,12 @@ def refused(r, hashes):
     for h in hashes:
         assert h.lower() in low, f"the refusal does not name the hash {h}: {text.strip()[-600:]!r}"
     assert "nothing" in low, f"the refusal does not say nothing was installed: {text.strip()[-600:]!r}"
+
+
+def squash(text):
+    """The text with every space, line break and quote left out: PowerShell wraps an error record at the width of
+    its host, also when its output is redirected, so a long command runs over several lines."""
+    return re.sub(r"[\s\"']", "", text)
 
 
 def sha_value(ctx):
@@ -758,7 +777,7 @@ def cut(ctx):
 
 @m19check("US-098 DST-03 with a session's runner and a shakedown mcp running from the install folder, the one-line route refuses, names each shakedown.exe of that folder by its id and command and says to stop them first; no file of the install changes and the session still answers status")
 def running(ctx):
-    v = once(ctx)
+    v = once(ctx, "us098", part098)
     u = v["us098"]
     if isinstance(u, Exception):
         raise AssertionError(f"the US-098 part failed: {u!r}")
@@ -768,11 +787,12 @@ def running(ctx):
     r = u["refused"]
     text = r["text"]
     ctx.log(f"M19 US-098: the refusal: {text.strip()[-700:]}")
-    named = {int(m.group(1)): m.group(2).strip() for m in re.finditer(r"^\s*(\d+)\s+(.+?)\s*$", text, re.M)
-             if int(m.group(1)) in procs or "shakedown" in m.group(2).lower()}
-    assert set(named) == set(procs), f"the refusal names the processes {sorted(named)}; the folder runs {sorted(procs)}"
+    flat = squash(text)
     for pid, cmd in procs.items():
-        assert named[pid] == cmd.strip(), f"the refusal gives {pid} the command {named[pid]!r}, the process has {cmd!r}"
+        assert re.search(rf"(?<!\d){pid}" + re.escape(squash(cmd)), flat, re.I), \
+            f"the refusal does not name {pid} with its command {cmd!r}"
+    others = {int(m.group(1)) for m in re.finditer(r"^\s{2,}(\d+)\s{2}\S", text, re.M)} - set(procs)
+    assert not others, f"the refusal names processes that are not shakedown.exe of the folder: {sorted(others)}"
     assert re.search(r"\bstop\b", text, re.I), "the refusal does not say to stop them"
     assert u["after"] == u["before"], "a file of the install changed"
     st = u["status"]
@@ -782,7 +802,7 @@ def running(ctx):
 
 @m19check("US-098 DST-03 once the session, its runner and shakedown mcp are stopped, the same one-line command upgrades the install and shakedown version prints the release's version")
 def upgrades(ctx):
-    v = once(ctx)
+    v = once(ctx, "us098", part098)
     u = v["us098"]
     if isinstance(u, Exception):
         raise AssertionError(f"the US-098 part failed: {u!r}")
@@ -790,7 +810,7 @@ def upgrades(ctx):
     r = u["upgrade"]
     assert r["code"] == 0, f"the second one-line run exit {r['code']}: {r['text'][-600:]}"
     assert u["upgraded"] == v["zip"], "the install folder does not hold the zip's files after the upgrade"
-    printed_version(ctx, u["version"], v["folders"]["file"])
+    printed_version(ctx, u["version"], v["folders"]["run"])
 
 
 @m19check("US-095 US-096 US-097 DST-03 the user PATH is as it was before the M19 installs, put back by the harness after each")
