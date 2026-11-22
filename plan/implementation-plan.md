@@ -160,4 +160,5 @@ Work found while planning that no story promises is in [deferred/](deferred/). P
 
 - `DEF-26` (`skd_fnc_pressKey` returns no handler value) waits for a second mod that needs it; without real keys (`SPK-11` failed) the documented way round stays.
 - `DEF-31` (restarting the server during a session) waits for a mod's story that needs it.
+- `DEF-34` (game client windows take the foreground when they start) is optional: the windows are a nuisance to whoever uses the machine, not a defect in what a check proves. It waits for the owner, and its spike gates the change.
 - `DEF-24` (ceilings count a paused runner), `DEF-14`, `DEF-22`, `DEF-23` and `DEF-25` (the reset around a player's death and a stop), `DEF-01`, `DEF-02`, `DEF-03`, `DEF-07`, `DEF-08`, `DEF-11`, `DEF-13`, `DEF-15` to `DEF-20`: no run of the port met them; each moves into a milestone when use shows it matters.
