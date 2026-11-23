@@ -3,7 +3,7 @@ type: Deferred
 title: "Shakedown installs only by building it from this repository"
 description: "tools/install.py builds the framework with cargo, HEMTT and Python, so a test author needs the whole toolchain and a clone to install it; a release is to ship as a zip on GitHub Releases, installed by winget, by a one-line script or by hand, as HEMTT does."
 id: DEF-30
-state: planned
+state: done
 milestone: M19
 status: stable
 ---
