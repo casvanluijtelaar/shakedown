@@ -193,6 +193,8 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 - 2026-11-22: The owner chose not to run SPK-23 (starting game clients minimised and never active, research 37) now: it becomes an optional deferred item with no milestone, written by a small developer round.
 - 2026-11-14: No Steam ID or Steam name in any file, commit or report, through phase 2. Subagents commit in small commits ending with the Co-Authored-By line; nobody but the owner pushes.
 
+- 2026-11-23: The owner waived the demos of M11 to M14 and M16 to M18, and the owner looks they hold (M16's US-088 rendered window and US-085 with Steam logged out), and told the coordinator to close them before the final 0.2.0. Each milestone report says the demo was waived by the owner, not run. Each closes in its own commit and is tagged on it with its milestone `version` (no `v` prefix, so `release.yml` does not run); the binaries at those commits report the workspace version `0.2.0-rc.1`, and each report says so. The same round then raises the workspace version to `0.2.0` in its own commit, which the owner tags `v0.2.0`; M19 stays `in-progress` until `komac new` and its close.
+
 ## Knowledge about the tooling
 
 - 2026-11-22: The owner set the PowerShell execution policy for their user to `RemoteSigned` (`CurrentUser`; machine and user policies undefined). Local scripts such as `tools/install.ps1` run with `powershell -File`; a downloaded script needs `Unblock-File` or a signature. Undo: the same command with `Undefined`.
