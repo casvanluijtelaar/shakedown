@@ -152,7 +152,7 @@ See [AI agents and the MCP tools](docs/agent-tools.md).
 
 ## Documentation
 
-The [documentation](docs/index.md) has a quickstart and a page for every feature, with examples, plus a [command-line reference](docs/command-line.md), a guide to [porting an existing suite](docs/porting-a-suite.md) and [troubleshooting](docs/troubleshooting.md).
+The [documentation](docs/index.md) has a quickstart and a page for every feature, with examples, plus a [command-line reference](docs/command-line.md) and [troubleshooting](docs/troubleshooting.md).
 
 ## License
 

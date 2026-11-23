@@ -55,6 +55,5 @@ New to it? Read the quickstart, then the pages in order. Each page stands on its
 ## Reference and help
 
 * [The command line](command-line.md) - Every shakedown command and option with its defaults and limits, its MCP twin, the common options, how Ctrl+C stops a run, and the exit codes of every command.
-* [Porting an existing suite](porting-a-suite.md) - How to move a mod's checks from PowerShell scripts that start the game and read its RPT to Shakedown - what each part becomes, the order of the work, how to rewrite one check, and how to show the port reaches the same verdicts.
 * [Security and privacy](security-and-privacy.md) - How Shakedown keeps control of a session to the local user, records every piece of code sent to the game, keeps the Steam account out of everything it writes, and what it does not yet cover.
 * [Troubleshooting](troubleshooting.md) - What to do when a session does not start, a session is broken, checks end invalid or fail with errors you did not cause, the runner does not answer or the install fails, and the known limits.
