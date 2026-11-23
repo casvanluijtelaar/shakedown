@@ -2,7 +2,7 @@
 type: Index
 okf_version: "0.2"
 title: Documentation
-description: How the code realises the spec, and what each finished milestone built.
+description: How the code realises the spec.
 ---
 
 # Documentation
@@ -24,4 +24,3 @@ description: How the code realises the spec, and what each finished milestone bu
 * [Every setup, repeats and slow steps](every-setup-and-repeats.md) - How one command runs a suite in every setup its checks name, one session after the other, what happens when a setup's session does not start, how to repeat a check and read its spread of outcomes and a flaky summary, what becomes of repeats when the session breaks, and how slow steps and slow checks are flagged.
 * [Outcomes and a broken session](outcomes-and-broken-sessions.md) - What pass, fail and invalid mean and every reason kind each carries, which cause decides when several come in one check, how the runner sees a machine that stops answering, a process that ends or crashes, a game clock that stops and a machine whose frame rate collapses or whose answers lag, what each machine's health in status shows, what a lost machine leaves in the result file, and how to find out what went wrong in a broken session without a restart.
 * [Porting an existing suite](porting-a-suite.md) - How to move a mod's existing checks, driven by PowerShell scripts that start the game and read its RPT, to Shakedown - what each part of the old suite becomes, the order of the work, how to rewrite one check, and how to show that the port reaches the same verdicts.
-* [Milestone reports](milestones/) - One Milestone Report per finished milestone.

@@ -16,7 +16,7 @@ Start at the `index.md` of a bundle and open only what the task needs.
 |---|---|---|
 | Research | [research/index.md](research/index.md) | Grounding a spec change or settling a finding that questions the spec. Never as a direct source of what to build. |
 | Specification | [spec/index.md](spec/index.md) | Every task. What the framework must do. |
-| Plan | [plan/index.md](plan/index.md) | Starting or closing a milestone, deferring work. |
+| Plan | [plan/index.md](plan/index.md) | Starting or closing a milestone, writing or reading its report, deferring work. |
 | Documentation | [docs/index.md](docs/index.md) | How the built framework works. Part of the contract for the tester. |
 | Acceptance docs | [acceptance/docs/index.md](acceptance/docs/index.md) | Test developer only: how the harness works. |
 | Findings | [acceptance/findings/index.md](acceptance/findings/index.md) | Writing, answering or verifying a finding. The format is in [acceptance/findings/format.md](acceptance/findings/format.md). |
@@ -29,7 +29,7 @@ Documents, by task:
 - **`spec/07-tech-stack.md`** (written in step 2): what the framework is built from and why. Needed before any code, dependency or gate change. It names the source code folders and the contract files.
 - **The contract** (written in step 2, named in `spec/07-tech-stack.md`): the framework's public interface, which the tester works from and never past. That is the SQF check API, the command line, the agent tools and the format of the result file. A change to any of them is a deliberate edit to the contract file first.
 - **`spec/roles/`** and **`spec/stories/<role>/`**: who the framework serves and what each story promises. Needed for every check, every interface change and every error path.
-- **`plan/implementation-plan.md`** (written in step 3): phases, milestone order and the rules behind the order. **`plan/milestones/mNN.md`**: one milestone's goal, demo, stories and exit criteria.
+- **`plan/implementation-plan.md`** (written in step 3): phases, milestone order and the rules behind the order. **`plan/milestones/mNN.md`**: one milestone's goal, demo, stories and exit criteria. **`plan/reports/mNN.md`**: the Milestone Report of one finished milestone, what it built, how it was checked and what it left out.
 - **`coordinator/playbook.md`**: coordinator sessions only. No role reads it.
 - **`tools/okf_check.py`**: the bundle check. Run `python3 tools/okf_check.py` after adding, moving or editing any concept. It also prints open findings and uncovered requirements and stories.
 
