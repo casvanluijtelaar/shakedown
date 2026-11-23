@@ -156,6 +156,6 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 - 2026-11-23: Two close rounds in a row wrote a bundle-check log to `C:\Users\Shadow\Documents\okf.txt`, outside the repository, and deleted it. Prompts name the scratch folder for every temporary file, including redirected command output.
 
-- 2026-11-23: The permission classifier refused a developer's single chained command (commit, rebase, merge, worktree remove, branch delete, process listing) as \"Undermining Oversight\". The coordinator did not run it for the round; the owner chose a retry, and the same steps ran one plain command per call without a refusal. Prompts ask for the commit and merge steps as separate commands.
+- 2026-11-23: The permission classifier refused a developer's single chained command (commit, rebase, merge, worktree remove, branch delete, process listing) as "Undermining Oversight". The coordinator did not run it for the round; the owner chose a retry, and the same steps ran one plain command per call without a refusal. Prompts ask for the commit and merge steps as separate commands.
 
 ## State at the end of the last session
