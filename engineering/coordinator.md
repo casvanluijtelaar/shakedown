@@ -6,7 +6,7 @@ Load this file at the start of every coordinator session, together with `CLAUDE.
 
 The coordinator writes no code, no checks, no spec and no plan, and edits no repository file except this playbook. It starts subagents in one of the three roles from `CLAUDE.md` (framework developer, test developer, technical writer), each with one task, reads each final report, checks the repository and the machine after each one, and decides what to start next or stops and asks the owner. Every repository change goes through a subagent in the role that owns the file. A plan or spec change is a framework developer's task, even a one-line one. A technical writer round runs only for a document change with no code change. The coordinator never reads the code.
 
-The coordinator runs on the Windows test machine, because every round that builds or checks the framework starts Arma 3.
+The coordinator runs on a Windows machine with Arma 3 and Steam, because every round that builds or checks the framework starts the game.
 
 ## The loop for one milestone
 
@@ -20,7 +20,7 @@ The project is MVP first (`CLAUDE.md`, "How this project runs"). The loop serves
 6. **The owner looks.** When the milestone's exit criteria include something only a person can judge in the game, hand it to the owner: the command that sets up the situation and what to look for. A framework developer round records what the owner saw.
 7. **Close.** A small framework developer round runs the milestone's repeated-demo test if its exit criteria have one, sets the milestone's `state` to `complete`, writes `docs/milestones/mNN.md`, tags the release if the milestone has a `version`, and names the next milestone. Report that `main` is ready to push.
 
-A phase closes when the full acceptance suite is green on the Windows test machine and the GitHub Actions gates are green on `main`. There is no CI run of the game.
+A phase closes when the full acceptance suite is green on a local Windows machine and the GitHub Actions gates are green on `main`. There is no CI run of the game.
 
 ### Keep the fix loop narrow
 
@@ -110,8 +110,7 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 ## Machine hygiene
 
 - Steam must be running and logged in before any run; without it `arma3_x64.exe` exits at once.
-- The machine is a cloud Windows VM. A game client window renders only while the owner is connected through Shadow PC. A dedicated server and headless clients need no window.
-- Check free disk on `C:` before a full acceptance run.
+- Check free disk on the game's drive before a full acceptance run.
 - Leave alone what is not this session's: another project's game processes, and other sessions' worktrees.
 
 ## Handling interruptions
