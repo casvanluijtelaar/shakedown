@@ -5,7 +5,7 @@ Shakedown is a test automation framework for Arma 3 addons and mods, in singlepl
 ## How this project runs
 
 - **MVP first.** A working framework early beats a careful one late. Each milestone takes the shortest path to its demo. Edge cases, hardening and `should` and `could` requirements wait until the MVP works end to end, and then come in only where use shows they matter. An edge case that no story of the current milestone promises goes into `engineering/plan/deferred/`, not into the milestone.
-- **Local first.** Everything that starts the game runs on the Windows test machine. There is no CI/CD that runs the game. GitHub Actions runs only the gates that need no game: the bundle check, and the framework's own tests that do not start Arma 3.
+- **Local first.** Everything that starts the game runs on a local Windows machine with Arma 3 and Steam. There is no CI/CD that runs the game. GitHub Actions runs only the gates that need no game: the bundle check, and the framework's own tests that do not start Arma 3.
 - **The first user is `arma-grappling-hook`.** Its milestones demo against that mod, or against a small fixture mod in this repository. Nothing in the framework is specific to one mod.
 
 ## Map
@@ -84,9 +84,9 @@ Every `by` value is an OKF actor: `human:casvanluijtelaar` for the owner, `claud
 - **Never use agent memory.** A rule about how to work here goes into this file. What to build goes into `engineering/spec/`, in what order into `engineering/plan/`, how the built framework works into `docs/`. If a fact is worth remembering, it is worth committing.
 - **No TODO markers in code.** Deferred work is a `Deferred` concept in `engineering/plan/deferred/` with the sections summary, current behaviour, the gap, options, recommendation, acceptance criteria.
 - **Nothing is left running.** A run stops every game, server and helper process it started, passed or failed, by process id, never by name. Before a turn ends, list the `arma3_x64` and `arma3server_x64` processes and stop any you started. If something has to stay up, such as a session the owner will use, say so and give the command that stops it. Bound every wait with a counted loop.
-- **One game at a time.** The test machine has one Steam session, one set of game ports and limited memory. Never start the game while another session's run holds it.
+- **One game at a time.** A machine has one Steam session, one set of game ports and limited memory. Never start the game while another session's run holds it.
 - **Never take over the desktop.** No code moves the machine's mouse or types on its keyboard. Input goes to the game only.
-- **Fetch the web cheaply.** Search with WebSearch, read pages with WebFetch or `curl`, and read GitHub with `gh`. Use the Firecrawl tools only for a page none of those can read; their credits are limited.
+- **Fetch the web cheaply.** Search with WebSearch, read pages with WebFetch or `curl`, and read GitHub with `gh`.
 - **Look up versions instead of recalling them.** Every dependency version, including Arma 3, CBA and ACE3, is looked up at the time of the change.
 - **Run only the tests the turn touched.** Before a turn ends, run the tests of the parts you changed and `python3 tools/okf_check.py` if you touched a document. A change that only moves or renames files needs only the bundle check.
 - **Acceptance runs once.** A test round runs its milestone's own checks once, with no `--repeat`, plus once each the earlier checks that cover what the milestone changed, selected with `--check`. The full acceptance suite runs only at the end of a phase, or when the owner asks.
@@ -105,7 +105,7 @@ Every `by` value is an OKF actor: `human:casvanluijtelaar` for the owner, `claud
 
 ## Machines
 
-- **The Windows test machine** is a cloud VM with Arma 3 and Steam. Every session that starts the game runs there. A game client window renders only while the owner is connected through Shadow PC. A dedicated server and headless clients need no window.
-- **The Mac** runs sessions that need no game: research, spec, plan, documents.
-- `origin` (`github.com/casvanluijtelaar/shakedown`) carries work between the two. Pull before you start a session on either machine.
+- **A Windows machine with Arma 3 and Steam** runs every session that starts the game. A dedicated server and headless clients need no window.
+- **Any machine** runs the sessions that need no game: research, spec, plan, documents.
+- Pull from the repository's remote before you start a session, and push only as the working rules allow.
 - Steam must be running and logged in before any run. Without it the game exits at once. When no `steam` process runs, start it only from the `steam.exe` under the `SteamPath` registry value of `HKCU\Software\Valve\Steam`, never by a command that names the account, then poll at most 10 times for it to come up logged in, and report if it does not. Starting Steam needs no approval.
