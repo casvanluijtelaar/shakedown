@@ -21,7 +21,7 @@ verified:
 
 ## What the spec promises
 
-`US-083` criterion 2: "`p1`'s window shows the three items on screen, and `p1` stands where the check put it". M15's demo: "the owner, in `p1`'s window through Shadow, finds the three things to look for on screen and in the command's output". The demo check `e2e/tests/handover/US-083-crate.sqf` lists them:
+`US-083` criterion 2: "`p1`'s window shows the three items on screen, and `p1` stands where the check put it". M15's demo: "the owner, in `p1`'s window, finds the three things to look for on screen and in the command's output". The demo check `e2e/tests/handover/US-083-crate.sqf` lists them:
 
 > 1. An ammo crate stands 3 m in front of you.
 > 2. Looking at it, the action menu (mouse wheel) offers Open crate.

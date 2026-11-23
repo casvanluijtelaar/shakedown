@@ -25,7 +25,7 @@ verified:
 
 `docs/install.md`, under "What the machine needs": "`list` and `version` work on any system with no game. Starting a session needs Windows." It names neither `status`, `guide` nor `mcp`. Its only way to build is `python tools/install.py`, which needs HEMTT; it lists Windows as what the machine needs and says nothing of a Mac.
 
-On the owner's Mac, with Rust 1.99.1 and no HEMTT, `python3 tools/install.py <folder>` built `shakedown` in release mode with cargo, then failed at `hemtt build` with `FileNotFoundError: ... 'hemtt'` and assembled no install folder. The binary it left in `target/release/shakedown` does everything `NFR-PT-02` promises (the Mac round of `US-046` passed 3 of 3 with it), but no document says to use it, or how to build only what a Mac needs.
+On macOS, with Rust 1.99.1 and no HEMTT, `python3 tools/install.py <folder>` built `shakedown` in release mode with cargo, then failed at `hemtt build` with `FileNotFoundError: ... 'hemtt'` and assembled no install folder. The binary it left in `target/release/shakedown` does everything `NFR-PT-02` promises (the macOS round of `US-046` passed 3 of 3 with it), but no document says to use it, or how to build only what macOS needs.
 
 ## What it costs
 
@@ -33,4 +33,4 @@ A test author or their AI agent on a Mac, which `NFR-PT-02` and `CR-53` serve, f
 
 ## The check that holds it
 
-None: a document gap. The Mac round's check, `US-046 AGT-05 NFR-PT-02 on the Mac with no game shakedown mcp starts from .mcp.json and answers status runner not-running, list_checks and guide, and starts nothing else`, shows the built binary does what the documents should say.
+None: a document gap. The macOS round's check, `US-046 AGT-05 NFR-PT-02 on macOS with no game shakedown mcp starts from .mcp.json and answers status runner not-running, list_checks and guide, and starts nothing else`, shows the built binary does what the documents should say.

@@ -1,6 +1,6 @@
 r"""The checks of M19 The first public release: US-095 to US-098, DST-01 to DST-04, NFR-LG-04 and NFR-PT-01.
 
-They judge a release zip built on this machine, `shakedown-windows-x64.zip` and its `.sha256` in the dist folder
+They judge a release zip built locally, `shakedown-windows-x64.zip` and its `.sha256` in the dist folder
 (`--dist`, default: the `SHAKEDOWN_DIST` variable, else `target\dist\` of the repository), as `docs/install.md` says
 `tools/package.py` writes them, with the `tools/install.ps1` a release carries beside them. No release on GitHub and
 no winget package is driven: those are the owner's steps.

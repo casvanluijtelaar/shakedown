@@ -269,8 +269,8 @@ def once(ctx, key, fn):
                 fault = machine_fault(ctx, began)
                 if not fault or attempt == 3:
                     break
-                ctx.log(f"M8 step {k}: a game process could not read a base-game file ({fault}); the machine, "
-                        f"not the framework (playbook). Starting the part again, attempt {attempt + 1} of 3")
+                ctx.log(f"M8 step {k}: a game process could not read a base-game file ({fault}); the game "
+                        f"install, not the framework. Starting the part again, attempt {attempt + 1} of 3")
     value = store[k]
     if isinstance(value, Exception):
         raise AssertionError(f"the M8 step {key} failed: {value!r}")

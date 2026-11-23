@@ -1,8 +1,8 @@
 r"""The checks of M10 The grappling-hook suite: its exit criteria 1, 2, 4, 5, 6 and 8 over arma-grappling-hook's
 ported M00 checks, and the checks of the findings m10-1, m10-2, m10-3 and m10-5.
 
-The ported suite is read from arma-grappling-hook's `acceptance/shakedown/` (default: the worktree of branch
-`shakedown/m10`, or the `SHAKEDOWN_AGH_SUITE` variable) and copied into `m10port` in the work folder, so nothing is
+The ported suite is read from arma-grappling-hook's `acceptance/shakedown/` (the `SHAKEDOWN_AGH_SUITE` variable,
+default: `acceptance/shakedown` in a clone of arma-grappling-hook beside this repository) and copied into `m10port` in the work folder, so nothing is
 written into that repository: its `shakedown.toml` and `tests/` as they are, and a `.mcp.json` as
 docs/agent-tools.md gives it. The mod paths of that file are absolute, so the copy loads the same builds.
 
@@ -39,8 +39,9 @@ from .m08 import game_folder, mission_copies, ports_held, steam_running
 from .mcp import Mcp, structured
 
 ACC = Path(__file__).resolve().parent.parent
-SUITE = Path(os.environ.get("SHAKEDOWN_AGH_SUITE", r"C:\Users\Shadow\Documents\arma-grappling-hook"
-                            r"\acceptance\shakedown"))
+# arma-grappling-hook cloned beside this repository, unless SHAKEDOWN_AGH_SUITE names the suite.
+SUITE = Path(os.environ.get("SHAKEDOWN_AGH_SUITE",
+                            ACC.parent.parent.parent / "arma-grappling-hook" / "acceptance" / "shakedown"))
 ORDER = ["dedicated-cba", "sp-cba", "sp-cba-ace"]
 # engineering/plan/milestones/m10.md, exit criterion 7: the checks each setup runs.
 EXPECTED = {
@@ -70,7 +71,9 @@ def port_project(ctx):
     store = keep(ctx)
     if "port" in store:
         return store["port"]
-    assert (SUITE / "shakedown.toml").is_file(), f"no ported suite at {SUITE}; give SHAKEDOWN_AGH_SUITE"
+    assert (SUITE / "shakedown.toml").is_file(), (
+        f"not run: no ported suite at {SUITE}; clone arma-grappling-hook beside this repository "
+        "or give SHAKEDOWN_AGH_SUITE")
     project = ctx.work / "m10port"
     if project.exists():
         shutil.rmtree(project)

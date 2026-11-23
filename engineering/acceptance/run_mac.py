@@ -1,4 +1,4 @@
-"""The Mac half of M4's exit criterion 1: US-046's third criterion on macOS, with no game and no runner.
+"""The macOS half of M4's exit criterion 1: US-046's third criterion on macOS, with no game and no runner.
 
 Usage: python3 engineering/acceptance/run_mac.py [--install <dir>] [--repeat <n>] [--work <dir>]
 
@@ -26,7 +26,7 @@ sys.path.insert(0, str(HERE))
 from harness.mcp import Mcp, structured  # noqa: E402
 from harness.schema import validate  # noqa: E402
 
-NAME = ("US-046 AGT-05 NFR-PT-02 on the Mac with no game shakedown mcp starts from .mcp.json and answers status "
+NAME = ("US-046 AGT-05 NFR-PT-02 on macOS with no game shakedown mcp starts from .mcp.json and answers status "
         "runner not-running, list_checks and guide, and starts nothing else")
 GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
 CHECKS = {
@@ -36,7 +36,7 @@ CHECKS = {
 
 
 def make_project(work):
-    """The example of docs/project-file.md, whose game folder does not exist on a Mac, two checks, and the .mcp.json."""
+    """The example of docs/project-file.md, whose game folder does not exist on macOS, two checks, and the .mcp.json."""
     project = work / "project"
     for cid, body in CHECKS.items():
         f = project / "tests" / f"{cid}.sqf"
@@ -80,11 +80,11 @@ def descendants(procs, root):
 
 
 def check(project, install, log):
-    assert platform.system() == "Darwin", f"this check is the Mac half; it runs on {platform.system()}"
+    assert platform.system() == "Darwin", f"this check is the macOS half; it runs on {platform.system()}"
     assert not Path(GAME).exists(), "the project's game folder exists"
     before = processes()
     game = named(before, "arma3", "steam")
-    assert not game, f"game or Steam processes {sorted(game)} run on this machine"
+    assert not game, f"game or Steam processes {sorted(game)} run here"
     others = named(before, "shakedown")
     assert not others, f"shakedown processes {sorted(others)} run before the check; it needs no runner running"
 

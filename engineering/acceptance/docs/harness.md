@@ -22,7 +22,7 @@ The harness follows the last section of `engineering/spec/07-tech-stack.md`: the
 | `harness/m02.py` | The checks of M2, their batches, and the `US-004` starts that fail. |
 | `harness/m03.py` | The checks of M3 and their batch, the reading of the Steam identity at run time, and the RPT reading of `INT-AR-07` that the `end` checks of `US-030`, `US-064`, `DEF-09` and `NFR-RL-05` use. The `DEF-09` check leaves out an `Object ... not found` line naming a killed `p2`'s body, whose net id the checks that kill `p2` write to the server's RPT as `[acc] DEF-25 body <net id>` (`DEF-25`). |
 | `harness/mcp.py` | An MCP client over stdio, as Claude Code is one: it starts the server the project's `.mcp.json` declares, with the install folder on `PATH`, speaks newline-delimited JSON-RPC to it, keeps every progress notification with its time, cancels a call, and judges a tool result (`structured`, `tool_error`). Written here instead of taking an MCP SDK as a dependency. |
-| `run_mac.py` | The Mac half of M4: `US-046`'s third criterion with no game, through `harness/mcp.py`, which stops the server by its id with `taskkill` on Windows and by its process on macOS. |
+| `run_mac.py` | The macOS half of M4: `US-046`'s third criterion with no game, through `harness/mcp.py`, which stops the server by its id with `taskkill` on Windows and by its process on macOS. |
 | `harness/m04.py` | The checks of M4 and their batches: the tools offline, the refused and slow starts, and the CLI and tool answers of the `ded` and `sp` sessions. |
 | `harness/m05.py` | The checks of M5: the four ways a host ends `shakedown mcp`, the five runner kills on a dedicated session, a stand-in runner of another version, the `ded` batch (a run from another console, `netstat`, `audit.jsonl`, connections without the right token, a suspended runner), the token search after the sessions, and the headless Claude Code check. |
 | `harness/m06.py` | The checks of M6 and their batch in the `rld` session: a check edited and run again, a `@reset mission` check, reloads of a new file and `config.cpp`, a mission restart and a game restart that each lose `p2`, and the staged change of `@skd_fixture_cba` reloaded and put back. It writes the staged copy and the `rld` setup into the project and puts the installed fixture files back after the session (`FIX-03`). |
@@ -65,7 +65,7 @@ A failed assertion fails only its own check; the others are still judged. A harn
 
 ## What the first round learned
 
-- A singleplayer session starts in about 40 s on the test machine and a run of eleven checks takes a tenth of a second, so the flake check costs one start.
+- A singleplayer session starts in about 40 s on the Windows machine where it ran and a run of eleven checks takes a tenth of a second, so the flake check costs one start.
 - `run --json` gives `result_file` as an absolute path; the run folder is its parent.
 - A header mistake is reported with no `machine` in its reason and no steps, which is how the checks see that the game was not touched.
 - Stopping the runner by id leaves its `runner.json` behind; the next command starts a new runner over it. The harness therefore waits for the runner to exit by itself first.
@@ -111,10 +111,10 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - In a full run the singleplayer session has served the M0 and M1 checks, `RST-05`'s killed player among them, before the M4 batch. There the game raised `Undefined variable in expression: tsw_camtargetunit` on `p1` three times during the 55 s check of `US-050`, which the framework listed in that execution's errors and failed it `script-error`. The `US-050` checks judge when `run_status` answers, not that check's outcome.
 - With no `steam` process, `session start` still brings up a runner, which refuses in 0.1 s and exits by itself about 60 s later. A check that refuses a start hands that runner to the suite as soon as the start answers, so the suite waits for it even when the check fails; a next run that starts while it lives refuses with exit 4.
 
-## What the Mac round learned
+## What the macOS round learned
 
-- On a Mac the `shakedown` binary alone serves `run_mac.py`: `cargo build --release -p shakedown`, as `docs/install.md` gives it, with Rust 1.99 or later and no HEMTT. `tools/install.py` stops at `hemtt build` there, before it assembles an install folder (`m04-2`). The same cargo build on the Windows test machine gives `target/release/shakedown.exe`, which answers `list`, `guide`, `version`, `status` and the MCP server's `status`, `list_checks` and `guide` with no runner; `run_mac.py` itself refuses to run off a Mac, since it asserts macOS and no Steam.
-- The guide is 4,837 characters on the Mac and 4,885 on Windows, the same text with other line endings; the checks compare it with the documented text with whitespace folded.
+- On macOS the `shakedown` binary alone serves `run_mac.py`: `cargo build --release -p shakedown`, as `docs/install.md` gives it, with Rust 1.99 or later and no HEMTT. `tools/install.py` stops at `hemtt build` there, before it assembles an install folder (`m04-2`). The same cargo build on Windows gives `target/release/shakedown.exe`, which answers `list`, `guide`, `version`, `status` and the MCP server's `status`, `list_checks` and `guide` with no runner; `run_mac.py` itself refuses to run off macOS, since it asserts macOS and no Steam.
+- The guide is 4,837 characters on macOS and 4,885 on Windows, the same text with other line endings; the checks compare it with the documented text with whitespace folded.
 - With no runner, `status`, `list_checks` and `guide` each answer in under 0.01 s, and the server exits 0 as soon as its stdin closes.
 
 ## What the M5 round learned
@@ -134,7 +134,7 @@ A failed assertion fails only its own check; the others are still judged. A harn
 - `status` lists a machine's new process with its start number one higher as soon as it is launched, during a mission restart or a game restart, so the checks that lose `p2` poll `status` twice a second and end that process by its id the moment it shows; that came 10 to 19 s into the restart.
 - A `shakedown reload` file path is relative to the current folder; the reload gives it back absolute but not normalised (`<project>\..\..\...`), so the checks compare paths after `normpath`.
 - SQF strings escape a quote by doubling it, not with a backslash: a step name holding `\"` does not compile, and the check ends `fail` / `check-error`.
-- Two session starts died on `Error 20 reading file` of a base-game PBO right after Steam had been restarted; the third started. The playbook's rule holds: start again before calling it a finding.
+- Two session starts died on `Error 20 reading file` of a base-game PBO right after Steam had been restarted; the third started. The rule holds: start again before calling it a finding.
 
 ## What the M7 round learned
 

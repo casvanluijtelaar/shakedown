@@ -20,7 +20,8 @@ from harness.core import AFTER_SESSION, BATCHES, CHECKS, SETUPS, Context  # noqa
 
 DEFAULT_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3"
 DEFAULT_CBA = r"C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997"
-DEFAULT_AGH = r"C:\Users\Shadow\Documents\arma-grappling-hook\.hemttout\build"
+# arma-grappling-hook cloned beside this repository and built with HEMTT.
+DEFAULT_AGH = str(REPO.parent / "arma-grappling-hook" / ".hemttout" / "build")
 
 
 def find_exe(install):
@@ -129,6 +130,9 @@ def main():
         logfile.write(line + "\n")
         logfile.flush()
 
+    if not Path(args.agh).is_dir():
+        log(f"No arma-grappling-hook build at {args.agh}; give --agh or SHAKEDOWN_AGH. The sessions of the setups "
+            "that load it (cba, ded, ded30) cannot start, and their checks fail with that reason.")
     project = make_project(work, args.game, exe.parent, args.cba, args.agh)
     ctx = Context(driver.Shakedown(exe, project, log), project, REPO, log)
     ctx.work, ctx.install = work, exe.parent
