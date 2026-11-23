@@ -1,84 +1,127 @@
 ---
 type: Documentation
-title: The check API by example
-description: Every skd_fnc function a check can call, with an example of each - the context, code on a machine, waits, assertions, the scene, actions, ACE interaction actions and keybinds, joining and leaving, recorded events, helpers shared from the library folder, cleanups, ending a check and handing over - and what each does when it fails.
+title: The check API
+description: Every skd_fnc function a check can call, with its arguments, what it returns, an example and how it fails - the context, steps, code on machines, waits, assertions, expected errors, the scene, actions, keybinds and ACE actions, joining and leaving, recorded events, cleanups, ending a check and handing over - and the rules every function keeps.
 status: draft
 ---
 
-# The check API by example
+# The check API
 
-A check's body calls these functions, each as `[arguments] call skd_fnc_name`. Their contract is [spec/contract/check-api.md](../spec/contract/check-api.md); this page shows each one at work in a singleplayer session, where the only machine is `p1` and `"server"` names it too. On a dedicated session the same functions reach the server, the clients and the headless clients by name; [Dedicated sessions](dedicated-sessions.md) shows how. [Writing and running a check](writing-and-running-checks.md) covers the file, the header and the commands.
+A check's body calls these functions, each as `[arguments] call skd_fnc_name`. This page is the reference: every function, its arguments in order, what it returns, an example and how it fails. The pages linked from each section show the functions at work. The contract is [spec/contract/check-api.md](../spec/contract/check-api.md).
 
-Rules for all of them:
+## Rules for every function
 
-- An argument of the wrong type, or a value out of range, ends the check `fail` / `check-error` with the function, the argument's number and name, what it takes and what it got: `skd_fnc_place: argument 2 (position) must be an ASL position [x, y, z] of three numbers, got STRING "here".`
-- A machine is `"p1"` (or `"server"`) in singleplayer, and `"server"`, `"p1"` to `"pN"` or `"hc1"` to `"hcN"` on a dedicated session; where a function takes several, `"all"`, `"clients"`, `"headless"` or an array of names. Any other name ends the check `fail` / `check-error` naming the session's machines.
-- Code given to a machine is compiled from its text there: it does not see the check's local variables, so pass what it needs in `args`, which arrive as `_this`. Objects and groups in `args` and in results arrive as the object or group; code arrives as a tagged value, not as code. `skd_fnc_*` functions cannot be called inside it.
-- Every function that waits takes a `ceiling` in seconds of real time, default 10. A ceiling that reaches past the check's `@timeout` is cut to the time left, and the check then ends `check-timeout`.
-- A function that fails does not return. The check ends there, and the reason is recorded against the innermost step.
+- **Arguments are one array**, passed with `call`: `[a, b, c] call skd_fnc_name`. Optional arguments may be left off from the end, or given as `nil`. A function with no arguments is called as `call skd_fnc_name` or `[] call skd_fnc_name`.
+- **A wrong argument** of the wrong type, or a value out of range, ends the check `fail` / `check-error` with the function, the argument's number and name, what it takes and what it got:
+
+  ```
+  skd_fnc_place: argument 2 (position) must be an ASL position [x, y, z] of three numbers, got STRING "here".
+  ```
+
+- **Machines** are named by a string: `"server"`, `"p1"` to `"pN"`, `"hc1"` to `"hcN"`. In singleplayer the only machine is `"p1"`, which `"server"` also names. Where a function takes several machines, it takes an array of names or a group: `"all"`, `"clients"` (`p1` to `pN`) or `"headless"` (`hc1` to `hcN`). A name the session does not have ends the check `fail` / `check-error`, naming the session's machines.
+- **Code sent to a machine** is a code value, sent as text and compiled there. It does not see the check's local variables; pass what it needs in `args`, which arrive as `_this`. Objects and groups in `args` and in results travel by net id and arrive as the object or group. It may call any SQF but no `skd_fnc_*` function ([Code sent to another machine](writing-checks.md#code-sent-to-another-machine)).
+- **Ceilings** are in seconds of real time. Every function that waits takes a `ceiling`; the default is 10. A ceiling is a number above 0, and `nil` takes the default. A ceiling that reaches past the check's own `@timeout` is cut to the time left, and the check then ends `check-timeout`. The runner also waits the ceiling plus 10 s on its own clock; a machine that has not answered by then is lost and the check is `invalid` / `machine-lost`.
+- **Failure ends the check at once.** A function that fails does not return: the body is terminated, and the outcome and reason are recorded against the innermost step.
 
 ## Context
 
+| Function | Arguments | Returns |
+|---|---|---|
+| `skd_fnc_machines` | `[]` | The names of the session's machines whose process runs, in the order `server`, `p1`..`pN`, `hc1`..`hcN`: a late client only once it has joined, a client that left not until it joins again. In singleplayer `["p1"]`. |
+| `skd_fnc_setup` | `[]` | A HashMap with `"name"`, `"mode"` (`"singleplayer"` or `"dedicated"`), `"clients"`, `"headless"` and `"world"`. |
+| `skd_fnc_player` | `[machine]` | The unit the player of that machine controls, as the lead machine sees it. `objNull` for `server` on a dedicated session, for a headless client, and for a client with no unit. |
+
 ```sqf
-private _machines = call skd_fnc_machines;      // ["p1"]
-private _setup = call skd_fnc_setup;            // HashMap: name, mode, clients, headless, world
-private _unit = ["p1"] call skd_fnc_player;     // the unit p1's player controls; objNull for "server" and "hc1" on a dedicated session
-[_setup get "mode", "==", "singleplayer", "the session is singleplayer"] call skd_fnc_expect;
+private _machines = call skd_fnc_machines;      // ["p1"] in singleplayer; ["server", "p1", "p2", "hc1"] on a dedicated session
+private _setup = call skd_fnc_setup;
+private _unit = ["p1"] call skd_fnc_player;
+if ((_setup get "mode") == "dedicated") then { /* ... */ };
+private _players = _machines select { !isNull ([_x] call skd_fnc_player) };   // the machines with a player
 ```
 
-## Steps and evidence
+## Steps
+
+| Function | Arguments | Returns |
+|---|---|---|
+| `skd_fnc_step` | `[title, code, args]` - `title` String; `code` Code; `args` Array, default `[]`. | The value of `code`. |
+
+`code` runs with `call` in the body's own script, so it sees the body's local variables, and `_this` is `args`. Steps nest. See [Steps](writing-checks.md#steps).
 
 ```sqf
 private _n = ["count the boxes", {
     count (allMissionObjects "Land_WoodenBox_F")
 }] call skd_fnc_step;
-["boxes", _n] call skd_fnc_evidence;
 ```
 
-`skd_fnc_step [title, code, args]` runs `code` in the body's own script, so it sees the body's local variables; `args` arrive as `_this`. `skd_fnc_evidence [label, value]` adds a value to the result for every outcome.
+## Running code on machines
 
-## Code on a machine
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_on` | `[machine, code, args, ceiling]` - `args` default `[]`; `ceiling` default 10. | The value `code` returned on that machine. | `fail` / `wait-ceiling` when the code is still running at the ceiling; `fail` / `check-error` when it does not compile there, with the engine's message. |
+| `skd_fnc_onEach` | `[machines, code, args, ceiling]` | A HashMap from machine name to the value `code` returned there; a machine whose code returned nothing has no key. | As `skd_fnc_on`, naming each machine that did not finish. |
 
 ```sqf
 private _dir = ["p1", { getDir (_this select 0) }, [_box]] call skd_fnc_on;
-private _each = ["all", { getDir (_this select 0) }, [_box]] call skd_fnc_onEach;   // HashMap: "p1" -> 45
+private _each = ["all", { getDir (_this select 0) }, [_box]] call skd_fnc_onEach;   // HashMap: "server" -> 45, "p1" -> 45, ...
+private _names = ["all", { profileName }] call skd_fnc_onEach;                       // server -> "server", p1 -> "p1", ...
 ```
 
-`skd_fnc_on [machine, code, args, ceiling]` returns the value the code returned. `skd_fnc_onEach [machines, code, args, ceiling]` returns a HashMap from machine name to value; a machine whose code returned nothing has no key. Code still running at its ceiling ends the check `fail` / `wait-ceiling`; code that does not compile ends it `fail` / `check-error` with the engine's message.
+The code runs scheduled, so it may `waitUntil`. A script error it raises does not stop it: the value still comes back, and the error fails the check `fail` / `script-error` when the body ends, unless `skd_fnc_expectError` expects it. Objects in `args` are looked up once, when the code starts on the target, so an object the target does not know yet arrives as `objNull`.
 
 ## Waits
+
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_waitUntil` | `[machine, condition, description, ceiling, args]` - `condition` Code returning a Boolean; `description` String saying what is awaited; `ceiling` default 10; `args` default `[]`. | `true` when the condition held. | `fail` / `wait-ceiling` with the description and the ceiling. |
+| `skd_fnc_tryWaitUntil` | Same as `skd_fnc_waitUntil`. | `true` if the condition held within the ceiling, `false` if not. | Never on the ceiling. |
 
 ```sqf
 ["p1", { player getVariable ["agh_climbState", "OFF"] == "OFF" }, "p1 is off the rope", 5] call skd_fnc_waitUntil;
 private _landed = ["p1", { isTouchingGround player }, "p1 landed", 3] call skd_fnc_tryWaitUntil;
 ```
 
-`skd_fnc_waitUntil [machine, condition, description, ceiling, args]` evaluates the condition every frame and returns `true` once it holds; at the ceiling the check ends `fail` / `wait-ceiling` with the description. `skd_fnc_tryWaitUntil` takes the same arguments and returns `false` at its ceiling instead. A condition that raises a script error ends the check at that evaluation, `fail` / `script-error` naming the machine and the error; one that returns anything but `true` or `false` ends it `fail` / `check-error` naming what it returned, such as `a String`. `skd_fnc_tryWaitUntil` ends the check the same way; it returns `false` only at its ceiling. There is no sleep: every wait has a condition.
+The condition is evaluated on that machine every frame. There is no sleep in the API. See [Waits and assertions](waits-and-assertions.md) for the failures and their messages.
 
 ## Assertions
+
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_expect` | `[actual, op, expected, description]` | `true` | At once, `fail` / `assertion`, with the actual and expected values. |
+| `skd_fnc_expectOn` | `[machine, value, op, expected, description, ceiling, args]` - `value` Code returning the value to test; `ceiling` default 10; `args` default `[]`. | The last value read. | `fail` / `assertion` at the ceiling, with the last value read. |
+| `skd_fnc_expectEach` | `[machines, value, op, expected, description, ceiling, args]` | A HashMap from machine name to the last value read. | `fail` / `assertion` at the ceiling, with every machine's last value and which ones did not meet it. |
+| `skd_fnc_expectAgree` | `[machines, value, description, tolerance, ceiling, args]` - `tolerance` Number, default 0. | A HashMap from machine name to the last value read. | `fail` / `assertion` at the ceiling, with every machine's last value and what each machine that differs read where the first machine read its value. |
 
 ```sqf
 [_n, "==", 0, "no box is left"] call skd_fnc_expect;
 ["p1", { damage player }, "<", 0.1, "p1 is unhurt"] call skd_fnc_expectOn;
 ["all", { count ropes (_this select 0) }, ">=", 1, "every machine sees the rope", 10, [_anchor]] call skd_fnc_expectEach;
-["all", { getPosASL player }, "every machine agrees where p1 is", 0.1] call skd_fnc_expectAgree;
+["all", { getPosASL (_this select 0) }, "every machine agrees where p1 is", 0.1, 10, [["p1"] call skd_fnc_player]] call skd_fnc_expectAgree;
 ```
 
-`skd_fnc_expect [actual, op, expected, description]` asserts at once. `skd_fnc_expectOn [machine, value, op, expected, description, ceiling, args]` reads the value every frame until the comparison holds and returns the last value; at the ceiling the check ends `fail` / `assertion` with the last value read, which the result also keeps under `evidence.observed`. `skd_fnc_expectEach` does the same on several machines at once and returns a HashMap of their values. `skd_fnc_expectAgree [machines, value, description, tolerance, ceiling, args]` holds when every machine's value equals the first one's, within `tolerance` for numbers and positions.
-
-The operators: `==` and `!=` (any type, case-sensitive), `<`, `<=`, `>`, `>=` (numbers), `~=` (expected `[target, tolerance]`, a number or a position), `in` (actual is an element of the array expected), `contains` (expected is an element of the array actual, or a substring of the string actual). Operands of the wrong type end the check `fail` / `check-error`.
+The operators are `==`, `!=`, `<`, `<=`, `>`, `>=`, `~=` (expected `[target, tolerance]`), `in` and `contains`. See [Waits and assertions](waits-and-assertions.md) for what each holds on and the messages.
 
 ## Script errors
 
-A script error on any machine during a check fails it `fail` / `script-error` once the body ends, naming the machine, the error with its file and line, and the step. `skd_fnc_expectError [text, code, args]` runs `code` with `call` and returns its value; every error on any machine whose text contains `text`, case-insensitively, from then to the end of the check is expected and fails nothing:
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_expectError` | `[text, code, args]` - `text` a String that is not empty; `code` Code run with `call` in the body; `args` default `[]`. | The value of `code`. | `fail` / `expected-error-missing` at the check's end when no error containing `text` was caught. |
 
 ```sqf
-["_skdfx_undefined", { ["p2", { [] call skdfx_fnc_throw; true }] call skd_fnc_on }] call skd_fnc_expectError;
+["_mymod_undefined", {
+    ["p2", { [] call mymod_fnc_rejectBadCall; true }] call skd_fnc_on;
+}] call skd_fnc_expectError;
 ```
 
-When no such error came by the end of a check that otherwise passes, it ends `fail` / `expected-error-missing`, quoting the text. `text` must be a String that is not empty. [Script errors, logs and evidence](script-errors-and-logs.md) says which errors count and how each is traced to its step.
+Every script error on any machine whose text contains `text`, case-insensitively, from the start of `code` until the check ends, is expected and fails nothing. See [Script errors, logs and evidence](script-errors-and-logs.md).
 
 ## Building a scene
+
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_create` | `[class, position, direction]` - `class` String (`CfgVehicles`); `position` ASL `[x, y, z]`; `direction` degrees, default 0. | The object. For a kind of `CAManBase`, a unit in a new group of the side its config gives. | `fail` / `check-error` for an unknown class. |
+| `skd_fnc_place` | `[unit, position, direction, ceiling]` - `unit` an object or a machine name (that machine's player); `position` ASL; `direction` degrees; `ceiling` default 10. | `true` once the server sees the unit within 0.1 m and 3 degrees. | `fail` / `wait-ceiling` with the position the server last saw. |
+| `skd_fnc_setDate` | `[date, ceiling]` - `date` `[year, month, day, hour, minute]`; `ceiling` default 10. | `true` once every machine reports that date and time to the minute. | `fail` / `wait-ceiling` with each machine's date. |
+| `skd_fnc_setWeather` | `[overcast, fog, rain, ceiling]` - each 0 to 1; `ceiling` default 10. | `true` once every machine reports the overcast within 0.01. | `fail` / `wait-ceiling` with each machine's values. |
 
 ```sqf
 private _wall = ["Land_Wall_IndCnc_4_F", AGLToASL [100, 110, 0], 180] call skd_fnc_create;
@@ -88,125 +131,97 @@ private _enemy = ["O_Soldier_F", AGLToASL [100, 140, 0], 180] call skd_fnc_creat
 [0.9, 0.2, 0.6] call skd_fnc_setWeather;
 ```
 
-- `skd_fnc_create [class, position, direction]` creates a `CfgVehicles` class at an ASL position, direction first, and returns it; a soldier class is a unit in a new group of its config's side. An unknown class ends the check `fail` / `check-error`: `skd_fnc_create: the class "B_Soldier_Typo" is not in CfgVehicles (or is not creatable). ...` It returns once the server has made the object. On a dedicated session another machine sees it a moment later: a check that reads it there at once can find no object, or the object at the spot the engine made it, before it is in place. Such a check waits for it first with `skd_fnc_waitUntil`, which looks the object up again every frame, before it hands the object to `skd_fnc_on`, which looks it up once and gives code on a machine that does not know it yet `objNull`; [dedicated sessions](dedicated-sessions.md#code-waits-and-agreement-across-machines) shows the wait and which function looks an object up when.
-- `skd_fnc_place [unit, position, direction, ceiling]` takes an object or a machine name (that machine's player) and returns once the unit stands within 0.1 m and 3 degrees of it.
-- `skd_fnc_setDate [[year, month, day, hour, minute], ceiling]` and `skd_fnc_setWeather [overcast, fog, rain, ceiling]` (each 0 to 1) return once the machines report the new date, or the overcast within 0.01.
-
-Whatever a check creates, through these functions or its own SQF, the next reset deletes.
+See [Scenes, resets and cleanups](scenes-resets-and-cleanups.md).
 
 ## Acting through the mod
 
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_useAction` | `[machine, target, title, ceiling]` - `machine` the acting player's machine; `target` the object carrying the action; `title` String; `ceiling` default 10. | `true` once the action was fired. | At the ceiling, `fail` / `assertion` with the reason: no action with that title (listing the titles on the target), its condition false, or the player's distance and the action's radius. `fail` / `check-error` when the machine has no player, and when `target` is `objNull`. |
+| `skd_fnc_pressKey` | `[machine, mod, action, mode]` - `mod` and `action` the names the mod registered its CBA keybind with; `mode` `"press"` (down then up), `"down"` or `"up"`, default `"press"`. | `true` once the keybind's code ran. | `fail` / `check-error` when CBA is not loaded on that machine or the keybind is not registered, listing the keybinds registered for that mod. |
+| `skd_fnc_useAceAction` | `[machine, target, path, ceiling]` - `target` the object whose menu holds the action, or a machine name for that machine's player; `path` an Array of one or more Strings, the action names from the menu's root; `ceiling` default 10. | `true` once ACE's key-up code ran the action. | At the ceiling, `fail` / `assertion`: a name not found, a condition false, or the path ending at a folder of actions. At once, `fail` / `check-error` when ACE is not loaded on the acting machine, when the loaded ACE lacks the internals it uses, when the machine has no player, and when `target` is `objNull`. |
+
 ```sqf
-["p1", player, "Get on rope"] call skd_fnc_useAction;
+["p1", _crate, "Open crate"] call skd_fnc_useAction;
 ["p1", "Grappling hooks", "agh_letGo"] call skd_fnc_pressKey;
-["p1", "skd_fixture", "signal", "down"] call skd_fnc_pressKey;
+["p1", "mymod", "signal", "down"] call skd_fnc_pressKey;
+["p1", _crate, ["ACE_MainActions", "mymod_open"]] call skd_fnc_useAceAction;
+["p1", "p1", ["ACE_SelfActions", "mymod_signal"]] call skd_fnc_useAceAction;   // p1's own menu
 ```
 
-`skd_fnc_useAction [machine, target, title, ceiling]` finds the action on `target` by its title, with structured-text tags such as `<t color='#ff0000'>` removed, exactly and case-sensitively. It waits until the action exists, its condition holds and the player is within its radius, then fires it as the player's own choice from the scroll menu. The engine does not check the condition or the radius of an action fired this way, so the framework does. At the ceiling the check ends `fail` / `assertion` with the reason: no action of that title (with the titles there are), its condition false, or the player's distance and the radius.
-
-`skd_fnc_pressKey [machine, mod, action, mode]` presses a keybind a mod registered with CBA, by the mod and action names it registered: it calls the keybind's own key-down code, key-up code or both (`mode` `"press"`, the default, `"down"` or `"up"`) as the game's key handler would, with its first bound key. A keybind that is not registered ends the check `fail` / `check-error` with the keybinds registered for that mod, in lower case; without CBA in the setup, with `skd_fnc_pressKey: CBA is not loaded on p1, ...`. A check that presses no key needs no CBA.
-
-`skd_fnc_pressKey` returns `true` once the keybind's code ran, not what that code returned, so it does not say whether the key was consumed or passed on to the game. A check that asserts that calls the keybind's code itself on the player's machine, as `skd_fnc_pressKey` does, and reads its value:
-
-```sqf
-private _passed = ["p1", {
-    private _bind = ["Grappling hooks", "agh_letGo"] call CBA_fnc_getKeybind;
-    private _key = (_bind select 8) param [0, _bind select 5];
-    _key params ["_dik", "_mods"];
-    _mods params ["_shift", "_ctrl", "_alt"];
-    private _out = nil;
-    isNil { _out = [findDisplay 46, _dik, _shift, _ctrl, _alt] call (_bind select 3) };
-    _out
-}] call skd_fnc_on;
-[_passed, "==", false, "off a rope the key passes on to the game"] call skd_fnc_expect;
-```
-
-A check cannot send a real key to a game window: Arma 3 reads the keyboard through DirectInput, which a key posted to its window does not reach (`SPK-11`), so this is the way to read a key's pass-through.
-
-A mod's ACE interaction action is used by its path of action names, through ACE's own key-up code:
-
-```sqf
-["p1", _crate, ["ACE_MainActions", "skdfx_aceOpen"]] call skd_fnc_useAceAction;
-["p1", "p1", ["ACE_SelfActions", "skdfx_aceSignal"]] call skd_fnc_useAceAction;   // p1's own menu
-```
-
-A missing name or a false condition ends the check `fail` / `assertion` at the ceiling, with the names that exist there; a machine without ACE ends it `fail` / `check-error` at once. [ACE interaction actions](ace-interaction.md) has the whole of it.
+See [Acting through the mod](acting-through-the-mod.md) and [ACE interaction actions](ace-interaction.md).
 
 ## Joining and leaving
 
-On a dedicated session a check makes a game client join late, leave and join again:
+On a dedicated session a check makes a game client join late, leave and join again.
+
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_join` | `[machine, ceiling]` - `machine` a late client or a client that left; `ceiling` default the setup's `start_timeout`. | `true` once the machine is ready. | `invalid` / `machine-lost` naming the machine when it is not ready within the ceiling, with its last 20 RPT lines in the evidence, or at once when its process exits during the join, with its exit code; its process is stopped and the session stays ready without it. |
+| `skd_fnc_leave` | `[machine, ceiling]` - `machine` a game client in the session; `ceiling` default 20, the server's disconnect timeout of 15 s plus 5. | `true` once the server's `PlayerDisconnected` event has fired for the machine. | `invalid` / `machine-lost` naming the machine when the event has not fired within the ceiling. |
 
 ```sqf
-["p3"] call skd_fnc_join;      // a late client (setup key late) starts and is ready
-["p2"] call skd_fnc_leave;     // p2 goes; the server's PlayerDisconnected has fired
+["p3"] call skd_fnc_join;      // the late client p3 starts and is ready
+["p2"] call skd_fnc_leave;     // p2 goes
 ["p2", 120] call skd_fnc_join; // p2 comes back with start number 2, ceiling 120 s
 ```
 
-Each is a step of its own, `join p3` or `leave p2`. In singleplayer either ends the check `fail` / `check-error`: `skd_fnc_leave: joining and leaving needs a dedicated session; ...`. [Dedicated sessions](dedicated-sessions.md#joining-late-leaving-and-joining-again) shows what each does, its failures and the reset that brings the clients back.
+Each runs as a step of its own, titled `join <machine>` or `leave <machine>`. Joining or leaving `server`, a headless client, a machine the setup does not name, a client already in or one already out ends the check `fail` / `check-error`, naming the machines that can join and leave at that moment; in singleplayer either function ends it `fail` / `check-error` saying that joining and leaving needs a dedicated session. See [Joining late, leaving and joining again](dedicated-sessions.md#joining-late-leaving-and-joining-again).
 
-## Recording the mod's events
+## Recording events
 
-A check records a CBA event, or an engine mission event, on the machines it names, and then reads what each machine received or waits for one, with no event handler of its own:
-
-```sqf
-["all", "skdfx_signalled"] call skd_fnc_record;              // a CBA event, on every machine
-["server", "EntityKilled", "mission"] call skd_fnc_record;   // a mission event, on the server
-["p1", "skd_fixture", "signal"] call skd_fnc_pressKey;       // the fixture's keybind raises skdfx_signalled
-private _args = ["p1", "skdfx_signalled", 5] call skd_fnc_waitEvent;   // its arguments, [unit]
-private _all = ["p1", "skdfx_signalled"] call skd_fnc_events;
-// each: createHashMap with "args" and "at", at holding "utc", "tick", "time" and "frame"
-[count _all, "==", 1, "one signal on p1"] call skd_fnc_expect;
-```
-
-`skd_fnc_waitEvent` returns at once when the event came before the call, so trigger first and wait after. Its fourth argument, `after`, passes over that many events: `["p1", "skdfx_signalled", 5, 1] call skd_fnc_waitEvent` waits for the second. Names match without regard to case.
-
-When the event does not come, the check ends `fail` / `wait-ceiling` with what did arrive, on the machine waited on and on every other machine the check records on:
-
-```
-skd_fnc_waitEvent: no event skdfx_signalled came on p2 within its ceiling of 3 s. Recorded events: p2: none; p1: 1 skdfx_signalled.
-```
-
-`evidence.observed` holds the same counts per machine. A wait or `skd_fnc_events` for an event the check does not record on that machine ends it `fail` / `check-error`: `skd_fnc_waitEvent: the check does not record the event skdfx_signalled on p2 (it records it on p1). Record it first with skd_fnc_record.` `skd_fnc_record` of a CBA event on a machine without CBA, or of a mission event the engine does not have, ends it `fail` / `check-error` too.
-
-The recording ends with the check: every handler it added is removed on every machine, whatever the outcome, so nothing is left for the next check. The result file lists every recorded event under the check, in `events`, with its machine, name, kind, arguments and clocks ([Script errors, logs and evidence](script-errors-and-logs.md)).
-
-## Helpers from the library folder
-
-Helper code that several checks share lives once in the library folder, `tests/_lib/` unless `shakedown.toml` sets `lib` ([The project file](project-file.md)). Each `.sqf` file directly in it is compiled on every machine when the session starts, after every mission restart, game restart and join, and after every `reload`, into `skd_lib_<file name>`. `list` and `run` never take it as a check.
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_record` | `[machines, event, kind, ceiling]` - `event` String, the event's name; `kind` `"cba"` or `"mission"`, default `"cba"`; `ceiling` default 10. | `true` once every machine records the event. | `fail` / `check-error` when CBA is not loaded on a machine for a `"cba"` event, when the engine has no mission event of that name, or when the event is recorded there already as the other kind. |
+| `skd_fnc_events` | `[machine, event]` | An Array of the events of that name recorded on the machine, oldest first, each a HashMap with `"args"`, the event's arguments as the machine received them, and `"at"`, a HashMap of its clocks `"utc"` (String), `"tick"`, `"time"` and `"frame"` (Numbers). | `fail` / `check-error` when the check does not record the event on that machine. |
+| `skd_fnc_waitEvent` | `[machine, event, ceiling, after]` - `ceiling` default 10; `after` the number of events of that name on the machine to pass over, default 0. | The arguments of event number `after + 1` recorded on the machine, once it is recorded. | `fail` / `wait-ceiling` at the ceiling, listing the events each recording machine did record; `fail` / `check-error` when the check does not record the event on that machine. |
 
 ```sqf
-// tests/_lib/kit.sqf: returns its helpers
-createHashMapFromArray [
-    ["settle", { params ["_unit"]; waitUntil { vectorMagnitude velocity _unit < 0.1 }; true }]
-]
+["all", "mymod_signalled"] call skd_fnc_record;
+["p1", "mymod", "signal"] call skd_fnc_pressKey;
+private _args = ["p2", "mymod_signalled", 10] call skd_fnc_waitEvent;
+[count (["server", "mymod_signalled"] call skd_fnc_events), "==", 1, "the server heard it once"] call skd_fnc_expect;
 ```
 
+See [Recording the mod's events](recording-events.md).
+
+## Cleanups, evidence and ending a check
+
+| Function | Arguments | Returns |
+|---|---|---|
+| `skd_fnc_cleanup` | `[code, args, machine]` - `args` default `[]`; `machine` the machine it runs on, default the lead machine. | Nothing. Registers `code` to run on `machine` at the start of the next reset, each machine's cleanups last registered first. `code` follows the rules of code sent to a machine. A cleanup still running at the reset's 15 s ceiling is terminated and fails the reset, naming the check that registered it. |
+| `skd_fnc_evidence` | `[label, value]` - `label` String. | Nothing. Adds the value to the check's evidence in the result file, for every outcome. |
+| `skd_fnc_fail` | `[message]` | Does not return. Ends the check `fail` / `explicit`. |
+| `skd_fnc_invalid` | `[message]` | Does not return. Ends the check `invalid` / `explicit`, for a cause outside the mod that the check detects itself. |
+
 ```sqf
-// a check
-private _kit = call skd_lib_kit;
-["p1", { [player] call ((call skd_lib_kit) get "settle") }] call skd_fnc_on;   // on p1 too
-```
-
-A changed library file reaches the game with `shakedown reload`, which lists it at level `none` and restarts nothing. A library file that does not compile ends every check `fail` / `check-error` before its body runs, until it is fixed and reloaded: `The library file tests/_lib/kit.sqf does not compile: Invalid number in expression, at line 4. Fix it and run `shakedown reload`; until then every check fails.` A file name that is not letters, digits and `_` is the same mistake.
-
-## Cleanups and ending a check
-
-```sqf
-private _id = player addAction ["Wave", {}];
-[{ player removeAction (_this select 0) }, [_id]] call skd_fnc_cleanup;
-
-// On a dedicated session: state that lives on p1 is put back on p1.
 ["p1", { player allowDamage false }] call skd_fnc_on;
-[{ player allowDamage true }, [], "p1"] call skd_fnc_cleanup;
+[{ player allowDamage true }, [], "p1"] call skd_fnc_cleanup;     // undone on p1, where it lives
 
+["boxes", _n] call skd_fnc_evidence;
 if (isNil "agh_fnc_placeHook") then { ["arma-grappling-hook is not loaded"] call skd_fnc_invalid };
 if (_n > 3) then { ["too many boxes"] call skd_fnc_fail };
 ```
 
-`skd_fnc_cleanup [code, args, machine]` registers code that runs on `machine` at the start of the next reset, each machine's last registered first, for state the reset cannot name: an action added to the player, a variable, a mod's setting. It runs whatever the check's outcome, so a check that fails half way leaves no such state to the next. `machine` defaults to the lead machine: `p1` in singleplayer, the server on a dedicated session. State that is local to one client, such as an action on its player, `allowDamage` on its unit, a CBA event handler or a variable in its `missionNamespace`, is undone on that client, so its cleanup names it. Like code given to `skd_fnc_on`, a cleanup sees only its `args` as `_this` and calls no `skd_fnc_*` function. `skd_fnc_fail [message]` ends the check `fail` / `explicit`; `skd_fnc_invalid [message]` ends it `invalid` / `explicit`, for a cause outside the mod that the check itself detects. `skd_fnc_handOver [machine, items]` ends the body and hands the situation over to a person in that game client's window, with the items to look for on screen, and leaves the session up ([Handing over to a manual tester](handing-over.md)).
+See [Scenes, resets and cleanups](scenes-resets-and-cleanups.md#cleanups).
 
-## The reset between checks
+## Handing over to a person
 
-Before every check the session is reset in place, in under a second: the previous check's cleanups run, every unit, vehicle and object created since the mission started is deleted (whatever created it, on whichever machine), every player is brought out of any vehicle, alive, with the loadout, position, direction, damage and animation it had at the mission's start, and the date and weather are put back on every machine. When ACE medical is loaded, each player is also given ACE's full heal (`ace_medical_treatment_fnc_fullHealLocal`, on the machine the player is local to), which clears the wounds, blood loss, pain, fractures, tourniquets and medication that `setDamage` leaves; Shakedown is checked against ACE 3.21.2. ACE marks that function as not public, so an ACE version without it fails the reset (`invalid` / `reset-failed`) with a message that names the ACE version the machine loaded. In singleplayer a player who dies during a check is handed a new unit where it fell at once, so the mission goes on; on a dedicated session it respawns at once. The reset brings that unit back to the start and deletes the body. `shakedown reset` runs the same reset by hand. What the reset does not touch: variables set on units or in `missionNamespace`, actions added to the player, a mod's own state. A check that changes those registers a cleanup, and a check that depends on them being fresh says `// @reset mission` in its header and starts in a restarted mission instead ([Reloading and the mission restart](reloading.md#a-check-that-needs-a-fresh-mission)).
+| Function | Arguments | Returns | Fails |
+|---|---|---|---|
+| `skd_fnc_handOver` | `[machine, items]` - `machine` a game client, `"p1"` to `"pN"`; `items` an Array of 1 to 10 Strings that are not empty, each one thing to look for. | Does not return: the body ends there. | `fail` / `check-error` for `server` or a headless client on a dedicated session, naming the game clients it can hand over to, and for `items` of the wrong form; `fail` / `wait-ceiling` when the list is not on the client's screen within 10 s. |
 
-A reset that cannot bring the session back within 15 s ends the next check `invalid` / `reset-failed` with what did not match, and leaves the session broken: every check after it is `invalid` / `session-broken` until `shakedown reload` restarts the game or the session is stopped.
+```sqf
+["p1", [
+    "An ammo crate stands 2 m in front of you.",
+    "Looking at it, the action menu offers Open crate."
+]] call skd_fnc_handOver;
+```
+
+See [Handing over to a person](handing-over.md).
+
+## Not in the API
+
+- **No sleep.** Every wait has a condition and a ceiling.
+- **No real key input.** Arma 3 reads the keyboard through DirectInput, so a key posted to a game window reaches neither a key handler nor a CBA keybind; a check presses a keybind with `skd_fnc_pressKey` instead.
+- **No screenshots and no failure simulation** functions. To make a failure on purpose, see [Making a failure on purpose](outcomes-and-broken-sessions.md#making-a-failure-on-purpose).
