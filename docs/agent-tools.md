@@ -1,17 +1,19 @@
 ---
 type: Documentation
-title: Agent tools
-description: How an AI agent drives Shakedown through the shakedown MCP server - the project's .mcp.json, every tool and its command line twin, the rules every tool keeps, the agent's workflow for a session and a run, the error codes, and the text the guide tool returns.
+title: AI agents and the MCP tools
+description: How an AI agent drives Shakedown through the shakedown MCP server - the project's .mcp.json, every tool with its input and its command line twin, the rules every tool keeps, the error codes, the agent's workflow for a session and a run, and the text the guide tool returns.
 status: draft
 ---
 
-# Agent tools
+# AI agents and the MCP tools
 
-`shakedown mcp` is an MCP server on stdio that gives an AI agent every command of the command line as a tool (`AGT-01`). A tool asks the runner the same requests as its command and returns the same JSON that the command prints with `--json` (`NFR-US-03`), so whatever [Asking a running game](asking-a-running-game.md) and [Writing and running a check](writing-and-running-checks.md) say of a command holds for its tool. The contract is [spec/contract/mcp-tools.md](../spec/contract/mcp-tools.md).
+`shakedown mcp` is an MCP server on stdio that gives an AI agent, such as Claude Code, every command of the command line as a tool. A tool asks the runner the same requests as its command and returns the same JSON that the command prints with `--json`, so whatever these docs say of a command holds for its tool. The contract is [spec/contract/mcp-tools.md](../spec/contract/mcp-tools.md).
+
+With it an agent can start and stop sessions, list and run checks, read results, script errors and each machine's logs, run SQF on any machine and inspect it, reload changed files and rerun, and write checks: the `guide` tool tells it how.
 
 ## Setting it up
 
-The project, the folder holding `shakedown.toml`, declares the server in a `.mcp.json` beside it (`INT-CC-01`):
+The project, the folder holding `shakedown.toml`, declares the server in a `.mcp.json` beside it:
 
 ```json
 {
@@ -21,43 +23,45 @@ The project, the folder holding `shakedown.toml`, declares the server in a `.mcp
 }
 ```
 
-`shakedown` must be on `PATH`: put the install folder there ([Installing Shakedown](install.md)). Claude Code asks once whether to trust the project's servers, then shows the tools as `mcp__shakedown__<tool>`. The server finds the project from the folder Claude Code starts it in. It starts and answers `status`, `list_checks` and `guide` on a machine with no game and no runner (`AGT-05`); every other tool reaches the runner, which it starts when none runs.
+`shakedown` must be on `PATH`: put the install folder there ([Installing, upgrading and removing](install.md)). Start Claude Code in that folder. It asks once whether to trust the project's servers, then shows the tools as `mcp__shakedown__<tool>`. The server finds the project from the folder it is started in. It starts and answers `status`, `list_checks` and `guide` on a machine with no game and no runner, macOS and Linux included; every other tool reaches the runner, which it starts when none runs.
 
-The demo project `e2e/grappling-hook` has such a `.mcp.json`: start Claude Code in that folder.
+The session belongs to the runner, not to the agent: when the agent's session ends, the game runs on, and the next agent session's `status` finds it ([Sessions and the runner](sessions-and-the-runner.md)). Have the agent call `session_stop` when it is done.
 
 ## The tools
 
-| Tool | Command | Does |
-|---|---|---|
-| `status` | `shakedown status` | The runner, the session with its machines, the active run. Shows a failed start until the next start or stop. |
-| `session_start` | `shakedown session start --setup <name>` | Starts a session; returns when it is `ready` or `failed`, or after 50 s with state `starting`. |
-| `session_stop` | `shakedown session stop` | Stops the session, or clears a failed start. |
-| `list_checks` | `shakedown list` | The checks a selection takes, from the files, with no runner. |
-| `run_start` | `shakedown run` | Starts a run and returns its `run_id` at once. `repeat` runs each check that many times in a row; `each_setup` runs the selection in every setup a selected check names, as `run --each-setup` does ([Every setup, repeats and slow steps](every-setup-and-repeats.md)). |
-| `run_status` | - | A run's progress and outcomes so far; with `wait_s` it waits for the next check to end. |
-| `run_result` | `shakedown run --json` | The result of a run that ended: the same JSON `run --json` prints. |
-| `run_stop` | `shakedown run stop` | Stops a run and returns its status, state `stopped`, once its result file is written ([Running a suite unattended](unattended-runs.md)). |
-| `reset` | `shakedown reset` | Resets the session in place. |
-| `reload` | `shakedown reload` | Reloads changed files, or the `files` given relative to the project, at the level they need; on a broken session restarts the game ([Reloading](reloading.md)). Returns when done, or after 50 s with state `applying`. |
-| `exec` | `shakedown exec` | SQF on a machine or a group, its value as data and the script errors it raised. |
-| `wait_until` | `shakedown wait` | Waits for a condition on a machine. |
-| `expect` | `shakedown expect` | Tries an assertion live. |
-| `inspect` | `shakedown inspect` | A compact summary of a machine. |
-| `logs` | `shakedown logs` | A machine's log lines, redacted. |
-| `errors` | `shakedown errors` | The script errors the session caught. |
-| `guide` | `shakedown guide` | The text below. |
+| Tool | Input | Command | Does |
+|---|---|---|---|
+| `status` | `{}` | `shakedown status` | The runner, the session with its machines and their health, the active run, the last reload. Shows a failed start until the next start or stop. |
+| `session_start` | `{"setup"}` | `shakedown session start --setup <name>` | Starts a session; returns when it is `ready` or `failed`, or after 50 s with state `starting`. |
+| `session_stop` | `{}` | `shakedown session stop` | Stops the session, or clears a failed start. |
+| `list_checks` | `{"ids"?, "tags"?}` | `shakedown list` | The checks a selection takes, from the files, with no runner: each with `id`, `name`, `tags`, `setups`, `timeout_s`, `reset` and `error`. |
+| `run_start` | `{"ids"?, "tags"?, "setup"?, "each_setup"?, "repeat"?}` | `shakedown run` | Starts a run and returns its `run_id`, its state and `total` at once. `setup` with no session starts one and stops it at the end; `repeat` runs each check that many times in a row; `each_setup` runs the selection in every setup a selected check names ([Every setup, repeats and slow steps](every-setup-and-repeats.md)). |
+| `run_status` | `{"run_id", "wait_s"?}` | - | A run's state, progress, current check and outcomes so far; with `wait_s` (at most 50) it returns as soon as a check ends or the run ends. |
+| `run_result` | `{"run_id"}` | `shakedown run --json` | The result of a run that ended: the summary, each outcome with its reason, failed step and evidence path, the checks not run, repeats, `handed_over` and `result_file`. |
+| `run_stop` | `{"run_id"}` | `shakedown run stop` | Stops a run and returns its status, state `stopped`, once its result file is written ([Running a suite unattended](unattended-runs.md)). |
+| `reset` | `{}` | `shakedown reset` | Resets the session in place: `{"state", "duration_s", "mismatches"}`. |
+| `reload` | `{"files"?}` | `shakedown reload` | Reloads changed files, or the `files` given relative to the project, at the level they need; on a broken session restarts the game ([Reloading changed mod files](reloading.md)). Returns when done, or after 50 s with state `applying`. |
+| `exec` | `{"machine", "code", "args"?, "ceiling"?}` | `shakedown exec` | SQF on a machine or a group, its value as data and the script errors it raised. |
+| `wait_until` | `{"machine", "condition", "description"?, "args"?, "ceiling"?}` | `shakedown wait` | Waits for a condition on one machine: `{"met", "waited_s", "error"}`. |
+| `expect` | `{"machine", "value", "op", "expected", "args"?, "ceiling"?}` | `shakedown expect` | Tries an assertion live: `{"passed", "last_value", "waited_s"}`. |
+| `inspect` | `{"machine", "near"?, "radius"?}` | `shakedown inspect` | A compact summary of a machine ([Asking a running game](asking-a-running-game.md)). |
+| `logs` | `{"machine", "run_id"?, "check_id"?, "grep"?, "last"?}` | `shakedown logs` | A machine's log lines, redacted. |
+| `errors` | `{"machine"?, "run_id"?, "check_id"?}` | `shakedown errors` | The script errors the session caught. |
+| `guide` | `{}` | `shakedown guide` | The text at the end of this page. |
+
+`status`, `list_checks`, `run_status`, `run_result`, `inspect`, `logs`, `errors` and `guide` are marked read-only; `exec` is marked destructive, so a client can ask before it runs.
 
 ## What every tool keeps to
 
-- **Structured results.** Each tool has an `inputSchema` and an `outputSchema`, and returns `structuredContent` and the same JSON as one text block (`AGT-02`). The shapes a tool shares with the result file, such as `ScriptError`, are those of [result.schema.json](../spec/contract/result.schema.json).
-- **No call past 60 s** (`AGT-03`). `exec`, `wait_until` and `expect` take a `ceiling` of at most 50 s, default 10; `run_status` a `wait_s` of at most 50. A call that waits sends `notifications/progress` every 4 s when the request carries a progress token. A run never holds a call: `run_start` returns at once.
-- **Cancelling stops the work** (`AGT-04`). When the client cancels `exec`, `wait_until`, `expect` or `inspect`, the server closes the call's connection to the runner, and the runner stops the code on the machine; `inspect` then lists no script of it. A session start goes on when its call is cancelled; stop it with `session_stop`. A run never holds a call; stop it with `run_stop`.
-- **Long results go to a file** (`AGT-07`). A result over 20,000 characters is written to `.shakedown/results/` in the project and the tool returns `{"result_path": <path>}`. `logs` keeps its own lines under the limit and names the file with all of them in `path`.
+- **Structured results.** Each tool has an `inputSchema` and an `outputSchema`, and returns `structuredContent` and the same JSON as one text block. The shapes a tool shares with the result file, such as `ScriptError`, are those of [result.schema.json](../spec/contract/result.schema.json).
+- **No call past 60 s.** `exec`, `wait_until` and `expect` take a `ceiling` of at most 50 s, default 10; `run_status` a `wait_s` of at most 50. A call that waits sends `notifications/progress` every 4 s when the request carries a progress token. A run never holds a call: `run_start` returns at once. An order sent to a machine whose mission restarts waits for the machine before its own ceiling starts, so on a dedicated session such a call can last longer than 60 s.
+- **Cancelling stops the work.** When the client cancels `exec`, `wait_until`, `expect` or `inspect`, the server closes the call's connection to the runner, and the runner stops the code on the machine; `inspect` then lists no script of it. A session start or a reset goes on when its call is cancelled; stop a session with `session_stop`. A run never holds a call; stop it with `run_stop`.
+- **Long results go to a file.** A result over 20,000 characters is written to `.shakedown\results\` in the project and the tool returns `{"result_path": <path>}`. With no project, the file goes to a `shakedown-results` folder in the system's temp folder. `logs` keeps its own lines under the limit and names the file with all of them in `path`.
 - **A failing check is a result.** `run_result` of a run whose checks failed is a successful call; their outcomes say `fail`.
 
 ## Mistakes the agent can fix
 
-Such a mistake is a result with `isError` `true` and one text block, `<code>: <what is wrong>. <what to do next>.` (`AGT-02`, `NFR-US-01`):
+Such a mistake is a result with `isError` `true` and one text block, `<code>: <what is wrong>. <what to do next>.`:
 
 ```
 unknown-machine: Session s-20261106-180721 has no machine `p9`; its machines are p1, and the groups all, clients and headless. Name one of those.
@@ -65,7 +69,7 @@ unknown-machine: Session s-20261106-180721 has no machine `p9`; its machines are
 
 | Code | When |
 |---|---|
-| `bad-arguments` | An argument does not match the input schema, a ceiling or `wait_s` is above 50, or the operands of `expect` do not fit its operator. |
+| `bad-arguments` | An argument does not match the input schema, a ceiling or `wait_s` is above 50, values conflict (such as `each_setup` with `setup`), or the operands of `expect` do not fit its operator. |
 | `config-error` | `shakedown.toml` is missing or malformed; the message names the key and its line. |
 | `unknown-check` | An id or a tag selects nothing; the message lists the checks or the tags that exist. |
 | `unknown-machine` | The session has no such machine. |
@@ -73,11 +77,11 @@ unknown-machine: Session s-20261106-180721 has no machine `p9`; its machines are
 | `unknown-run` | No run has that id, or, from `run_result`, the run has not ended: call `run_status`. |
 | `compile-error` | The SQF does not compile on the machine; the engine's message follows. |
 | `no-session` | The tool needs a session and none runs; the message names the start command and the setups of the project. |
-| `session-exists` | A session runs already, or one of another setup than the `setup` given to `run_start`. |
+| `session-exists` | A session runs already, or one of another setup than the `setup` given to `run_start`, or one runs while `each_setup` asks to start its own. |
 | `session-busy` | The session is starting or stopping, or busy with a run, a reload or a reset. |
-| `session-broken` | The session is `broken`; the reason follows. |
-| `precondition-failed` | Steam, the game, a mod folder or the framework's addon is missing; the message names it. |
-| `runner-unreachable` | The runner does not answer or runs another version; its process id follows. Ending that process ends its session ([When a client or the runner ends](sessions-and-the-runner.md)). |
+| `session-broken` | The session is broken; the reason follows. |
+| `precondition-failed` | Steam, the game, a mod folder, free disk, a port or the framework's addon is missing; every gap found follows, in one message. |
+| `runner-unreachable` | The runner does not answer or runs another version; its process id follows. Ending that process ends its session ([Sessions and the runner](sessions-and-the-runner.md#a-command-cannot-reach-the-runner)). |
 
 A failure of the framework itself is a JSON-RPC error, not a tool result.
 
@@ -88,11 +92,12 @@ A failure of the framework itself is a JSON-RPC error, not a tool result.
 3. `run_start` with `ids` or `tags`, then `run_status` with `wait_s` 50 until its state is `finished` or `stopped`: each call returns as soon as a check ends, with every outcome so far. `run_stop` stops a run that should not go on.
 4. `run_result` for the summary, each check's reason and failed step, and the path of the result file. `logs` with `check_id` and `run_id` gives a check's log lines.
 5. To look into a failure: `inspect` the machine, `exec` code on it, `wait_until` and `expect` to try what the check does, `errors` for the script errors.
-6. `session_stop` when done.
+6. To try a fix: edit the check and run it again, or edit the mod, `reload`, and run again.
+7. `session_stop` when done.
 
 ## The guide
 
-`guide` and `shakedown guide` return this text (`AGT-06`):
+`guide` and `shakedown guide` return this text:
 
 ```text
 Shakedown runs automated checks of an Arma 3 mod inside the running game, in singleplayer or on a dedicated server with game clients and headless clients.

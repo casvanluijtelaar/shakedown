@@ -85,7 +85,7 @@ Every session folder gets a `session.json` when the session ends:
 }
 ```
 
-`reason` is `runner-died` for a session the recovery ended, and `null` for one stopped with `session stop` while it was `ready`. For a start that failed, `state` is `failed` and `reason` is the reason `session start` printed and `status` showed, with its `message`, `machine` and `rpt_tail`, redacted; a session that broke and was then stopped keeps its reason the same way ([The reason stays in session.json](starting-and-failed-starts.md#the-reason-stays-in-sessionjson)).
+`reason` is `runner-died` for a session the recovery ended, and `null` for one stopped with `session stop` while it was `ready`. For a start that failed, `state` is `failed` and `reason` is the reason `session start` printed and `status` showed, with its `message`, `machine` and `rpt_tail`, redacted; a session that broke and was then stopped keeps its reason the same way ([The reason stays in session.json](starting-and-failed-starts.md#the-reason-stays-in-status-and-in-sessionjson)).
 
 ## A command cannot reach the runner
 
