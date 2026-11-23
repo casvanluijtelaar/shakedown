@@ -3,7 +3,7 @@ type: Deferred
 title: "Checks cannot share helper code"
 description: "A check cannot load another file and runs no preprocessor, so helper code that many checks use is copied into each, and a change to it is one edit per copy that nothing keeps in step."
 id: DEF-27
-state: planned
+state: done
 milestone: M12
 status: stable
 ---
