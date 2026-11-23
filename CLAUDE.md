@@ -88,11 +88,16 @@ Every `by` value is an OKF actor: `human:casvanluijtelaar` for the owner, `claud
 - **Never take over the desktop.** No code moves the machine's mouse or types on its keyboard. Input goes to the game only.
 - **Fetch the web cheaply.** Search with WebSearch, read pages with WebFetch or `curl`, and read GitHub with `gh`. Use the Firecrawl tools only for a page none of those can read; their credits are limited.
 - **Look up versions instead of recalling them.** Every dependency version, including Arma 3, CBA and ACE3, is looked up at the time of the change.
-- **Run only the tests the turn touched.** Before a turn ends, run the tests of the parts you changed and `python3 tools/okf_check.py` if you touched a document. The full acceptance suite runs only when the driver asks for it.
+- **Run only the tests the turn touched.** Before a turn ends, run the tests of the parts you changed and `python3 tools/okf_check.py` if you touched a document. A change that only moves or renames files needs only the bundle check.
+- **Acceptance runs once.** A test round runs its milestone's own checks once, with no `--repeat`, plus once each the earlier checks that cover what the milestone changed, selected with `--check`. The full acceptance suite runs only at the end of a phase, or when the owner asks.
+- **Research rounds are bounded.** A research or spike round spends at most about one hour on game runs.
 - **Never sleep a fixed time in a test or a check.** Poll for the outcome with a ceiling.
 - **The owner does the in-game look and feel.** Screenshots are evidence for a person or an agent to interpret, never a verdict. When a milestone needs a look in the game, the session sets up the situation and tells the owner what to look for.
 - **Committing and pushing are the owner's call.** Wait to be asked, unless a coordinator's prompt says otherwise. Never push unless told to.
-- **Git: trunk based.** All work lands on `main`. When sessions run in parallel, each works in its own worktree inside the repository, `.worktrees/<role>-<topic>` on branch `<role>/<topic>`, never beside the repository, rebases on `main` and fast-forward merges. Never use `git stash`: the stash list is shared by every worktree.
+- **Tags, releases and winget are the owner's.** No session pushes a tag, creates a GitHub release or submits to winget. A session that reaches such a step stops and gives the owner the exact commands.
+- **A refused command is reported.** When the permission system refuses a command, report it and stop that line of work. Never reach the same result another way.
+- **No Steam identity anywhere.** No Steam ID or Steam name goes into any file, commit, report or tool output that is kept. A game or server started outside the framework has its output discarded, since it can print the identity. A report that holds either is not passed on, and the owner is told.
+- **Git: trunk based.** All work lands on `main`. A session that runs alone works directly in the main checkout on `main`. When sessions run in parallel, each works in its own worktree inside the repository, `.worktrees/<role>-<topic>` on branch `<role>/<topic>`, never beside the repository, rebases on `main` and fast-forward merges. Run each git step as its own command. Never use `git stash`: the stash list is shared by every worktree.
 - **Do not add a dependency for something you can write in an afternoon.** Code taken from another project needs a license that allows this project to be open-sourced later. Record where it came from and its license.
 
 ## Machines
@@ -100,4 +105,4 @@ Every `by` value is an OKF actor: `human:casvanluijtelaar` for the owner, `claud
 - **The Windows test machine** is a cloud VM with Arma 3 and Steam. Every session that starts the game runs there. A game client window renders only while the owner is connected through Shadow PC. A dedicated server and headless clients need no window.
 - **The Mac** runs sessions that need no game: research, spec, plan, documents.
 - `origin` (`github.com/casvanluijtelaar/shakedown`) carries work between the two. Pull before you start a session on either machine.
-- Steam must be running and logged in before any run. Without it the game exits at once.
+- Steam must be running and logged in before any run. Without it the game exits at once. When no `steam` process runs, start it only from the `steam.exe` under the `SteamPath` registry value of `HKCU\Software\Valve\Steam`, never by a command that names the account, then poll at most 10 times for it to come up logged in, and report if it does not. Starting Steam needs no approval.
