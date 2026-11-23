@@ -40,7 +40,7 @@ The check allows SYSTEM, which is the operating system itself and not an account
 
 ## What it costs
 
-On a machine with more than one administrator account, another administrator's programs can read the token and drive the session, and so run code in the game as this user's test. The test machine has one user, so the cost there is small. An administrator can also take ownership of any file. Still, the promise is "the current user only", and both the contract and the M0 docs say it holds. Either the runner writes the file with a protected ACL that grants only the current user (and SYSTEM, if the spec allows it), or the spec, the contract and `plan/reports/m00.md` say what the file's ACL is.
+On a machine with more than one administrator account, another administrator's programs can read the token and drive the session, and so run code in the game as this user's test. On a Windows machine with one user the cost is small. An administrator can also take ownership of any file. Still, the promise is "the current user only", and both the contract and the M0 docs say it holds. Either the runner writes the file with a protected ACL that grants only the current user (and SYSTEM, if the spec allows it), or the spec, the contract and `plan/reports/m00.md` say what the file's ACL is.
 
 ## The check that holds it
 

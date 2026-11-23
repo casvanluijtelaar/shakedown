@@ -25,7 +25,7 @@ verified:
 
 ## What the system does
 
-The owner, `human:casvanluijtelaar`, ran the M15 demo look (exit criterion 3) on 2026-11-19, `cd e2e; ..\target\shakedown\shakedown.exe run --setup dedicated handover/US-083-crate`, and looked through `p1`'s window over Shadow PC. In their words:
+The owner, `human:casvanluijtelaar`, ran the M15 demo look (exit criterion 3) on 2026-11-19, `cd e2e; ..\target\shakedown\shakedown.exe run --setup dedicated handover/US-083-crate`, and looked through `p1`'s window on screen. In their words:
 
 > "the top left window overlays the scroll menu, so hard to see what I selected."
 
