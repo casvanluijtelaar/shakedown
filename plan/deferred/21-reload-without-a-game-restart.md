@@ -3,7 +3,7 @@ type: Deferred
 title: "A changed mod file reaches a running game only through a game restart"
 description: "The game holds every loose mod file it has read, shared for reading only, until it has read a few hundred MiB of other loose files, so every .sqf change reloads by a game restart; spike SPK-19 found that the framework can make every machine let go of the file and a mission restart then takes the change, which M14 builds."
 id: DEF-21
-state: planned
+state: done
 milestone: M14
 status: stable
 ---
