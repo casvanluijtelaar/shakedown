@@ -234,6 +234,8 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 - 2026-11-23: Two close rounds in a row wrote a bundle-check log to `C:\Users\Shadow\Documents\okf.txt`, outside the repository, and deleted it. Prompts name the scratch folder for every temporary file, including redirected command output.
 
+- 2026-11-23: The permission classifier refused a developer's single chained command (commit, rebase, merge, worktree remove, branch delete, process listing) as \"Undermining Oversight\". The coordinator did not run it for the round; the owner chose a retry, and the same steps ran one plain command per call without a refusal. Prompts ask for the commit and merge steps as separate commands.
+
 ## State at the end of the last session
 
 - 2026-11-23: Phase 2 is complete. M19 closed in `1bf0abd` (no tag; `v0.2.0` is on `56021ef`); every milestone M0 to M19 is `complete`. The round deferred DEF-35 (installing a pre-release needs the tag's script URL) and DEF-36 (whether `komac update` keeps `ArchiveBinariesDependOnPath`), set DEF-30 done, and noted that the README's `winget install` line finds nothing until microsoft/winget-pkgs#487410 merges (the owner signed the CLA; checks 01 to 05 passed). Next: push on the owner's word, the winget PR's remaining checks, the deferred candidates (about 30) for the owner, then phase 3 planning when the owner asks.
