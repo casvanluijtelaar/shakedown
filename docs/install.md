@@ -33,6 +33,8 @@ The binary is not signed, so Windows SmartScreen may warn the first time it runs
 winget install casvanluijtelaar.Shakedown
 ```
 
+The package's moniker is `shakedown`, so `winget install shakedown` works too. In scripts use the full id `casvanluijtelaar.Shakedown`, which always matches exactly one package.
+
 winget unpacks the zip into its own package folder and puts that folder on your `PATH`. A pre-release, such as `0.2.0-rc.1`, is never on winget; install it with the script or by hand.
 
 ### With the one-line script

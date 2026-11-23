@@ -173,10 +173,16 @@ A `version` without a `patch` is refused, since the version is that class's `ver
 shakedown.toml, line 8: mods.ace.patch is required with version: the version is the versionStr of that CfgPatches class.
 ```
 
-A `slow_step` that is not a number above 0, such as `-1`, `0` or `"10"`:
+A `slow_step` that is a number but not above 0, such as `-1` or `0`:
 
 ```
 shakedown.toml, line 3: slow_step must be a number of seconds above 0, got -1.
+```
+
+A `slow_step` that is not a number, such as the string `"10"`, gets the message for a key of the wrong type:
+
+```
+shakedown.toml, line 3: key `slow_step`: invalid type: string "10", expected f64. Fix the key as contract/cli.md describes the project file.
 ```
 
 A tests folder that does not exist:

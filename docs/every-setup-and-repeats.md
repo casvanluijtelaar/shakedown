@@ -19,11 +19,19 @@ With no session running, this runs the selection once for each setup that a sele
 
 A selection works as for any run: `shakedown run --each-setup --tag smoke` starts only the setups the checks tagged `smoke` name. `--repeat` goes with it.
 
-The command prints a line per check execution as it ends, and a line per setup when it ends:
+The command prints a line when a setup's session starts, the session's lines for each game process it starts and for ready, a line per check execution as it ends, and a line per setup when it ends. The `starting its session` line goes to stderr:
 
 ```
+setup sp-cba: starting its session for run r-20261116-101500-1
+session s-20261116-101500: started p1 (process 4920)
+session s-20261116-101500: ready
 pass    rope/US-012-hook-holds  (13.5 s)
 setup sp-cba: 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\agh\.shakedown\runs\r-20261116-101500-1\result.json
+setup dedicated-cba: starting its session for run r-20261116-101632-2
+session s-20261116-101632: started server (process 5512)
+session s-20261116-101632: started p1 (process 6120)
+session s-20261116-101632: started p2 (process 6844)
+session s-20261116-101632: ready
 pass    rope/US-012-hook-holds  (14.1 s)
 setup dedicated-cba: 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\agh\.shakedown\runs\r-20261116-101632-2\result.json
 2 setups: 2 passed, 0 failed, 0 invalid, 0 not run.
@@ -111,4 +119,10 @@ A nested step that holds a slow step is slow too, since its time holds the inner
 
 ```
 shakedown.toml, line 3: slow_step must be a number of seconds above 0, got -1.
+```
+
+A string, such as `"10"`, is refused as a key of the wrong type:
+
+```
+shakedown.toml, line 3: key `slow_step`: invalid type: string "10", expected f64. Fix the key as contract/cli.md describes the project file.
 ```

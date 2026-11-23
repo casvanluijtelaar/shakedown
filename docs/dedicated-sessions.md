@@ -68,8 +68,10 @@ In singleplayer the only machine is `p1`, which `"server"` also names; `"all"` a
 ```sqf
 private _p1 = ["p1"] call skd_fnc_player;          // p1's unit, as the server sees it
 private _each = ["all", { profileName }] call skd_fnc_onEach;
-// _each: server -> "server", p1 -> "p1", p2 -> "p2", hc1 -> "hc1"
+// _each: server -> "server", p1 -> "p1", p2 -> "p2", hc1 -> "skd_hc1"
 ```
+
+`profileName` is the machine name on the server and on every game client. On a headless client the engine reports the name of its slot in the mission, `skd_hc1` for `hc1`, so find a headless client by the key of the HashMap, not by `profileName`.
 
 ### A check for both kinds of setup
 

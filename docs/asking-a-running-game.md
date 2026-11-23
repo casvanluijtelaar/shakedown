@@ -19,11 +19,11 @@ Machines are named `server`, `p1` to `pN` and `hc1` to `hcN`; in singleplayer `p
 
 ```
 > shakedown exec --machine p1 --code "getPosASL player"
-p1  done  [100,100,0.00143862]  (0.004 s)
+p1  done  [100,100,5.00144]  (0.004 s)
 > shakedown exec --machine all --code "profileName"
-server  done  "server"  (0.021 s)
 p1  done  "p1"  (0.006 s)
 p2  done  "p2"  (0.006 s)
+server  done  "server"  (0.021 s)
 ```
 
 ```
@@ -76,22 +76,22 @@ met after 0.4 s
 held: last read 0 after 0 s
 ```
 
-`shakedown expect --machine <m> --value <sqf> --op <op> --expected <json> [--args <json>] [--ceiling <s>]` reads the value every frame until `value op expected` holds or the ceiling passes, as `skd_fnc_expectOn` does in a check, and answers `{"passed", "last_value", "waited_s"}`; it prints `held` or `did not hold` with the last value read, and exits 0 either way. `--expected` is JSON, so a string is written `'"OFF"'` and a tolerance `'[[100, 100, 0], 0.5]'`. The operators are those of the check API: `==`, `!=`, `<`, `<=`, `>`, `>=`, `~=`, `in` and `contains` ([Waits and assertions](waits-and-assertions.md#the-operators)). Operands that do not fit the operator, such as `<` on a string, exit 3 naming what the operator needs.
+`shakedown expect --machine <m> --value <sqf> --op <op> --expected <json> [--args <json>] [--ceiling <s>]` reads the value every frame until `value op expected` holds or the ceiling passes, as `skd_fnc_expectOn` does in a check, and answers `{"passed", "last_value", "waited_s"}`; it prints `held` or `did not hold` with the last value read, and exits 0 either way. `--expected` is JSON, so a string is written `'"OFF"'` and a tolerance `'[[100, 100, 5], 0.5]'`. The operators are those of the check API: `==`, `!=`, `<`, `<=`, `>`, `>=`, `~=`, `in` and `contains` ([Waits and assertions](waits-and-assertions.md#the-operators)). Operands that do not fit the operator, such as `<` on a string, exit 3 naming what the operator needs.
 
 ## Look at a machine: `inspect`
 
 ```
 > shakedown inspect --machine p1
 p1 (client) ready, start 1
-mission shakedown_s-20261106-092156 (start 1), time 312.4 s, tick 401.2 s, 58 fps, frame 18110
-player: {"alive":true,"animation":"amovpercmstpsraswrfldnon","class":"B_Soldier_F","damage":0,"direction":0,"position":[100,104,0], ...}
+mission __cur_mp (start 1), time 312.4 s, tick 401.2 s, 58 fps, frame 18110
+player: {"alive":true,"animation":"amovpercmstpsraswrfldnon","class":"B_Soldier_F","damage":0,"direction":0,"position":[100,104,5.00144], ...}
   near: Land_WoodenBox_F 2:14 at 1.02 m
 ```
 
 `shakedown inspect --machine <m> [--near <netId>] [--radius <m>]` gives a compact summary, read without stopping anything:
 
 - the machine as `status` lists it;
-- the mission, its start count and the clocks: `time`, `tick`, `fps` and `frame`;
+- the mission, its start count and the clocks: `time`, `tick`, `fps` and `frame`. The mission is the engine's `missionName` on that machine: `shakedown_<session id>` on the server of a dedicated session, and `__cur_mp`, the engine's name for a mission a client received from the server, on its game clients;
 - the run, check and step running: the step is the innermost step running in the check on the lead and, on another machine, the step whose wait, poll or code runs there, else `[]`;
 - the player unit (class, position ASL, direction, damage, alive, vehicle, animation), or `null` on a machine without one;
 - up to 50 objects within `--radius` metres (default 50) of the player, or of the object whose net id `--near` gives, each with its class, net id, position and distance;

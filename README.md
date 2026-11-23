@@ -50,7 +50,9 @@ With winget:
 winget install casvanluijtelaar.Shakedown
 ```
 
-or with the one-line script, in PowerShell:
+The package's moniker is `shakedown`, so `winget install shakedown` works too. In scripts use the full id `casvanluijtelaar.Shakedown`, which always matches exactly one package.
+
+Or with the one-line script, in PowerShell:
 
 ```
 irm https://github.com/casvanluijtelaar/shakedown/releases/latest/download/install.ps1 | iex
@@ -104,6 +106,8 @@ Run it in singleplayer, then on a dedicated server with two clients:
 
 ```
 > shakedown run --setup sp
+session s-20261105-161317: started p1 (process 3604)
+session s-20261105-161317: ready
 pass    smoke  (0.0 s)
 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\...\.shakedown\runs\r-20261105-161317-1\result.json
 > shakedown run --setup dedicated

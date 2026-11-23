@@ -9,7 +9,8 @@ for: writer
 checks: []
 stories: [US-047, US-001]
 generated: { by: "claude-code/tester", at: 2026-11-23T20:13:00Z }
-addressed: []
+addressed:
+  - { by: "claude-code/writer", at: 2026-11-23T20:20:15Z, note: "Step 9 runs the changed check with `shakedown run --setup sp smoke`, since step 6 stopped the session, and says `shakedown run smoke` gives the same failure in a running session. Changed docs/quickstart.md." }
 verified: []
 ---
 

@@ -9,7 +9,8 @@ for: writer
 checks: []
 stories: [US-080]
 generated: { by: "claude-code/tester", at: 2026-11-23T20:13:00Z }
-addressed: []
+addressed:
+  - { by: "claude-code/writer", at: 2026-11-23T20:20:15Z, note: "Both pages give the range message for -1 and 0 and the type message for the string \"10\". Changed docs/project-file.md and docs/every-setup-and-repeats.md." }
 verified: []
 ---
 

@@ -15,6 +15,10 @@ The **runner** is the background process that owns the session. The first comman
 
 ```
 > shakedown session start --setup dedicated
+session s-20261106-092156: started server (process 3116)
+session s-20261106-092156: started p1 (process 3604)
+session s-20261106-092156: started p2 (process 7484)
+session s-20261106-092156: ready
 session s-20261106-092156 ready (setup dedicated)
 > shakedown status
 runner: running (process 9184)
@@ -29,7 +33,7 @@ session: s-20261106-092156 of setup dedicated, ready
 session s-20261106-092156 stopped
 ```
 
-- **`session start --setup <name>`** checks the environment, starts the game processes and returns when the session is `ready` or `failed`. It takes the game's own start time: 40 to 60 s in singleplayer, about 45 s for a dedicated server with two clients and a headless client. More mods take longer. A start that is refused or fails exits 4 and leaves no game process running ([Starting a session, and when it fails](starting-and-failed-starts.md)).
+- **`session start --setup <name>`** checks the environment, starts the game processes and returns when the session is `ready` or `failed`. As it goes it prints a line for each game process it starts and one when the session is ready; `run --setup` and `run --each-setup` print the same lines before their check lines. With `--json` these lines go to stderr. It takes the game's own start time: 40 to 60 s in singleplayer, about 45 s for a dedicated server with two clients and a headless client. More mods take longer. A start that is refused or fails exits 4 and leaves no game process running ([Starting a session, and when it fails](starting-and-failed-starts.md)).
 - **`status`** shows the runner, the session and each of its machines with its state, start number, process id, profile folder and health, the run in progress (`run: <id> <done> of <total> done, now <check>`) and, with `--json`, the last reload. It starts nothing and works at any time: with no runner, while a session starts in another command, and while a run goes on. It lists each machine from the moment its process is launched.
 - **`session stop`** stops every process of the session and returns when none is left: on a dedicated session the clients and headless clients first, then the server, and it deletes the mission copy it put in the game's `MPMissions` folder. During a run it stops the run first. On a failed start that `status` still shows, it clears it and exits 0.
 

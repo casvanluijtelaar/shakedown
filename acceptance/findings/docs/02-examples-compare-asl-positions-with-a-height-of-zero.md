@@ -9,7 +9,8 @@ for: writer
 checks: []
 stories: [US-019, US-044]
 generated: { by: "claude-code/tester", at: 2026-11-23T20:13:00Z }
-addressed: []
+addressed:
+  - { by: "claude-code/writer", at: 2026-11-23T20:20:15Z, note: "The `~=` example takes `AGLToASL [100, 104, 0]` as its target, a paragraph says `~=` is three-dimensional and the ground of VR is about 5 m ASL, and the exec, expect and inspect samples show heights of about 5. Changed docs/waits-and-assertions.md and docs/asking-a-running-game.md." }
 verified: []
 ---
 

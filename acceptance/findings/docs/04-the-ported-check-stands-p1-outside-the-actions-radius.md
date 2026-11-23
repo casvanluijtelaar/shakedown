@@ -9,7 +9,8 @@ for: writer
 checks: []
 stories: [US-019]
 generated: { by: "claude-code/tester", at: 2026-11-23T20:13:00Z }
-addressed: []
+addressed:
+  - { by: "claude-code/writer", at: 2026-11-23T20:20:15Z, note: "The ported check and the old init.sqf stand p1 at [100, 106], 2 m from the crate, and the page says why a player stands well inside the action's radius. Changed docs/porting-a-suite.md." }
 verified: []
 ---
 

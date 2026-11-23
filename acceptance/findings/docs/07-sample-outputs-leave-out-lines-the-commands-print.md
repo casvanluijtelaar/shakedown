@@ -9,7 +9,8 @@ for: writer
 checks: []
 stories: [US-001, US-044, US-075]
 generated: { by: "claude-code/tester", at: 2026-11-23T20:13:00Z }
-addressed: []
+addressed:
+  - { by: "claude-code/writer", at: 2026-11-23T20:20:15Z, note: "The session start, run --setup and run --each-setup samples show the started and ready lines (and the setup's starting line, which goes to stderr), the quickstart's status shows the health line, and the inspect sample of a client shows mission __cur_mp with a line on what each machine reports. Changed docs/quickstart.md, docs/sessions-and-the-runner.md, docs/every-setup-and-repeats.md, docs/asking-a-running-game.md and README.md." }
 verified: []
 ---
 

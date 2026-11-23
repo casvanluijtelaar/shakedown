@@ -9,7 +9,8 @@ for: writer
 checks: []
 stories: [US-066]
 generated: { by: "claude-code/tester", at: 2026-11-23T20:13:00Z }
-addressed: []
+addressed:
+  - { by: "claude-code/writer", at: 2026-11-23T20:20:15Z, note: "The profileName comments give hc1 -> \"skd_hc1\", and docs/dedicated-sessions.md says a headless client reports its slot name, so it is found by the HashMap key. Changed docs/dedicated-sessions.md and docs/check-api.md." }
 verified: []
 ---
 

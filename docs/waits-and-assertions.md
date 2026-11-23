@@ -74,11 +74,13 @@ A polled assertion is a wait and an assertion in one: prefer `skd_fnc_expectOn` 
 | `"contains"` | `expected` is an element of the array `actual`, or a substring of the string `actual`, case-sensitive. |
 
 ```sqf
-["p1", { getPosASL player }, "~=", [[100, 104, 0], 0.5], "p1 stands at the wall"] call skd_fnc_expectOn;
+["p1", { getPosASL player }, "~=", [AGLToASL [100, 104, 0], 0.5], "p1 stands at the wall"] call skd_fnc_expectOn;
 ["p1", { animationState player }, "in", ["amovpercmstpsnonwnondnon", "amovpercmstpsraswrfldnon"], "p1 stands"] call skd_fnc_expectOn;
 ["p1", { items player }, "contains", "FirstAidKit", "p1 carries a first aid kit"] call skd_fnc_expectOn;
 [name (["p1"] call skd_fnc_player), "contains", "p1", "p1's name"] call skd_fnc_expect;
 ```
+
+A position compared with `~=` is measured in three dimensions, so the target is ASL like the value read: write a position on the ground with `AGLToASL`. On the default world `VR` the ground is about 5 m above sea level, so a player standing at `[100, 104]` reads `[100, 104, 5.00144]` and a target of `[100, 104, 0]` is 5 m away.
 
 Any other `op`, or operands of the wrong type for it, ends the check `fail` / `check-error`:
 

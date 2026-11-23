@@ -44,7 +44,7 @@ Take an old check that sets up a scene in SQF, makes the player act, sleeps, and
 
 ```sqf
 // init.sqf of the old test mission
-player setPosASL [100, 104, 0];
+player setPosATL [100, 106, 0];
 private _crate = "mymod_Crate" createVehicle [100, 108, 0];
 player action ["User", _crate, 0];
 sleep 5;
@@ -60,7 +60,7 @@ As a Shakedown check, in `tests\US-012-unhurt.sqf`:
 
 private _crate = ["build the scene", {
     private _crate = ["mymod_Crate", AGLToASL [100, 108, 0], 0] call skd_fnc_create;
-    ["p1", AGLToASL [100, 104, 0], 0] call skd_fnc_place;
+    ["p1", AGLToASL [100, 106, 0], 0] call skd_fnc_place;
     _crate
 }] call skd_fnc_step;
 
@@ -78,7 +78,7 @@ What changed, and why:
 - **The header** names the story or requirement the old check proved, so the result, the tags and a later issue can point at it. Keep the old check's name in `@tags` too if other documents refer to it.
 - **Steps** name each phase, so a failure says where it happened.
 - **The scene** is made with `skd_fnc_create` and `skd_fnc_place`, which return only once the object exists and the player stands where asked. Positions are ASL. Whatever the check creates, by these functions or by its own SQF, the next reset deletes.
-- **The action** is fired as the player's own choice from the scroll menu, after the framework has checked its condition and radius, the way a player would reach it.
+- **The action** is fired as the player's own choice from the scroll menu, after the framework has checked its condition and radius, the way a player would reach it. So the player stands well inside the action's radius: here 2 m from a crate whose action reaches 3 m. A player at or past the radius ends the check `fail` naming the distance and the radius ([Acting through the mod](acting-through-the-mod.md)).
 - **The sleep and the verdict** become one polled assertion. It passes as soon as the condition holds and fails at its ceiling with the last value it read.
 
 ## Points to watch

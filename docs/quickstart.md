@@ -111,11 +111,13 @@ smoke  SMOKE-01 A crate placed in front of p1 reaches every client  [smoke]
 
 ```
 > shakedown run --setup sp
+session s-20261105-161040: started p1 (process 3604)
+session s-20261105-161040: ready
 pass    smoke  (0.0 s)
-1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\mymod\.shakedown\runs\r-20261105-161317-1\result.json
+1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\mymod\.shakedown\runs\r-20261105-161040-1\result.json
 ```
 
-With no session running, `run --setup` starts the game in that setup, runs every check, and stops the game again, whatever the outcome. Starting the game takes its usual time, about 40 to 60 s. A game window opens; leave it alone while the check runs.
+With no session running, `run --setup` starts the game in that setup, runs every check, and stops the game again, whatever the outcome. It prints a line for each game process it starts and one when the game is ready, then a line per check and the summary. Starting the game takes its usual time, about 40 to 60 s. A game window opens; leave it alone while the check runs.
 
 The exit code says how it went: in PowerShell, `$LASTEXITCODE` is `0`.
 
@@ -125,6 +127,8 @@ Starting the game for every run is slow. Start a **session** once and run agains
 
 ```
 > shakedown session start --setup sp
+session s-20261105-161208: started p1 (process 3604)
+session s-20261105-161208: ready
 session s-20261105-161208 ready (setup sp)
 > shakedown run smoke
 pass    smoke  (0.0 s)
@@ -133,6 +137,7 @@ pass    smoke  (0.0 s)
 runner: running (process 9184)
 session: s-20261105-161208 of setup sp, ready
   p1      client    ready      start 1 process 3604 profile C:\mods\mymod\.shakedown\sessions\s-20261105-161208\machines\p1-1
+          health: 149.9 frames a second, answers in 0.008 s, mission time 2.1 s, frame 1278
 > shakedown session stop
 session s-20261105-161208 stopped
 ```
@@ -143,6 +148,10 @@ Before every check the session is reset to the state its mission started in, in 
 
 ```
 > shakedown run --setup dedicated
+session s-20261105-161950: started server (process 3116)
+session s-20261105-161950: started p1 (process 5208)
+session s-20261105-161950: started p2 (process 7484)
+session s-20261105-161950: ready
 pass    smoke  (0.4 s)
 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\mymod\.shakedown\runs\r-20261105-162020-2\result.json
 ```
@@ -187,20 +196,22 @@ Git ignores everything in `.shakedown\`. See [Results and the result file](resul
 
 ## 9. See a failure
 
-Change the last line of the check to expect damage above 0.5 and run it again:
+Change the last line of the check to expect damage above 0.5 and run it again in singleplayer. No session runs since step 6 stopped it, so the command names the setup:
 
 ```sqf
 ["p1", { damage player }, ">", 0.5, "p1 is hurt", 3] call skd_fnc_expectOn;
 ```
 
 ```
-> shakedown run smoke
+> shakedown run --setup sp smoke
+session s-20261105-162140: started p1 (process 5120)
+session s-20261105-162140: ready
 fail    smoke  (3.0 s)
         assertion: p1 is hurt: expected > 0.5 on p1 within 3 s, last read 0.
 0 passed, 1 failed, 0 invalid, 0 not run. Result: ...
 ```
 
-The exit code is `1`, and the result file names the failed step, the last value each machine read and each machine's log lines for the check. A check ends with one of three outcomes:
+In a session started as in step 6, `shakedown run smoke` gives the same failure. The exit code is `1`, and the result file names the failed step, the last value each machine read and each machine's log lines for the check. A check ends with one of three outcomes:
 
 - `pass`: the body ran to its end, no assertion failed and no machine raised a script error.
 - `fail`: the mod did not do what the check asserts, or the check itself is wrong.
