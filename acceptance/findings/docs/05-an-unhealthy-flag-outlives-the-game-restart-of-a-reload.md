@@ -9,7 +9,8 @@ for: developer
 checks: []
 stories: [US-059]
 generated: { by: "claude-code/tester", at: 2026-11-23T20:13:00Z }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-23T21:00:00Z, note: "A machine that reports ready at a mission restart or a game restart closes every flagged interval of its earlier start, so no check after a reload overlaps it (HLT-02 in spec/03-functional-requirements.md, docs/outcomes-and-broken-sessions.md). The game test us_059_hlt_02_a_flag_of_an_earlier_start_ends_with_the_game_restart_of_a_reload in crates/shakedown/tests/m19_findings.rs holds p1's clock, breaks the session, reloads and runs two passing checks; it failed on the build before the fix (both checks after the reload invalid / unhealthy citing the old flag) and passed in each of the 3 singleplayer runs after it." }
 verified: []
 ---
 

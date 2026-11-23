@@ -923,6 +923,9 @@ impl Session {
                 m.baseline = message["baseline"].clone();
             }
         }
+        if kind == "ready" {
+            close_flags(&mut inner, machine);
+        }
         match kind.as_str() {
             "pong" => return,
             "heartbeat" => {
@@ -2204,16 +2207,22 @@ fn watch_clocks(inner: &mut Inner, machine: &str) -> bool {
         return false;
     }
     inner.machines[i].flag = None;
+    close_flags(inner, machine);
+    true
+}
+
+/// Clears every interval of `machine` still open, at the current time: its clocks moved over a
+/// whole window again, or its mission or game started again, whose clocks start afresh, so no
+/// check from then on overlaps it (`HLT-02`).
+fn close_flags(inner: &mut Inner, machine: &str) {
     let now = shakedown_protocol::time::now();
-    if let Some(f) = inner
+    for f in inner
         .flags
         .iter_mut()
-        .rev()
-        .find(|f| f.machine == machine && f.cleared.is_none())
+        .filter(|f| f.machine == machine && f.cleared.is_none())
     {
-        f.cleared = Some(now);
+        f.cleared = Some(now.clone());
     }
-    true
 }
 
 /// The crash dumps in a profile folder, each with its size.
@@ -2931,6 +2940,11 @@ mod tests {
         assert!(watch_clocks(&mut inner, "p1"));
         assert!(machine_view(&inner.machines[0])["health"]["flag"].is_null());
         assert!(inner.flags[0].cleared.is_some());
+        // US-059 2: a flag still open when the machine's mission or game starts again ends there.
+        inner.machines[0].beats = beats(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        assert!(watch_clocks(&mut inner, "p1"));
+        close_flags(&mut inner, "p1");
+        assert!(inner.flags.iter().all(|f| f.cleared.is_some()));
     }
 
     /// `P-07` step 2: an order is named in the words of a lost machine's message.
