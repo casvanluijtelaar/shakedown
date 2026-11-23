@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-    <img src="https://img.shields.io/github/v/release/casvanluijtelaar/shakedown?include_prereleases&style=flat-square&label=Version" alt="Latest release">
+    <img src="https://img.shields.io/github/v/release/casvanluijtelaar/shakedown?style=flat-square&label=Version" alt="Latest release">
     <img src="https://img.shields.io/badge/License-GPL--2.0--or--later-blue.svg?style=flat-square" alt="GPL-2.0-or-later">
     <img src="https://img.shields.io/badge/Arma%203-2.22+-a3c644.svg?style=flat-square" alt="Arma 3 2.22 or later">
     <img src="https://img.shields.io/badge/Platform-Windows-lightgrey.svg?style=flat-square" alt="Windows">
@@ -11,32 +11,38 @@
 </p>
 
 <p align="center">
-    <sup><strong><a href="#quickstart">Quickstart</a> | <a href="https://github.com/casvanluijtelaar/shakedown/wiki">Documentation</a></strong></sup>
+    <sup><strong><a href="docs/quickstart.md">Quickstart</a> | <a href="docs/index.md">Documentation</a></strong></sup>
 </p>
 
-**Shakedown** is Playwright for Arma 3. You write tests in SQF, and Shakedown runs them inside a live game and tells you which passed.
+**Shakedown** is Playwright for Arma 3. You write tests of your mod in SQF, and Shakedown runs them inside a live game, in singleplayer or on a dedicated server with clients, and tells you which passed and why the others did not.
 
 ## Features
 
-- Tests in plain SQF, run inside a live game
-- Singleplayer and dedicated server, with clients and headless clients
-- A reset between tests in under a second, no restart
-- Check the result on the server, on one client, or on every client at once
-- Players act through the mod's own actions and CBA keybinds
-- `pass`, `fail` or `invalid`, always with a reason
-- Script errors traced to their machine and step
-- One JSON result file per run
-- Every command as an MCP tool for AI agents
+- **Tests in plain SQF**, run inside the live game: no build step, no macros, no other language ([Writing checks](docs/writing-checks.md)).
+- **Singleplayer and dedicated server**, with up to 8 game clients and 8 headless clients on one machine, and clients that join late, leave and join again ([Dedicated sessions](docs/dedicated-sessions.md)).
+- **One game start for many runs**, with a reset to the mission's start between tests in under a second, cleanups for state the reset cannot name, and a fresh mission for a test that needs one ([Scenes, resets and cleanups](docs/scenes-resets-and-cleanups.md)).
+- **Every machine by name**: run code, wait and assert on the server, one client, every client at once, or check that they all agree ([Waits and assertions](docs/waits-and-assertions.md)).
+- **Players act through the mod**: its scroll-menu actions, CBA keybinds and ACE interaction menu, without touching your mouse or keyboard ([Acting through the mod](docs/acting-through-the-mod.md)).
+- **Recorded events**: catch the mod's CBA events and the engine's mission events on any machine, with their arguments and clocks ([Recording events](docs/recording-events.md)).
+- **`pass`, `fail` or `invalid`, always with a reason**: a crash, a hang, a stopped clock or a struggling machine is `invalid`, never a false failure ([Outcomes](docs/outcomes-and-broken-sessions.md)).
+- **Script errors on any machine** fail the test, traced to their machine, file, line and step ([Script errors and logs](docs/script-errors-and-logs.md)).
+- **One JSON result file per run**, with each test's steps and their times, the evidence, the mod versions each machine loaded, and each machine's log lines ([Results](docs/results.md)).
+- **Every setup with one command**, repeats with a flaky summary, slow steps flagged, and unattended runs that leave nothing running ([Every setup and repeats](docs/every-setup-and-repeats.md)).
+- **Reload changed mod files** into the running game, by a mission restart where it can and a game restart where it must ([Reloading](docs/reloading.md)).
+- **Ask the running game**: run SQF, wait, try an assertion and inspect any machine from the command line ([Asking a running game](docs/asking-a-running-game.md)).
+- **Hand over to a person**: a test sets up a situation and leaves the game open with a list of what to look for ([Handing over](docs/handing-over.md)).
+- **Pinned mod versions** and a start check that names every missing piece at once ([Starting a session](docs/starting-and-failed-starts.md)).
+- **Every command as an MCP tool** for AI agents such as Claude Code ([AI agents](docs/agent-tools.md)).
+- **Private by default**: local connections only, every piece of code sent to the game recorded, and the Steam account kept out of every file ([Security and privacy](docs/security-and-privacy.md)).
 
 ## Requirements
 
 - Windows 10 or 11, 64-bit
-- Arma 3 2.22+ from Steam
-- Steam running and logged in
+- Arma 3 2.22 or later, from Steam
+- Steam running and logged in to an account that owns Arma 3
+- 2 GB free on the drive that holds your project
 
-## Quickstart
-
-### 1. Install
+## Install
 
 With winget:
 
@@ -52,11 +58,11 @@ irm https://github.com/casvanluijtelaar/shakedown/releases/latest/download/insta
 
 or unpack `shakedown-windows-x64.zip` from the [latest release](https://github.com/casvanluijtelaar/shakedown/releases/latest) into a folder and put that folder on `PATH`. Keep `shakedown.exe` and `@shakedown` together. No Rust, HEMTT or Python is needed. Open a new terminal and check with `shakedown version`.
 
-[docs/install.md](docs/install.md) says how to upgrade and remove it, and how to build it from source.
+[Installing, upgrading and removing](docs/install.md) has the details, and how to build from source.
 
-### 2. A project file
+## Quickstart
 
-A project is a folder that holds a `shakedown.toml`. Put it in your mod's repository:
+A project is a folder with a `shakedown.toml`. Put it in your mod's repository:
 
 ```toml
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'
@@ -76,11 +82,7 @@ clients = 2
 mods = ["mymod"]
 ```
 
-`path` is the folder the game loads, and `patch` is a `CfgPatches` class of the mod, whose version the result file records. For a CBA-based mod, also declare `[mods.cba]` with the path of CBA's folder, and list it first in each setup's `mods`. Use single quotes so Windows paths keep their backslashes.
-
-### 3. A first test
-
-Save this as `tests\smoke.sqf`:
+Save a first test as `tests\smoke.sqf`:
 
 ```sqf
 // @check SMOKE-01 A crate placed in front of p1 reaches every client
@@ -98,41 +100,29 @@ private _crate = ["build the scene", {
 ["p1", { damage player }, "<", 0.1, "p1 is unhurt"] call skd_fnc_expectOn;
 ```
 
-The header names what the test proves. The body runs on the lead machine: `p1` in singleplayer, the server on a dedicated session. Code given to another machine sees only what it is passed, as `_this`. `shakedown list` reads every test header without the game and reports any mistake in one.
-
-### 4. Run it in singleplayer
+Run it in singleplayer, then on a dedicated server with two clients:
 
 ```
-shakedown run --setup sp
-```
-
-With no session running, `run --setup` starts a session of that setup, runs every test and stops the session. To keep a session up for many runs:
-
-```
-shakedown session start --setup sp
-shakedown run smoke
-shakedown session stop
-```
-
-### 5. Run it on a dedicated server with two clients
-
-```
-shakedown run --setup dedicated
-```
-
-This starts a dedicated server and the game clients `p1` and `p2` on the one machine, runs the test, and stops them all. The same test runs in both setups without a change.
-
-### 6. Read the result
-
-`run` prints one line per test, then a summary with the path of the result file:
-
-```
+> shakedown run --setup sp
 pass    smoke  (0.0 s)
 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\...\.shakedown\runs\r-20261105-161317-1\result.json
+> shakedown run --setup dedicated
 ```
 
-The exit code is 0 when every test passed, 1 when a test failed, and 2 when none failed and one was `invalid` or the run was stopped. Each run folder under `.shakedown\runs\` holds `result.json`, with each test's outcome, reason, steps, script errors and evidence, and each machine's log lines for the run and for each test. Add `--json` to any command for one JSON document on stdout. Git ignores everything in `.shakedown\`.
+Each command starts the game in that setup, runs the test and stops the game. To keep the game running between runs, use `shakedown session start --setup sp`, then `shakedown run` as often as you like, and `shakedown session stop`. No mod yet? Leave out `[mods.mymod]` and write `mods = []`.
 
+The [quickstart](docs/quickstart.md) walks through each step and how to read the result.
+
+### Exit codes
+
+| Code | Means |
+|---|---|
+| `0` | Every test that ran passed. |
+| `1` | A test failed. |
+| `2` | No test failed, but one was `invalid`, could not run because its session failed to start or broke, or the run was stopped. |
+| `3` | The request is wrong: an unknown command, option, test, machine or setup, a malformed project file, SQF that does not compile. |
+| `4` | The request cannot be done now: no session, a session already running, Steam, the game, a mod or a port missing, a start or reload that failed, a broken or busy session, or a runner that does not answer. |
+| `5` | Shakedown itself failed; the message names its log. |
 
 ## AI agents
 
@@ -148,11 +138,17 @@ The exit code is 0 when every test passed, 1 when a test failed, and 2 when none
 
 Start Claude Code in that folder, and the agent can:
 
-- start and stop sessions, and run tests
+- start and stop sessions, and run tests in one setup or every setup
 - read results, script errors and each machine's logs
 - run SQF on any machine and inspect it live
 - reload changed mod files and rerun a test
 - call `guide` for a short manual on writing and running tests
+
+See [AI agents and the MCP tools](docs/agent-tools.md).
+
+## Documentation
+
+The [documentation](docs/index.md) has a quickstart and a page for every feature, with examples, plus a [command-line reference](docs/command-line.md), a guide to [porting an existing suite](docs/porting-a-suite.md) and [troubleshooting](docs/troubleshooting.md).
 
 ## License
 
