@@ -1,4 +1,4 @@
-//! Spike SPK-22 (`spec/06-open-questions.md`), run before M18 sets the thresholds of the frame
+//! Spike SPK-22 (`engineering/spec/06-open-questions.md`), run before M18 sets the thresholds of the frame
 //! rate and answer time watch (`HLT-01`): each machine's frame rate and answer time over 50
 //! passing checks in singleplayer and on a dedicated session with two clients, and how fast a
 //! client starved of CPU is flagged. They start the game, so they run only on the test machine,
@@ -8,7 +8,7 @@
 //!     cargo test -p shakedown --test spikes_m18 -- --ignored --nocapture --test-threads=1
 //!
 //! The installed `@shakedown` and fixtures are taken from `target/shakedown`. Results go to
-//! `research/36-spike-frame-rate-and-answer-time.md`. Nothing here prints a line of an RPT.
+//! `engineering/research/36-spike-frame-rate-and-answer-time.md`. Nothing here prints a line of an RPT.
 
 #![cfg(windows)]
 

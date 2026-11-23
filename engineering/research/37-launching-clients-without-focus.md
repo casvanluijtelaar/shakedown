@@ -6,7 +6,7 @@ status: draft
 generated: { by: "claude-code/developer", at: 2026-11-22T07:28:09Z }
 sources:
   - { id: launch, resource: "crates/shakedown/src/runner/session.rs (Session::launch, the client options) and crates/shakedown/src/win.rs (Job::spawn, spawn_breakaway, set_window_title) at a225174", read: 2026-11-22 }
-  - { id: intar, resource: "spec/04-integrations.md, INT-AR-02, INT-WIN-01, INT-WIN-02, INT-WIN-04", read: 2026-11-22 }
+  - { id: intar, resource: "engineering/spec/04-integrations.md, INT-AR-02, INT-WIN-01, INT-WIN-02, INT-WIN-04", read: 2026-11-22 }
   - { id: startup, resource: "https://community.bistudio.com/wiki/Arma_3:_Startup_Parameters (oldid 373124, Wayback snapshot 2025-04-09; the live wiki answered every request with a Cloudflare challenge on 2026-11-22), entries window, posX, posY, limitFPS, noPause, noPauseAudio", read: 2026-11-22 }
   - { id: focus, resource: "https://community.bistudio.com/wiki/isGameFocused (oldid 309152, Wayback snapshot 2024-12-04)", read: 2026-11-22 }
   - { id: reforger, resource: "https://community.bistudio.com/wiki/Arma_Reforger:Startup_Parameters (oldid 370846, Wayback snapshot 2025-03-31), entry noFocus", read: 2026-11-22 }
@@ -17,13 +17,13 @@ sources:
   - { id: showwin, resource: "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow (ms.date 2023-06-06)", read: 2026-11-22 }
   - { id: startupinfo, resource: "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/ns-processthreadsapi-startupinfow (ms.date 2018-12-05)", read: 2026-11-22 }
   - { id: reg, resource: "reg query 'HKCU\\Control Panel\\Desktop' on the Windows test machine: ForegroundLockTimeout 0x30d40, ForegroundFlashCount 0x7", read: 2026-11-22 }
-  - { id: r17, resource: "research/17-health.md, section 2", read: 2026-11-22 }
+  - { id: r17, resource: "engineering/research/17-health.md, section 2", read: 2026-11-22 }
   - { id: tclock, resource: "arma-grappling-hook@4ad9127:tests/m00-let-go-clock/README.md and focus.ps1", read: 2026-11-22 }
   - { id: tgun, resource: "arma-grappling-hook@4ad9127:research/tests/grapple-gun-no-ammo/README.md, the dedicated row on gun B", read: 2026-11-22 }
-  - { id: r32, resource: "research/32-spike-connect-times.md", read: 2026-11-22 }
-  - { id: r33, resource: "research/33-client-to-another-server.md", read: 2026-11-22 }
-  - { id: r35, resource: "research/35-spikes-ace-and-keys.md", read: 2026-11-22 }
-  - { id: r36, resource: "research/36-spike-frame-rate-and-answer-time.md", read: 2026-11-22 }
+  - { id: r32, resource: "engineering/research/32-spike-connect-times.md", read: 2026-11-22 }
+  - { id: r33, resource: "engineering/research/33-client-to-another-server.md", read: 2026-11-22 }
+  - { id: r35, resource: "engineering/research/35-spikes-ace-and-keys.md", read: 2026-11-22 }
+  - { id: r36, resource: "engineering/research/36-spike-frame-rate-and-answer-time.md", read: 2026-11-22 }
   - { id: handover, resource: "docs/handing-over.md", read: 2026-11-22 }
 ---
 

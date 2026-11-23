@@ -162,7 +162,7 @@ Code from a callback runs inside an event handler. Whether mission event handler
 - **Feature flags (2.18):** `RVFeature_ContextNoDefaultCall` skips the context call when it is not needed; `RVFeature_ArgumentNoEscapeString` (2.22) passes string arguments unescaped, which is faster[^wiki-ext].
 - **Newer interfaces:** `RVExtensionLoadFile` is tagged 2.24[^wiki-ext], above the current stable 2.22[^spotrep-120], so it is development branch only for now. The framework does not need it.
 
-**Forces:** the extension is the one native component. arma-rs gives the shortest path to it (callbacks with retry, typed commands, unit tests without the game). C++ with the wiki header avoids the GPL-2.0 question at the cost of writing the plumbing. The choice goes to `spec/07-tech-stack.md` with T11's license reading.
+**Forces:** the extension is the one native component. arma-rs gives the shortest path to it (callbacks with retry, typed commands, unit tests without the game). C++ with the wiki header avoids the GPL-2.0 question at the cost of writing the plumbing. The choice goes to `engineering/spec/07-tech-stack.md` with T11's license reading.
 
 ## Which language each channel forces
 

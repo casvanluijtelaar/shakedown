@@ -35,4 +35,4 @@ The first option, in M4, with the `status` tool. `session stop` on a kept failed
 
 1. After a start that fails, `status` and the `status` tool show the session with state `failed` and the same `reason` that `session start` printed, until the next `session start` or `session stop`.
 2. A `session start` after a failed one starts as usual, and `status` then shows the new session.
-3. `INS-02`, the session status machine in `spec/01-domain-model.md` and the MCP contract say that `status` keeps a failed start.
+3. `INS-02`, the session status machine in `engineering/spec/01-domain-model.md` and the MCP contract say that `status` keeps a failed start.

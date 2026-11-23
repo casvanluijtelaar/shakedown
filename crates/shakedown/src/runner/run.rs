@@ -1684,7 +1684,8 @@ mod tests {
     }
 
     fn validate(result: &ResultFile) {
-        let schema: Value = serde_json::from_str(include_str!("../../../../spec/contract/result.schema.json")).unwrap();
+        let schema: Value =
+            serde_json::from_str(include_str!("../../../../engineering/spec/contract/result.schema.json")).unwrap();
         let validator = jsonschema::validator_for(&schema).unwrap();
         let instance = serde_json::to_value(result).unwrap();
         let errors: Vec<String> = validator
@@ -1881,7 +1882,8 @@ mod tests {
             machine: "p1".into(),
             items: vec!["one".into()],
         });
-        let schema: Value = serde_json::from_str(include_str!("../../../../spec/contract/result.schema.json")).unwrap();
+        let schema: Value =
+            serde_json::from_str(include_str!("../../../../engineering/spec/contract/result.schema.json")).unwrap();
         let validator = jsonschema::validator_for(&schema).unwrap();
         assert!(!validator.is_valid(&serde_json::to_value(&r).unwrap()));
         assert!(handed_over(&json!({"machine": "p1", "items": []})).is_none());

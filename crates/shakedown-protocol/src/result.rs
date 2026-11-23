@@ -1,5 +1,5 @@
-//! The result file, `result.json`, as `spec/contract/result-file.md` and
-//! `spec/contract/result.schema.json` define it.
+//! The result file, `result.json`, as `engineering/spec/contract/result-file.md` and
+//! `engineering/spec/contract/result.schema.json` define it.
 
 use std::collections::BTreeMap;
 

@@ -1,5 +1,5 @@
 //! Shakedown: test automation for Arma 3 mods. One binary holds the runner and the command line
-//! (`spec/07-tech-stack.md`, "Shape").
+//! (`engineering/spec/07-tech-stack.md`, "Shape").
 
 pub mod checks;
 pub mod cli;

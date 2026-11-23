@@ -5,18 +5,18 @@ description: The holes the PRD leaves that the research shows matter, the places
 status: stable
 generated: { by: "claude-code/research", at: 2026-11-04T23:45:00+01:00 }
 sources:
-  - { id: prd, resource: "spec/client-requirements.md", read: 2026-11-04 }
-  - { id: harness, resource: "research/10-prior-harness.md", read: 2026-11-04 }
-  - { id: tools, resource: "research/11-arma-tools.md", read: 2026-11-04 }
-  - { id: remote, resource: "research/12-remote-execution.md", read: 2026-11-04 }
-  - { id: reload, resource: "research/13-hot-reload.md", read: 2026-11-04 }
-  - { id: sessions, resource: "research/14-sessions.md", read: 2026-11-04 }
-  - { id: input, resource: "research/15-player-input.md", read: 2026-11-04 }
-  - { id: observe, resource: "research/16-observation.md", read: 2026-11-04 }
-  - { id: health, resource: "research/17-health.md", read: 2026-11-04 }
-  - { id: testtools, resource: "research/18-test-tools.md", read: 2026-11-04 }
-  - { id: agent, resource: "research/19-agent-tools.md", read: 2026-11-04 }
-  - { id: legal, resource: "research/20-licenses-and-rules.md", read: 2026-11-04 }
+  - { id: prd, resource: "engineering/spec/client-requirements.md", read: 2026-11-04 }
+  - { id: harness, resource: "engineering/research/10-prior-harness.md", read: 2026-11-04 }
+  - { id: tools, resource: "engineering/research/11-arma-tools.md", read: 2026-11-04 }
+  - { id: remote, resource: "engineering/research/12-remote-execution.md", read: 2026-11-04 }
+  - { id: reload, resource: "engineering/research/13-hot-reload.md", read: 2026-11-04 }
+  - { id: sessions, resource: "engineering/research/14-sessions.md", read: 2026-11-04 }
+  - { id: input, resource: "engineering/research/15-player-input.md", read: 2026-11-04 }
+  - { id: observe, resource: "engineering/research/16-observation.md", read: 2026-11-04 }
+  - { id: health, resource: "engineering/research/17-health.md", read: 2026-11-04 }
+  - { id: testtools, resource: "engineering/research/18-test-tools.md", read: 2026-11-04 }
+  - { id: agent, resource: "engineering/research/19-agent-tools.md", read: 2026-11-04 }
+  - { id: legal, resource: "engineering/research/20-licenses-and-rules.md", read: 2026-11-04 }
 ---
 
 # Gaps between the PRD and the research
@@ -65,15 +65,15 @@ Places where a requirement conflicts with what the engine allows, or with anothe
 | Q5 | The reset contract (H2): is a tag for "needs a fresh mission" enough for checks whose changes the framework cannot see? | A tag; or a fresh mission per check by default. | A tag. A fresh mission per check costs the restart the framework exists to avoid. | A tag. |
 | Q6 | ACE interactions (H7). | MVP, or `should` after it. | `should` after the MVP. | `should`, after the MVP. |
 
-[^prd]: spec/client-requirements.md
-[^harness]: research/10-prior-harness.md
-[^tools]: research/11-arma-tools.md
-[^remote]: research/12-remote-execution.md
-[^reload]: research/13-hot-reload.md
-[^sessions]: research/14-sessions.md
-[^input]: research/15-player-input.md
-[^observe]: research/16-observation.md
-[^health]: research/17-health.md
-[^testtools]: research/18-test-tools.md
-[^agent]: research/19-agent-tools.md
-[^legal]: research/20-licenses-and-rules.md
+[^prd]: engineering/spec/client-requirements.md
+[^harness]: engineering/research/10-prior-harness.md
+[^tools]: engineering/research/11-arma-tools.md
+[^remote]: engineering/research/12-remote-execution.md
+[^reload]: engineering/research/13-hot-reload.md
+[^sessions]: engineering/research/14-sessions.md
+[^input]: engineering/research/15-player-input.md
+[^observe]: engineering/research/16-observation.md
+[^health]: engineering/research/17-health.md
+[^testtools]: engineering/research/18-test-tools.md
+[^agent]: engineering/research/19-agent-tools.md
+[^legal]: engineering/research/20-licenses-and-rules.md

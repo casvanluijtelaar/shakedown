@@ -29,7 +29,7 @@ A test author who misspells a setup name gets a check that never runs and is nev
 
 ## Recommendation
 
-The first option. It matches how a malformed header is treated everywhere else (`US-038`) and how an unknown setup is refused at `session start` (`US-006`), and `list` already reads the project file, so it has the declared setups at hand. The spec edit goes into `spec/contract/check-api.md` and `API-01` when the work is planned.
+The first option. It matches how a malformed header is treated everywhere else (`US-038`) and how an unknown setup is refused at `session start` (`US-006`), and `list` already reads the project file, so it has the declared setups at hand. The spec edit goes into `engineering/spec/contract/check-api.md` and `API-01` when the work is planned.
 
 ## Acceptance criteria
 

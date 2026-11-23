@@ -242,9 +242,10 @@ fn run(dir: &Path, ids: &[&str]) -> Value {
         .as_str()
         .unwrap_or_else(|| panic!("no result file: {out} {err}"));
     let result: Value = serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
-    let schema: Value =
-        serde_json::from_str(&std::fs::read_to_string(repo().join("spec/contract/result.schema.json")).unwrap())
-            .unwrap();
+    let schema: Value = serde_json::from_str(
+        &std::fs::read_to_string(repo().join("engineering/spec/contract/result.schema.json")).unwrap(),
+    )
+    .unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     let errors: Vec<String> = validator.iter_errors(&result).map(|e| e.to_string()).collect();
     assert!(errors.is_empty(), "{errors:?}");

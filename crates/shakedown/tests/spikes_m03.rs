@@ -1,4 +1,4 @@
-//! Spikes SPK-07 and SPK-13 (`spec/06-open-questions.md`), run before the M3 work that depends
+//! Spikes SPK-07 and SPK-13 (`engineering/spec/06-open-questions.md`), run before the M3 work that depends
 //! on them: the `ScriptError` mission event on every machine kind and every kind of code, and
 //! reading a running game's RPT. They start the game, so they run only on the test machine, by
 //! hand:
@@ -7,7 +7,7 @@
 //!     cargo test -p shakedown --test spikes_m03 -- --ignored --nocapture --test-threads=1
 //!
 //! The installed `@shakedown` and fixtures are taken from `target/shakedown`. Results go to
-//! `research/`. Nothing here prints a line of an RPT that is not a script error or a marker of
+//! `engineering/research/`. Nothing here prints a line of an RPT that is not a script error or a marker of
 //! the spike's own, so no Steam ID or Steam name reaches the output.
 
 use std::io::{Read, Seek, SeekFrom};

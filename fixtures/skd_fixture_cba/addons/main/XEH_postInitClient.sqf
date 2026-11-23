@@ -1,4 +1,4 @@
-// The fixture's CBA keybind (spec/contract/fixture-mod.md, "A CBA keybind"; ACT-02, ACT-03), on
+// The fixture's CBA keybind (engineering/spec/contract/fixture-mod.md, "A CBA keybind"; ACT-02, ACT-03), on
 // every machine with an interface: mod skd_fixture, action signal, F7 (DIK 65) with no modifier.
 // Down adds 1 to skdfx_signalDown and up adds 1 to skdfx_signalUp on the player's unit, both
 // public; down also raises the CBA global event skdfx_signalled with [unit].
@@ -18,7 +18,7 @@
     [65, [false, false, false]], false
 ] call CBA_fnc_addKeybind;
 
-// The fixture's ACE interaction actions (spec/contract/fixture-mod.md, "ACE interaction actions";
+// The fixture's ACE interaction actions (engineering/spec/contract/fixture-mod.md, "ACE interaction actions";
 // ACT-04), only where ACE's interaction menu is loaded: an action on the crate that asks the
 // server to open it, as the crate's own action does, and two self actions, one that counts its
 // runs on the player's unit and one whose condition is always false.

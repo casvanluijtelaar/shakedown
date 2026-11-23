@@ -6,13 +6,13 @@ status: stable
 generated: { by: "claude-code/developer", at: 2026-11-21T20:20:48Z }
 sources:
   - { id: tests, resource: "crates/shakedown/tests/spikes_m18.rs, spk_22_frame_rate_and_answer_time_over_50_passing_checks and spk_22_a_starved_client_is_flagged, runs of 2026-11-21 on the Windows test machine, Arma 3 2.22 stable, the e2e setups sp-fixture and dedicated (a server, two clients and a headless client loading @skd_fixture)", read: 2026-11-21 }
-  - { id: r17, resource: "research/17-health.md", read: 2026-11-21 }
-  - { id: r28, resource: "research/28-spikes-health.md", read: 2026-11-21 }
+  - { id: r17, resource: "engineering/research/17-health.md", read: 2026-11-21 }
+  - { id: r28, resource: "engineering/research/28-spikes-health.md", read: 2026-11-21 }
 ---
 
 # Spike SPK-22: the thresholds of the frame rate and answer time watch
 
-M18 ran `SPK-22` (`spec/06-open-questions.md`) on the Windows test machine before it set the thresholds of `HLT-01`, from the tests in `crates/shakedown/tests/spikes_m18.rs`[^tests]. Each test starts its sessions through the runner's own library, as `session start` does, and ends every process it started.
+M18 ran `SPK-22` (`engineering/spec/06-open-questions.md`) on the Windows test machine before it set the thresholds of `HLT-01`, from the tests in `crates/shakedown/tests/spikes_m18.rs`[^tests]. Each test starts its sessions through the runner's own library, as `session start` does, and ends every process it started.
 
 ## What was measured
 
@@ -59,5 +59,5 @@ At 480 ms of each 500 ms a second effect showed: mission time fell under half of
 **Forces:** `SPK-22` passes: a starved client was flagged within 15 s, 5 of 5, and no healthy machine crossed either threshold. `HLT-01` takes the floor, the ceiling, the order in which the measures are named, mission time that fell behind on steps under the floor named by the frame rate, and when a flag clears; `INS-04` and the `status` tool show both measures; `DM-05`'s `unhealthy` names the machine and the measure. The fallback is not needed.
 
 [^tests]: `crates/shakedown/tests/spikes_m18.rs`, run with `cargo test -p shakedown --test spikes_m18 -- --ignored --nocapture --test-threads=1` after `python tools/install.py`, 2026-11-21. The starving duty is `SKD_STARVE`, `<off ms>,<on ms>`, by default 480 and 20; the rows of the second table ran with the duty each names, and the 155 frames a second row is the first run of `crates/shakedown/tests/m18.rs`.
-[^r17]: research/17-health.md
-[^r28]: research/28-spikes-health.md
+[^r17]: engineering/research/17-health.md
+[^r28]: engineering/research/28-spikes-health.md

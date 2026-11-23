@@ -9,13 +9,13 @@ sources: []
 
 # Research plan
 
-The research gathers what is known about driving Arma 3 from outside for acceptance testing, so the spec of the framework has something to stand on. It starts from the PRD, `spec/client-requirements.md`, and reads every topic for what it forces into the framework: a component, a state, a limit, a requirement, an error case or a thing we cannot do.
+The research gathers what is known about driving Arma 3 from outside for acceptance testing, so the spec of the framework has something to stand on. It starts from the PRD, `engineering/spec/client-requirements.md`, and reads every topic for what it forces into the framework: a component, a state, a limit, a requirement, an error case or a thing we cannot do.
 
 The project is MVP first. Topics marked **MVP** must be done before the spec is written. Topics marked **later** get a short first pass now, enough to keep the spec from closing a door, and a fuller one when their requirements come up.
 
 ## Rules for every topic
 
-- One OKF `Research` concept per topic, in the output file the topic names, listed in `research/index.md`.
+- One OKF `Research` concept per topic, in the output file the topic names, listed in `engineering/research/index.md`.
 - Every claim carries a footnote whose label is the `id` of an entry in the file's `sources` list: `{ id, resource, read }`. A claim that could not be checked at its gate is marked **unverified**.
 - Facts are looked up, never answered from memory. Engine commands, tool features, versions and licenses change.
 - Every finding ends in what it forces into the framework, and which `CR-nn` it touches.
@@ -191,8 +191,8 @@ Gate: the post or issue itself, quoted with its link.
 
 ## After the topics
 
-- `research/01-best-of-breed.md`: a table of capabilities. Each row says which tool or idea we take, which we reject, and why, with its license.
-- `research/02-gaps.md`: the holes, conflicts and open questions of the PRD against the research, each with a recommendation.
+- `engineering/research/01-best-of-breed.md`: a table of capabilities. Each row says which tool or idea we take, which we reject, and why, with its license.
+- `engineering/research/02-gaps.md`: the holes, conflicts and open questions of the PRD against the research, each with a recommendation.
 
 ## Decisions for this research
 

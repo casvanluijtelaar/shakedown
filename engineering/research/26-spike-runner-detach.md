@@ -11,7 +11,7 @@ sources:
 
 # Spike SPK-06: the runner outlives its client and dies with its game
 
-M5 ran `SPK-06` (`spec/06-open-questions.md`) on the Windows test machine with Claude Code 2.1.319 (`claude -p`, headless), the project's `.mcp.json` of `e2e/grappling-hook` passed with `--mcp-config`, and the install folder on `PATH`. The spike passed: the runner is started through the relay of `INT-WIN-02`, with WMI as its fallback, and no scheduled task is needed.
+M5 ran `SPK-06` (`engineering/spec/06-open-questions.md`) on the Windows test machine with Claude Code 2.1.319 (`claude -p`, headless), the project's `.mcp.json` of `e2e/grappling-hook` passed with `--mcp-config`, and the install folder on `PATH`. The spike passed: the runner is started through the relay of `INT-WIN-02`, with WMI as its fallback, and no scheduled task is needed.
 
 ## How Claude Code holds and ends a stdio server
 

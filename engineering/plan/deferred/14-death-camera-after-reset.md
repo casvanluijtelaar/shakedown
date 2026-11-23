@@ -16,7 +16,7 @@ status: stable
 
 ## Current behaviour
 
-`fn_killed.sqf` creates a unit of the dead player's class in the dead unit's group, puts it where the old one fell, and calls `selectPlayer` on it; the dead unit goes into `skd_created`, so the reset deletes it. Nothing ends a script the game started on the player's death. In the acceptance round's first full run, in the `sp` session in which a check had killed the player, the game raised `Undefined variable in expression: tsw_camtargetunit` on `p1` three times during the 55 s check of `US-050`. The framework listed the errors in that execution and failed it `script-error`, as `ERR-03` says (`acceptance/coverage/m04.md`, "Runs that were not green on the first try"). No variable of that name exists in the framework or the fixtures. The later full runs, 171 of 171, did not show it.
+`fn_killed.sqf` creates a unit of the dead player's class in the dead unit's group, puts it where the old one fell, and calls `selectPlayer` on it; the dead unit goes into `skd_created`, so the reset deletes it. Nothing ends a script the game started on the player's death. In the acceptance round's first full run, in the `sp` session in which a check had killed the player, the game raised `Undefined variable in expression: tsw_camtargetunit` on `p1` three times during the 55 s check of `US-050`. The framework listed the errors in that execution and failed it `script-error`, as `ERR-03` says (`engineering/acceptance/coverage/m04.md`, "Runs that were not green on the first try"). No variable of that name exists in the framework or the fixtures. The later full runs, 171 of 171, did not show it.
 
 ## The gap
 

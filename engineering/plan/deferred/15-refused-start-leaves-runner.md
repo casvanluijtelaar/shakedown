@@ -16,7 +16,7 @@ status: stable
 
 ## Current behaviour
 
-`session start` and the `session_start` tool connect to the runner first (`client::connect` in `client.rs`), starting it when none runs. The runner then checks the preconditions (`preconditions` in `runner/session.rs`) and refuses with exit 4 and "missing: a running Steam client of this user (start Steam and log in)". A runner with no session and no client exits by itself after `IDLE_EXIT`, 60 s (`runner/mod.rs`). In the acceptance round with Steam stopped, the runner the refused start brought up exited by itself within 61 s; a run of the check started before it had exited ran into it and was refused with exit 4 (`acceptance/coverage/m04.md`).
+`session start` and the `session_start` tool connect to the runner first (`client::connect` in `client.rs`), starting it when none runs. The runner then checks the preconditions (`preconditions` in `runner/session.rs`) and refuses with exit 4 and "missing: a running Steam client of this user (start Steam and log in)". A runner with no session and no client exits by itself after `IDLE_EXIT`, 60 s (`runner/mod.rs`). In the acceptance round with Steam stopped, the runner the refused start brought up exited by itself within 61 s; a run of the check started before it had exited ran into it and was refused with exit 4 (`engineering/acceptance/coverage/m04.md`).
 
 ## The gap
 

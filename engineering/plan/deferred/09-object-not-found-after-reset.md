@@ -35,6 +35,6 @@ The first option, in M3. M3 does not count this line as a script error (it does 
 
 ## Acceptance criteria
 
-1. The cause is named in `research/` or in the M3 report: the object, the message and why it is sent.
+1. The cause is named in `engineering/research/` or in the M3 report: the object, the message and why it is sent.
 2. Twenty resets on a dedicated session with two clients and a headless client, after checks that create and delete objects on each machine, leave no `Object ... not found` line in the server's RPT.
 3. No code in the framework exists only to drop this line.

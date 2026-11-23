@@ -17,7 +17,7 @@ jobs:
       - run: pip install PyYAML==6.0.3
       - run: python3 tools/okf_check.py
 
-  # The gates of NFR-MT-03 that need no game. Versions looked up on 2026-11-05 (spec/07-tech-stack.md).
+  # The gates of NFR-MT-03 that need no game. Versions looked up on 2026-11-05 (engineering/spec/07-tech-stack.md).
   rust:
     name: Rust (${{ matrix.os }})
     strategy:

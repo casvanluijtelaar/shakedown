@@ -16,7 +16,7 @@ status: stable
 
 ## Current behaviour
 
-An `exec`, `wait_until`, `expect` or `inspect` call sent while a `@reset mission` check or a `game-restart` reload restarts a dedicated session waits up to about 48 s for the machine (measured in `research/27-spikes-reload.md`), then up to its ceiling of at most 50 s plus the grace. The command line has no 60 s limit and is not affected.
+An `exec`, `wait_until`, `expect` or `inspect` call sent while a `@reset mission` check or a `game-restart` reload restarts a dedicated session waits up to about 48 s for the machine (measured in `engineering/research/27-spikes-reload.md`), then up to its ceiling of at most 50 s plus the grace. The command line has no 60 s limit and is not affected.
 
 ## The gap
 

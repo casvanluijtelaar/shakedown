@@ -19,7 +19,7 @@ verified:
 
 ## What the spec promises
 
-`NFR-PT-02` (must): "`list`, `status`, `guide` and the MCP server's start work on macOS and Linux with no game, so an AI agent on the Mac can read checks and the contract (`CR-53`)." `US-046` criterion 3: "On the Mac, with no game installed, `shakedown mcp` starts and its `status` tool answers `runner` `not-running`; `list_checks` and `guide` answer too." `docs/agent-tools.md` says the server needs `shakedown` on `PATH` and points to [Installing Shakedown](../../../docs/install.md) for the install folder.
+`NFR-PT-02` (must): "`list`, `status`, `guide` and the MCP server's start work on macOS and Linux with no game, so an AI agent on the Mac can read checks and the contract (`CR-53`)." `US-046` criterion 3: "On the Mac, with no game installed, `shakedown mcp` starts and its `status` tool answers `runner` `not-running`; `list_checks` and `guide` answer too." `docs/agent-tools.md` says the server needs `shakedown` on `PATH` and points to [Installing Shakedown](../../../../docs/install.md) for the install folder.
 
 ## What the documents say
 

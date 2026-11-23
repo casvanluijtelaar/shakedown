@@ -1,6 +1,6 @@
-# The framework developer's end-to-end project (spec/07-tech-stack.md, "Source code folders").
+# The framework developer's end-to-end project (engineering/spec/07-tech-stack.md, "Source code folders").
 # The fixtures are those `python tools/install.py` installs into target\shakedown and links into
-# the game folder (spec/contract/fixture-mod.md).
+# the game folder (engineering/spec/contract/fixture-mod.md).
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'
 tests = "tests"
 

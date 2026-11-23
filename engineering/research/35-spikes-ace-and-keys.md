@@ -15,7 +15,7 @@ sources:
 
 # Spikes SPK-21 and SPK-11: ACE interaction by its path, and a key posted to the game's window
 
-M17 ran both spikes of `spec/06-open-questions.md` on the Windows test machine before the work that depends on them. `SPK-21` passed: the framework performs an ACE interaction action through ACE's own key-up code. `SPK-11` failed: a key posted to the game's window does not reach the game, so `ACT-05` is dropped and `US-091` and `US-092` are deprecated, as `plan/milestones/m17.md` provides.
+M17 ran both spikes of `engineering/spec/06-open-questions.md` on the Windows test machine before the work that depends on them. `SPK-21` passed: the framework performs an ACE interaction action through ACE's own key-up code. `SPK-11` failed: a key posted to the game's window does not reach the game, so `ACT-05` is dropped and `US-091` and `US-092` are deprecated, as `engineering/plan/milestones/m17.md` provides.
 
 ## SPK-21: ACE interaction by its path
 

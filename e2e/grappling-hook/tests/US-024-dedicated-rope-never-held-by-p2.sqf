@@ -3,7 +3,7 @@
 // @setups dedicated dedicated-2
 // @timeout 120
 
-// The M3 demo (plan/milestones/m03.md): US-009-dedicated-freed-rope with its last assertion
+// The M3 demo (engineering/plan/milestones/m03.md): US-009-dedicated-freed-rope with its last assertion
 // changed to one the mod cannot meet, that p2 holds the rope p1 let go of. It fails in the last
 // step with each machine's last value, and the run folder keeps each machine's log excerpt.
 

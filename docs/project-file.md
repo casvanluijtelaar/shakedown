@@ -7,7 +7,7 @@ status: draft
 
 # The project file
 
-A project is a folder with a `shakedown.toml` file. Every command finds it by looking in the current folder and then upward, or takes `--project <dir>`. The file is read fresh by every command, so an edit takes effect at the next command; a running session keeps the setup it was started with until it is stopped. The full contract is [spec/contract/cli.md](../spec/contract/cli.md).
+A project is a folder with a `shakedown.toml` file. Every command finds it by looking in the current folder and then upward, or takes `--project <dir>`. The file is read fresh by every command, so an edit takes effect at the next command; a running session keeps the setup it was started with until it is stopped. The full contract is [engineering/spec/contract/cli.md](../engineering/spec/contract/cli.md).
 
 ## A complete example
 

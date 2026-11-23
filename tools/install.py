@@ -1,4 +1,4 @@
-"""Builds Shakedown and assembles its install folder (spec/07-tech-stack.md, "Install layout").
+"""Builds Shakedown and assembles its install folder (engineering/spec/07-tech-stack.md, "Install layout").
 
     python tools/install.py [destination] [--game <Arma 3 folder>]
 
@@ -14,7 +14,7 @@ The destination defaults to target/shakedown in the repository. It receives:
     fixtures/skdfx_cba/addons/main/...    the CBA fixture's unpacked file tree
 
 On Windows it then links, in the game folder, <game>\\skdfx and <game>\\skdfx_cba to the unpacked
-trees and <game>\\@skd_fixture to the installed @skd_fixture, as spec/contract/fixture-mod.md
+trees and <game>\\@skd_fixture to the installed @skd_fixture, as engineering/spec/contract/fixture-mod.md
 says. A link left by an earlier install is replaced; a real folder of that name is never touched.
 The game folder defaults to the SHAKEDOWN_GAME variable, else Steam's default Arma 3 folder.
 

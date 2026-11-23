@@ -13,7 +13,7 @@ sources:
 
 # Spikes SPK-01, SPK-02 and SPK-03 in singleplayer
 
-M0 ran the singleplayer `p1` parts of `SPK-01` and `SPK-03` and the whole of `SPK-02` (`spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, with the extension built on `arma-rs` 1.13.0 and the in-game agent of `addon/`. The game ran in a window with no person connected through Shadow PC. Each spike runs again with `cargo test -p shakedown --test spikes -- --ignored --nocapture` after `python tools/install.py`[^spikes].
+M0 ran the singleplayer `p1` parts of `SPK-01` and `SPK-03` and the whole of `SPK-02` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, with the extension built on `arma-rs` 1.13.0 and the in-game agent of `addon/`. The game ran in a window with no person connected through Shadow PC. Each spike runs again with `cargo test -p shakedown --test spikes -- --ignored --nocapture` after `python tools/install.py`[^spikes].
 
 ## SPK-01, singleplayer p1: passed
 

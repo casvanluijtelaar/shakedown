@@ -7,7 +7,7 @@ status: draft
 
 # AI agents and the MCP tools
 
-`shakedown mcp` is an MCP server on stdio that gives an AI agent, such as Claude Code, every command of the command line as a tool. A tool asks the runner the same requests as its command and returns the same JSON that the command prints with `--json`, so whatever these docs say of a command holds for its tool. The contract is [spec/contract/mcp-tools.md](../spec/contract/mcp-tools.md).
+`shakedown mcp` is an MCP server on stdio that gives an AI agent, such as Claude Code, every command of the command line as a tool. A tool asks the runner the same requests as its command and returns the same JSON that the command prints with `--json`, so whatever these docs say of a command holds for its tool. The contract is [engineering/spec/contract/mcp-tools.md](../engineering/spec/contract/mcp-tools.md).
 
 With it an agent can start and stop sessions, list and run checks, read results, script errors and each machine's logs, run SQF on any machine and inspect it, reload changed files and rerun, and write checks: the `guide` tool tells it how.
 
@@ -53,7 +53,7 @@ The session belongs to the runner, not to the agent: when the agent's session en
 
 ## What every tool keeps to
 
-- **Structured results.** Each tool has an `inputSchema` and an `outputSchema`, and returns `structuredContent` and the same JSON as one text block. The shapes a tool shares with the result file, such as `ScriptError`, are those of [result.schema.json](../spec/contract/result.schema.json).
+- **Structured results.** Each tool has an `inputSchema` and an `outputSchema`, and returns `structuredContent` and the same JSON as one text block. The shapes a tool shares with the result file, such as `ScriptError`, are those of [result.schema.json](../engineering/spec/contract/result.schema.json).
 - **No call past 60 s.** `exec`, `wait_until` and `expect` take a `ceiling` of at most 50 s, default 10; `run_status` a `wait_s` of at most 50. A call that waits sends `notifications/progress` every 4 s when the request carries a progress token. A run never holds a call: `run_start` returns at once. An order sent to a machine whose mission restarts waits for the machine before its own ceiling starts, so on a dedicated session such a call can last longer than 60 s.
 - **Cancelling stops the work.** When the client cancels `exec`, `wait_until`, `expect` or `inspect`, the server closes the call's connection to the runner, and the runner stops the code on the machine; `inspect` then lists no script of it. A session start or a reset goes on when its call is cancelled; stop a session with `session_stop`. A run never holds a call; stop it with `run_stop`.
 - **Long results go to a file.** A result over 20,000 characters is written to `.shakedown\results\` in the project and the tool returns `{"result_path": <path>}`. With no project, the file goes to a `shakedown-results` folder in the system's temp folder. `logs` keeps its own lines under the limit and names the file with all of them in `path`.

@@ -1,5 +1,5 @@
 //! `skdfx_x64.dll`, the extension of the fixture mod `@skd_fixture` (`FIX-01`,
-//! `spec/contract/fixture-mod.md`): it ends the game process it is loaded in, on demand, after a
+//! `engineering/spec/contract/fixture-mod.md`): it ends the game process it is loaded in, on demand, after a
 //! delay in real time, so a test makes a crash or an exit at a known point of a check.
 //!
 //! - `"skdfx" callExtension ["crash", [delay]]`: after `delay` seconds a thread of the extension

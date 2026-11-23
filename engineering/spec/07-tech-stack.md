@@ -103,7 +103,7 @@ The one cost: SQF cannot be unit-tested outside the game (EP-09). The in-game ag
 
 ## Source code folders
 
-The framework developer owns these. The test developer opens none of them.
+These sit at the repository root, beside `docs/` and `README.md`; `engineering/` holds the research, the spec, the plan and the acceptance suite. The framework developer owns these folders. The test developer opens none of them.
 
 | Folder | Holds |
 |---|---|
@@ -124,7 +124,7 @@ GitHub Actions runs, besides the bundle check: `cargo fmt --check`, `cargo clipp
 
 ## Contract files
 
-The contract is the framework's public interface. The test developer works from it, the docs and the stories, and never past it. A change to any of these is a deliberate edit to the contract file first.
+The contract is the framework's public interface. The test developer works from it, the docs and the stories, and never past it. A change to any of these is a deliberate edit to the contract file first. They are in `engineering/spec/contract/`.
 
 | File | Defines |
 |---|---|

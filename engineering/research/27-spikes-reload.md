@@ -18,7 +18,7 @@ sources:
 
 # Spikes SPK-08 and SPK-01 across a mission restart: reloading by restart
 
-M6 ran `SPK-08` and the mission-restart part of `SPK-01` (`spec/06-open-questions.md`) first, on the Windows test machine with Arma 3 2.22.154089 and CBA_A3 3.19.0, and a research round after it looked for a way for a changed mod file to reach a running session. `SPK-01` passed across mission restarts. `SPK-08` passes only when the game has let go of the changed file, which it does at a time nothing tried here controls: CBA's cache is off, and a mission restart takes a released file on every machine, but while the game holds a file nobody can change it.
+M6 ran `SPK-08` and the mission-restart part of `SPK-01` (`engineering/spec/06-open-questions.md`) first, on the Windows test machine with Arma 3 2.22.154089 and CBA_A3 3.19.0, and a research round after it looked for a way for a changed mod file to reach a running session. `SPK-01` passed across mission restarts. `SPK-08` passes only when the game has let go of the changed file, which it does at a time nothing tried here controls: CBA's cache is off, and a mission restart takes a released file on every machine, but while the game holds a file nobody can change it.
 
 ## The game holds the loose files it read
 

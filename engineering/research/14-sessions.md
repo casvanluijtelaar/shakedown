@@ -16,7 +16,7 @@ sources:
   - { id: meh, resource: "https://community.bistudio.com/wiki/Arma_3:_Mission_Event_Handlers (oldid 379196)", read: 2026-11-04 }
   - { id: amo, resource: "https://community.bistudio.com/wiki/allMissionObjects", read: 2026-11-04 }
   - { id: cstate, resource: "https://community.bistudio.com/wiki/getClientStateNumber (oldid 348456)", read: 2026-11-04 }
-  - { id: t1, resource: "research/10-prior-harness.md", read: 2026-11-04 }
+  - { id: t1, resource: "engineering/research/10-prior-harness.md", read: 2026-11-04 }
   - { id: hdoc, resource: "arma-grappling-hook@3f4f7bd:docs/harness.md", read: 2026-11-04 }
   - { id: hrun, resource: "arma-grappling-hook@3f4f7bd:harness/run.ps1", read: 2026-11-04 }
   - { id: r14, resource: "arma-grappling-hook@3f4f7bd:research/14-test-automation.md", read: 2026-11-04 }
@@ -25,7 +25,7 @@ sources:
   - { id: tsmoke, resource: "arma-grappling-hook@3f4f7bd:research/tests/harness-smoke/README.md", read: 2026-11-04 }
   - { id: amiss, resource: "arma-grappling-hook@3f4f7bd:acceptance/docs/m00-missions.md", read: 2026-11-04 }
   - { id: f004, resource: "arma-grappling-hook@3f4f7bd:acceptance/findings/m00/004-a-let-go-8-m-up-now-and-then-does-more-leg-damage-than-the-game-s-own-fall-from-there.md", read: 2026-11-04 }
-  - { id: prd, resource: "spec/client-requirements.md", read: 2026-11-04 }
+  - { id: prd, resource: "engineering/spec/client-requirements.md", read: 2026-11-04 }
 ---
 
 # Sessions: starting, keeping and resetting the game
@@ -133,7 +133,7 @@ The `-autotest` list fixes the missions at start, and the game exits after the l
 [^meh]: https://community.bistudio.com/wiki/Arma_3:_Mission_Event_Handlers (oldid 379196)
 [^amo]: https://community.bistudio.com/wiki/allMissionObjects
 [^cstate]: https://community.bistudio.com/wiki/getClientStateNumber (oldid 348456)
-[^t1]: research/10-prior-harness.md
+[^t1]: engineering/research/10-prior-harness.md
 [^hdoc]: arma-grappling-hook@3f4f7bd:docs/harness.md
 [^hrun]: arma-grappling-hook@3f4f7bd:harness/run.ps1
 [^r14]: arma-grappling-hook@3f4f7bd:research/14-test-automation.md
@@ -142,4 +142,4 @@ The `-autotest` list fixes the missions at start, and the game exits after the l
 [^tsmoke]: arma-grappling-hook@3f4f7bd:research/tests/harness-smoke/README.md
 [^amiss]: arma-grappling-hook@3f4f7bd:acceptance/docs/m00-missions.md
 [^f004]: arma-grappling-hook@3f4f7bd:acceptance/findings/m00/004-a-let-go-8-m-up-now-and-then-does-more-leg-damage-than-the-game-s-own-fall-from-there.md
-[^prd]: spec/client-requirements.md
+[^prd]: engineering/spec/client-requirements.md

@@ -1,4 +1,4 @@
-// The fixture mod @skd_fixture (spec/contract/fixture-mod.md). It needs nothing but the game. Each
+// The fixture mod @skd_fixture (engineering/spec/contract/fixture-mod.md). It needs nothing but the game. Each
 // behaviour of the contract is added with the first story or demo that uses it; a setup without
 // CBA loads this mod alone.
 class CfgPatches {

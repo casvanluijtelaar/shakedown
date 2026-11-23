@@ -98,9 +98,10 @@ mods = ["cba", "fixture", "fixture-cba"]
 }
 
 fn validate(file: &Path) -> Value {
-    let schema: Value =
-        serde_json::from_str(&std::fs::read_to_string(repo().join("spec/contract/result.schema.json")).unwrap())
-            .unwrap();
+    let schema: Value = serde_json::from_str(
+        &std::fs::read_to_string(repo().join("engineering/spec/contract/result.schema.json")).unwrap(),
+    )
+    .unwrap();
     let result: Value = serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     let errors: Vec<String> = validator

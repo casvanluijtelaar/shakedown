@@ -81,7 +81,7 @@ Eight checks of `@timeout 1` have a ceiling of 68 s. If each registers a cleanup
 
 ## Reading a stopped run's result
 
-The result file of a stopped run is a whole result file, valid against [result.schema.json](../spec/contract/result.schema.json):
+The result file of a stopped run is a whole result file, valid against [result.schema.json](../engineering/spec/contract/result.schema.json):
 
 | Field | In a stopped run |
 |---|---|

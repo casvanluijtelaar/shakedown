@@ -16,7 +16,7 @@ The only way to install Shakedown is `python tools/install.py` in a clone of thi
 
 ## Current behaviour
 
-`tools/install.py` runs `cargo build --release` and `hemtt build` for the addon and the fixture mods, and assembles the install layout of `spec/07-tech-stack.md` into `target\shakedown\`: `shakedown.exe`, `@shakedown\` with `addons\shakedown_main.pbo` and `shakedown_x64.dll`, and `fixtures\`. The binary finds `@shakedown` next to itself. The user puts the folder on `PATH` by hand. Upgrading means pulling and running the script again. Nothing is released: the repository on GitHub is public but has no `LICENSE` file, and `.github/workflows/ci.yml` runs only the gates that need no game.
+`tools/install.py` runs `cargo build --release` and `hemtt build` for the addon and the fixture mods, and assembles the install layout of `engineering/spec/07-tech-stack.md` into `target\shakedown\`: `shakedown.exe`, `@shakedown\` with `addons\shakedown_main.pbo` and `shakedown_x64.dll`, and `fixtures\`. The binary finds `@shakedown` next to itself. The user puts the folder on `PATH` by hand. Upgrading means pulling and running the script again. Nothing is released: the repository on GitHub is public but has no `LICENSE` file, and `.github/workflows/ci.yml` runs only the gates that need no game.
 
 ## The gap
 
@@ -60,4 +60,4 @@ The versions of every action and tool the workflow uses, and the winget manifest
 3. On the same kind of machine, the PowerShell one-liner installs the latest release with the same result as winget, refuses a download whose hash does not match, and run again replaces the installed version.
 4. Unpacking the zip by hand into a folder on `PATH` gives the same result.
 5. After each of the three, `shakedown run --setup sp` on a project runs its checks, which shows the binary found `@shakedown\` next to itself.
-6. `docs/install.md`, the root `README.md` and `spec/07-tech-stack.md` describe the three routes first and the install from source last.
+6. `docs/install.md`, the root `README.md` and `engineering/spec/07-tech-stack.md` describe the three routes first and the install from source last.

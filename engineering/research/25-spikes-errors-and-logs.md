@@ -10,7 +10,7 @@ sources:
 
 # Spikes SPK-07 and SPK-13: script errors and live RPTs
 
-M3 ran `SPK-07` and `SPK-13` (`spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, once in a dedicated session the runner started (a server, two game clients `p1` and `p2`, a headless client `hc1`) and once in a singleplayer session, each loading the fixture `@skd_fixture` with its `skdfx_fnc_throw`. The owner was connected through Shadow PC, so the client windows rendered. Both run again after `python tools/install.py` with `cargo test -p shakedown --test spikes_m03 -- --ignored --nocapture --test-threads=1`.
+M3 ran `SPK-07` and `SPK-13` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, once in a dedicated session the runner started (a server, two game clients `p1` and `p2`, a headless client `hc1`) and once in a singleplayer session, each loading the fixture `@skd_fixture` with its `skdfx_fnc_throw`. The owner was connected through Shadow PC, so the client windows rendered. Both run again after `python tools/install.py` with `cargo test -p shakedown --test spikes_m03 -- --ignored --nocapture --test-threads=1`.
 
 ## SPK-07: passed
 

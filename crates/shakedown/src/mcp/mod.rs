@@ -33,7 +33,7 @@ const RESULT_LIMIT: usize = 20_000;
 const RUN_BEGIN_CEILING: Duration = Duration::from_secs(4);
 
 const TOOLS: &str = include_str!("tools.json");
-const RESULT_SCHEMA: &str = include_str!("../../../../spec/contract/result.schema.json");
+const RESULT_SCHEMA: &str = include_str!("../../../../engineering/spec/contract/result.schema.json");
 
 /// A run started by `run_start`, followed by a thread that holds its runner connection.
 #[derive(Default)]

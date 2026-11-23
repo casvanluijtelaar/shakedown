@@ -5,18 +5,18 @@ description: For each capability the framework needs, which tool or idea it take
 status: stable
 generated: { by: "claude-code/research", at: 2026-11-04T23:30:00+01:00 }
 sources:
-  - { id: harness, resource: "research/10-prior-harness.md", read: 2026-11-04 }
-  - { id: tools, resource: "research/11-arma-tools.md", read: 2026-11-04 }
-  - { id: remote, resource: "research/12-remote-execution.md", read: 2026-11-04 }
-  - { id: reload, resource: "research/13-hot-reload.md", read: 2026-11-04 }
-  - { id: sessions, resource: "research/14-sessions.md", read: 2026-11-04 }
-  - { id: input, resource: "research/15-player-input.md", read: 2026-11-04 }
-  - { id: observe, resource: "research/16-observation.md", read: 2026-11-04 }
-  - { id: health, resource: "research/17-health.md", read: 2026-11-04 }
-  - { id: testtools, resource: "research/18-test-tools.md", read: 2026-11-04 }
-  - { id: agent, resource: "research/19-agent-tools.md", read: 2026-11-04 }
-  - { id: legal, resource: "research/20-licenses-and-rules.md", read: 2026-11-04 }
-  - { id: pain, resource: "research/21-mod-developer-pain.md", read: 2026-11-04 }
+  - { id: harness, resource: "engineering/research/10-prior-harness.md", read: 2026-11-04 }
+  - { id: tools, resource: "engineering/research/11-arma-tools.md", read: 2026-11-04 }
+  - { id: remote, resource: "engineering/research/12-remote-execution.md", read: 2026-11-04 }
+  - { id: reload, resource: "engineering/research/13-hot-reload.md", read: 2026-11-04 }
+  - { id: sessions, resource: "engineering/research/14-sessions.md", read: 2026-11-04 }
+  - { id: input, resource: "engineering/research/15-player-input.md", read: 2026-11-04 }
+  - { id: observe, resource: "engineering/research/16-observation.md", read: 2026-11-04 }
+  - { id: health, resource: "engineering/research/17-health.md", read: 2026-11-04 }
+  - { id: testtools, resource: "engineering/research/18-test-tools.md", read: 2026-11-04 }
+  - { id: agent, resource: "engineering/research/19-agent-tools.md", read: 2026-11-04 }
+  - { id: legal, resource: "engineering/research/20-licenses-and-rules.md", read: 2026-11-04 }
+  - { id: pain, resource: "engineering/research/21-mod-developer-pain.md", read: 2026-11-04 }
 ---
 
 # Best of breed
@@ -75,17 +75,17 @@ Nothing the framework needs requires them. Stable 2.22 covers every recommendati
 
 ## Code that may be reused
 
-MIT, with the notice kept and the source recorded: a3-bridge, Zihuange/arma3-mcp, a3ref, Intercept, Pythia, ArmaTesqf, and CBA's `keybinding` and `settings` addons[^legal]. CBA and ACE3 are GPL: the framework loads and calls them and copies nothing. HEMTT is GPL-2.0: the framework runs it as a tool. No code is copied from tools with no license file or a license that forbids reuse: Neefay, headswe, arma-ws, ArmaDebugEngine, Arma-Remote-Code-Executor (GPL-3.0)[^legal]. Their ideas are read and implemented in the framework's own code, which the owner allows (`spec/client-requirements.md`, section 7).
+MIT, with the notice kept and the source recorded: a3-bridge, Zihuange/arma3-mcp, a3ref, Intercept, Pythia, ArmaTesqf, and CBA's `keybinding` and `settings` addons[^legal]. CBA and ACE3 are GPL: the framework loads and calls them and copies nothing. HEMTT is GPL-2.0: the framework runs it as a tool. No code is copied from tools with no license file or a license that forbids reuse: Neefay, headswe, arma-ws, ArmaDebugEngine, Arma-Remote-Code-Executor (GPL-3.0)[^legal]. Their ideas are read and implemented in the framework's own code, which the owner allows (`engineering/spec/client-requirements.md`, section 7).
 
-[^harness]: research/10-prior-harness.md
-[^tools]: research/11-arma-tools.md
-[^remote]: research/12-remote-execution.md
-[^reload]: research/13-hot-reload.md
-[^sessions]: research/14-sessions.md
-[^input]: research/15-player-input.md
-[^observe]: research/16-observation.md
-[^health]: research/17-health.md
-[^testtools]: research/18-test-tools.md
-[^agent]: research/19-agent-tools.md
-[^legal]: research/20-licenses-and-rules.md
-[^pain]: research/21-mod-developer-pain.md
+[^harness]: engineering/research/10-prior-harness.md
+[^tools]: engineering/research/11-arma-tools.md
+[^remote]: engineering/research/12-remote-execution.md
+[^reload]: engineering/research/13-hot-reload.md
+[^sessions]: engineering/research/14-sessions.md
+[^input]: engineering/research/15-player-input.md
+[^observe]: engineering/research/16-observation.md
+[^health]: engineering/research/17-health.md
+[^testtools]: engineering/research/18-test-tools.md
+[^agent]: engineering/research/19-agent-tools.md
+[^legal]: engineering/research/20-licenses-and-rules.md
+[^pain]: engineering/research/21-mod-developer-pain.md

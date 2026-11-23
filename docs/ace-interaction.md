@@ -94,4 +94,4 @@ ACE has no public function that performs an action by its path, so the function 
 
 ## Trying it with the fixture mod
 
-An install from source comes with the fixture mod `@skd_fixture_cba`, which registers three ACE actions where ACE is loaded: `["ACE_MainActions", "skdfx_aceOpen"]` on the fixture's crate `skdfx_Crate`, and `["ACE_SelfActions", "skdfx_aceSignal"]` and `["ACE_SelfActions", "skdfx_aceNever"]`, whose condition is always false, on every player ([spec/contract/fixture-mod.md](../spec/contract/fixture-mod.md)).
+An install from source comes with the fixture mod `@skd_fixture_cba`, which registers three ACE actions where ACE is loaded: `["ACE_MainActions", "skdfx_aceOpen"]` on the fixture's crate `skdfx_Crate`, and `["ACE_SelfActions", "skdfx_aceSignal"]` and `["ACE_SelfActions", "skdfx_aceNever"]`, whose condition is always false, on every player ([engineering/spec/contract/fixture-mod.md](../engineering/spec/contract/fixture-mod.md)).

@@ -313,7 +313,7 @@ fn cfg_01_rst_01_dm_14_m10_findings_on_a_dedicated_server() {
 /// `SPK-14`: the wait for an action's effect to reach every machine of a dedicated session with
 /// two clients and a headless client, 100 times in two runs of 50 checks, and how near each
 /// passing check came to its runner ceiling. Prints every measure; the pass condition is in
-/// `spec/06-open-questions.md`.
+/// `engineering/spec/06-open-questions.md`.
 #[test]
 #[ignore = "starts the game; run on the test machine"]
 fn spk_14_an_actions_effect_reaches_every_machine_within_the_default_wait_ceiling() {

@@ -7,7 +7,7 @@ status: draft
 
 # Results and the result file
 
-Every run writes exactly one result file, also when it was stopped or its session broke. It is the full record of the run, for a person and for a program; `run --json` and the MCP tool `run_result` give a summary and its path. Its shape is the JSON Schema [result.schema.json](../spec/contract/result.schema.json), and the contract is [spec/contract/result-file.md](../spec/contract/result-file.md).
+Every run writes exactly one result file, also when it was stopped or its session broke. It is the full record of the run, for a person and for a program; `run --json` and the MCP tool `run_result` give a summary and its path. Its shape is the JSON Schema [result.schema.json](../engineering/spec/contract/result.schema.json), and the contract is [engineering/spec/contract/result-file.md](../engineering/spec/contract/result-file.md).
 
 ## The run folder
 

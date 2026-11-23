@@ -11,8 +11,8 @@ sources:
   - { id: armars, resource: "https://raw.githubusercontent.com/BrettMayson/arma-rs/main/LICENSE and https://crates.io/api/v1/crates/arma-rs (1.13.0, license MIT)", read: 2026-11-21 }
   - { id: releaser, resource: "https://github.com/vedantmgoyal9/winget-releaser README at tag v2 (2025-01-27): prerequisites and the token input", read: 2026-11-21 }
   - { id: komac, resource: "https://github.com/russellbanks/Komac README at v2.17.2 (2026-11-03): komac new, komac update, GitHub token setup", read: 2026-11-21 }
-  - { id: def30, resource: "plan/deferred/30-release-and-install.md: how HEMTT, SQFvm and CBA_A3 ship, looked up on 2026-11-13", read: 2026-11-21 }
-  - { id: r20, resource: "research/20-licenses-and-rules.md: the licences of CBA, ACE3, arma-rs and the T2 tools, and what the EULA allows", read: 2026-11-21 }
+  - { id: def30, resource: "engineering/plan/deferred/30-release-and-install.md: how HEMTT, SQFvm and CBA_A3 ship, looked up on 2026-11-13", read: 2026-11-21 }
+  - { id: r20, resource: "engineering/research/20-licenses-and-rules.md: the licences of CBA, ACE3, arma-rs and the T2 tools, and what the EULA allows", read: 2026-11-21 }
   - { id: scan, resource: "git grep and git log -p --all on main at 739a237 for Steam IDs (7656119 followed by 10 digits), user paths, tokens and internal names; gh repo view for the repository's visibility and licence", read: 2026-11-21 }
 ---
 
@@ -67,6 +67,6 @@ The repository on GitHub is public and has no licence[^scan]. Searching it and i
 [^armars]: `arma-rs` LICENSE on its main branch, and its crates.io record.
 [^releaser]: `vedantmgoyal9/winget-releaser` README.
 [^komac]: `russellbanks/Komac` README.
-[^def30]: `plan/deferred/30-release-and-install.md`.
-[^r20]: `research/20-licenses-and-rules.md`.
+[^def30]: `engineering/plan/deferred/30-release-and-install.md`.
+[^r20]: `engineering/research/20-licenses-and-rules.md`.
 [^scan]: The search of the repository and its history on 2026-11-21.

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/casvanluijtelaar/shakedown/spec/contract/result.schema.json",
   "title": "Shakedown result file",
-  "description": "One run of checks against one session. Defined by spec/contract/result-file.md.",
+  "description": "One run of checks against one session. Defined by engineering/spec/contract/result-file.md.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "framework_version", "run", "session", "summary", "checks", "not_run", "reloads", "logs"],

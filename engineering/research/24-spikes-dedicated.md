@@ -12,7 +12,7 @@ sources:
 
 # Spikes SPK-01, SPK-03 and SPK-04 on a dedicated session
 
-M2 ran the server, client and headless client parts of `SPK-01` and `SPK-03` and the dedicated half of `SPK-04` (`spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, in a dedicated session the runner started: `arma3server_x64.exe` as `server` with `-autoInit`, then two `arma3_x64.exe` game clients `p1` and `p2` and one headless client `hc1` once the server was ready. The owner was connected through Shadow PC, so the client windows rendered. Each runs again after `python tools/install.py` with `cargo test -p shakedown --test spikes_m02 -- --ignored --nocapture` and, for `SPK-04`, `cargo test -p shakedown --test m02 nfr_rl_02 -- --ignored --nocapture`.
+M2 ran the server, client and headless client parts of `SPK-01` and `SPK-03` and the dedicated half of `SPK-04` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, in a dedicated session the runner started: `arma3server_x64.exe` as `server` with `-autoInit`, then two `arma3_x64.exe` game clients `p1` and `p2` and one headless client `hc1` once the server was ready. The owner was connected through Shadow PC, so the client windows rendered. Each runs again after `python tools/install.py` with `cargo test -p shakedown --test spikes_m02 -- --ignored --nocapture` and, for `SPK-04`, `cargo test -p shakedown --test m02 nfr_rl_02 -- --ignored --nocapture`.
 
 ## SPK-01, server, client and headless client: passed
 

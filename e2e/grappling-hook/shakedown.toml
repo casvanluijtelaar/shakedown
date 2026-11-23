@@ -1,5 +1,5 @@
 # The M1 demo project: arma-grappling-hook checks rewritten as Shakedown checks
-# (plan/milestones/m01.md). It loads CBA_A3 from the Steam Workshop and the arma-grappling-hook
+# (engineering/plan/milestones/m01.md). It loads CBA_A3 from the Steam Workshop and the arma-grappling-hook
 # build that HEMTT leaves in that repository's .hemttout\build; Shakedown does not build it. For
 # the M6 demo, reload watches the mod's addons folder, and a game-restart reload runs its own
 # `hemtt build` while no game process runs (RLD-06, docs/reloading.md).

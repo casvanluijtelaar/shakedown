@@ -14,7 +14,7 @@ None open. A question the specification cannot settle is added here with its opt
 
 ## Spikes
 
-Measurements the specification depends on. Each has a pass condition and what the spec says if it fails. A spike runs on the Windows test machine in the milestone that first needs it; its result goes into `research/` and the spec is edited in place to the answer.
+Measurements the specification depends on. Each has a pass condition and what the spec says if it fails. A spike runs on the Windows test machine in the milestone that first needs it; its result goes into `engineering/research/` and the spec is edited in place to the answer.
 
 | # | Question | Pass condition | If it fails |
 |---|---|---|---|

@@ -1,4 +1,4 @@
-// The fixture mod @skd_fixture_cba (spec/contract/fixture-mod.md). It needs CBA_A3 and
+// The fixture mod @skd_fixture_cba (engineering/spec/contract/fixture-mod.md). It needs CBA_A3 and
 // @skd_fixture.
 class CfgPatches {
     class skdfx_cba {

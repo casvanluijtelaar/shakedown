@@ -12,7 +12,7 @@ status: stable
 
 ## Summary
 
-`AGT-07`, `spec/contract/mcp-tools.md` and `docs/agent-tools.md` say a tool result over 20,000 characters is written to the project's `.shakedown/results/` and the result gives its path. They do not say where it goes when `shakedown mcp` runs with no project, as it may: `status` and `guide` need none (`AGT-05`).
+`AGT-07`, `engineering/spec/contract/mcp-tools.md` and `docs/agent-tools.md` say a tool result over 20,000 characters is written to the project's `.shakedown/results/` and the result gives its path. They do not say where it goes when `shakedown mcp` runs with no project, as it may: `status` and `guide` need none (`AGT-05`).
 
 ## Current behaviour
 
@@ -34,5 +34,5 @@ The first, as a writer's edit with the next change to the MCP contract: what the
 
 ## Acceptance criteria
 
-1. `AGT-07`, `spec/contract/mcp-tools.md` and `docs/agent-tools.md` say where a long result goes with no project.
+1. `AGT-07`, `engineering/spec/contract/mcp-tools.md` and `docs/agent-tools.md` say where a long result goes with no project.
 2. `shakedown mcp` started outside any project, asked for a result over 20,000 characters, returns `result_path` in the folder they name, and the file holds the whole result.

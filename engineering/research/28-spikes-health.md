@@ -6,12 +6,12 @@ status: stable
 generated: { by: "claude-code/developer", at: 2026-11-12T12:40:00+01:00 }
 sources:
   - { id: tests, resource: "crates/shakedown/tests/spikes_m09.rs, spk_16_a_crash_on_demand_on_each_kind_of_game_process, spk_16_the_headless_client_after_its_crash, spk_17_mission_time_held_while_frames_go_on, spk_15_heartbeats_over_50_passing_checks and spk_15_a_suspended_and_a_killed_client_are_flagged, runs of 2026-11-12 on the Windows test machine, Arma 3 2.22 stable, the e2e setups sp-fixture and dedicated (a server, two clients and a headless client loading @skd_fixture)", read: 2026-11-12 }
-  - { id: r17, resource: "research/17-health.md", read: 2026-11-12 }
+  - { id: r17, resource: "engineering/research/17-health.md", read: 2026-11-12 }
 ---
 
 # Spikes SPK-16, SPK-17 and SPK-15: crashes, a held clock and the clock watch
 
-M9 ran `SPK-16`, `SPK-17` and `SPK-15` (`spec/06-open-questions.md`) on the Windows test machine, each before the work that depends on it, from the tests in `crates/shakedown/tests/spikes_m09.rs`[^tests]. Each test starts its sessions through the runner's own library, as `session start` does, and ends every process it started.
+M9 ran `SPK-16`, `SPK-17` and `SPK-15` (`engineering/spec/06-open-questions.md`) on the Windows test machine, each before the work that depends on it, from the tests in `crates/shakedown/tests/spikes_m09.rs`[^tests]. Each test starts its sessions through the runner's own library, as `session start` does, and ends every process it started.
 
 ## SPK-16: a crash on demand
 
@@ -82,4 +82,4 @@ The Shadow stream cut was not driven: nobody could cut the owner's stream during
 **Forces:** `HLT-02` keeps its thresholds, says when a flag clears and from when a clock counts as stopped, and adds the 10 s heartbeat gap; `P-07` takes the gap as its third way to see a stall. The clock watch changes outcomes, as `HLT-02` says, so the fallback is not needed.
 
 [^tests]: `crates/shakedown/tests/spikes_m09.rs`, run with `cargo test -p shakedown --test spikes_m09 -- --ignored --nocapture --test-threads=1` after `python tools/install.py`, 2026-11-12.
-[^r17]: research/17-health.md
+[^r17]: engineering/research/17-health.md

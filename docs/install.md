@@ -163,7 +163,7 @@ fixtures\@skd_fixture_cba\              the fixture mod with a CBA keybind
 fixtures\skdfx\, fixtures\skdfx_cba\    the fixtures' unpacked files
 ```
 
-The fixtures are small mods the framework's own tests run against ([spec/contract/fixture-mod.md](../spec/contract/fixture-mod.md)); a project loads them only when a setup names them. The install also links three folders in the game folder to the installed fixtures: `skdfx`, `skdfx_cba` and `@skd_fixture`. A link left by an earlier install is replaced; a real folder of one of those names stops the install. The game folder is Steam's default unless the `SHAKEDOWN_GAME` variable or `--game <folder>` names another:
+The fixtures are small mods the framework's own tests run against ([engineering/spec/contract/fixture-mod.md](../engineering/spec/contract/fixture-mod.md)); a project loads them only when a setup names them. The install also links three folders in the game folder to the installed fixtures: `skdfx`, `skdfx_cba` and `@skd_fixture`. A link left by an earlier install is replaced; a real folder of one of those names stops the install. The game folder is Steam's default unless the `SHAKEDOWN_GAME` variable or `--game <folder>` names another:
 
 ```
 python tools/install.py --game D:\Games\Arma3

@@ -13,7 +13,7 @@ sources:
 
 # Spikes SPK-04, SPK-05, SPK-10 and SPK-12 in singleplayer
 
-M1 ran `SPK-12`, `SPK-10` and `SPK-05` whole and the singleplayer half of `SPK-04` (`spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, in a session the runner started with `-autotest`. The game ran in a window with no person connected through Shadow PC. Each runs again with `cargo test -p shakedown --test spikes_m01 -- --ignored --nocapture` and, for `SPK-04`, `cargo test -p shakedown --test m01 nfr_rl_02 -- --ignored --nocapture`, after `python tools/install.py`.
+M1 ran `SPK-12`, `SPK-10` and `SPK-05` whole and the singleplayer half of `SPK-04` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, in a session the runner started with `-autotest`. The game ran in a window with no person connected through Shadow PC. Each runs again with `cargo test -p shakedown --test spikes_m01 -- --ignored --nocapture` and, for `SPK-04`, `cargo test -p shakedown --test m01 nfr_rl_02 -- --ignored --nocapture`, after `python tools/install.py`.
 
 ## SPK-12: passed
 

@@ -8,7 +8,7 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T21:37:06+01:00 }]
 
 # Client requirements
 
-This is the product requirements document (PRD). It says **what** the framework must do and **why**, not how it is built. The research (step 1) checks it against the domain, and the specification in `spec/` (step 2) fills its holes with requirement IDs, a domain model and user stories. Where this document and the research disagree on goals or scope, this document wins.
+This is the product requirements document (PRD). It says **what** the framework must do and **why**, not how it is built. The research (step 1) checks it against the domain, and the specification in `engineering/spec/` (step 2) fills its holes with requirement IDs, a domain model and user stories. Where this document and the research disagree on goals or scope, this document wins.
 
 Each requirement has an ID of the form `CR-nn`, never reused, so the spec can trace back to it. Write what the user needs, not the screen or code that delivers it. Where a decision is still open, put it in section 10 rather than guessing.
 

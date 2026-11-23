@@ -2,7 +2,7 @@ name: Release
 
 # A tag v<version> builds the GitHub release of that version (DST-01) and, for a version with no
 # pre-release part whose package is already in microsoft/winget-pkgs, submits it to winget (DST-02).
-# Runs no game. Versions looked up on 2026-11-21 (spec/07-tech-stack.md).
+# Runs no game. Versions looked up on 2026-11-21 (engineering/spec/07-tech-stack.md).
 
 on:
   push:

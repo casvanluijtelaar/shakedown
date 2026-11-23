@@ -7,12 +7,12 @@ generated: { by: "claude-code/developer", at: 2026-11-19T21:42:48Z }
 sources:
   - { id: script, resource: "A scratch script of the M16 developer round that ran shakedown session start and session stop in a loop against a project with CBA_A3, ACE3 and @skd_fixture, and read each machine's 'started process' and 'extension connected' lines from runner.log", read: 2026-11-19 }
   - { id: rpt, resource: "The RPT of each singleplayer start of that series, in its session folder", read: 2026-11-19 }
-  - { id: def28, resource: "plan/deferred/28-hung-client-waits-the-start-ceiling.md", read: 2026-11-19 }
+  - { id: def28, resource: "engineering/plan/deferred/28-hung-client-waits-the-start-ceiling.md", read: 2026-11-19 }
 ---
 
 # Spike SPK-20: the time from launch to connected
 
-M16 ran `SPK-20` (`spec/06-open-questions.md`) on the Windows test machine before building the connect ceiling of `SES-10`. Its pass condition: over 20 starts per kind of machine, cold and warm, the slowest launch-to-`connected` time of each kind is known, and a connect ceiling of twice it is under 90 s. It failed on the singleplayer client, whose slowest healthy start connected 90.3 s after its launch. `SES-10` keeps the reason in `session.json` and has no connect ceiling; a hung client fails the start at the start ceiling of `SES-04`, and `DEF-28` stays open[^def28].
+M16 ran `SPK-20` (`engineering/spec/06-open-questions.md`) on the Windows test machine before building the connect ceiling of `SES-10`. Its pass condition: over 20 starts per kind of machine, cold and warm, the slowest launch-to-`connected` time of each kind is known, and a connect ceiling of twice it is under 90 s. It failed on the singleplayer client, whose slowest healthy start connected 90.3 s after its launch. `SES-10` keeps the reason in `session.json` and has no connect ceiling; a hung client fails the start at the start ceiling of `SES-04`, and `DEF-28` stays open[^def28].
 
 ## How it was measured
 

@@ -22,7 +22,7 @@ The product requirements are in [client-requirements.md](client-requirements.md)
 
 ## Goals
 
-The PRD's goals G1 to G4 hold as written, with the owner's answers in `research/02-gaps.md`: G2's 30 seconds applies to a changed check, which reloads inside the mission, in singleplayer and on a dedicated server. No change of mod code reloads inside the mission. The game holds every mod file it has read (spike `SPK-08`) until it has read a few hundred MiB of other loose files (spike `SPK-19`), so a changed `.sqf` of a mod reloads by a mission restart after every machine has read the framework's release files, and a new file or a config change by a game restart. In singleplayer that mission restart keeps G2's 30 seconds for mod code; on a dedicated session it starts new clients and takes about as long as a game restart (`DEF-32`). `NFR-PF-02` sets the target of each.
+The PRD's goals G1 to G4 hold as written, with the owner's answers in `engineering/research/02-gaps.md`: G2's 30 seconds applies to a changed check, which reloads inside the mission, in singleplayer and on a dedicated server. No change of mod code reloads inside the mission. The game holds every mod file it has read (spike `SPK-08`) until it has read a few hundred MiB of other loose files (spike `SPK-19`), so a changed `.sqf` of a mod reloads by a mission restart after every machine has read the framework's release files, and a new file or a config change by a game restart. In singleplayer that mission restart keeps G2's 30 seconds for mod code; on a dedicated session it starts new clients and takes about as long as a game restart (`DEF-32`). `NFR-PF-02` sets the target of each.
 
 ## Scope
 
@@ -37,7 +37,7 @@ In scope, for the first release (the MVP, PRD section 9):
 
 Out of scope, as the PRD says: Arma Reforger, Arma 4 and DayZ; CI/CD; unit tests of SQF outside the game; building, packing or signing mods; public servers and BattlEye; screenshots as a verdict; the machine's mouse and keyboard; reading or patching the mod's source.
 
-Also out, by the owner's answers in `research/02-gaps.md`:
+Also out, by the owner's answers in `engineering/research/02-gaps.md`:
 
 - A player-hosted (non-dedicated host) session, until a spike shows an unattended way to start one (H9).
 - A Linux dedicated server, deferred; the extension is written so it builds for Linux (H10).

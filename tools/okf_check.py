@@ -22,13 +22,13 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 BUNDLES = [
-    "research",
-    "spec",
-    "plan",
+    "engineering/research",
+    "engineering/spec",
+    "engineering/plan",
     "docs",
-    "acceptance/docs",
-    "acceptance/findings",
-    "acceptance/coverage",
+    "engineering/acceptance/docs",
+    "engineering/acceptance/findings",
+    "engineering/acceptance/coverage",
 ]
 STATUSES = {"draft", "stable", "deprecated"}
 STORY_KINDS = {"feature", "error", "mistake", "system fail", "malicious intent"}
@@ -164,7 +164,7 @@ def main():
     milestones = {str(fm.get("id")): (p, fm) for p, fm in by_type.get("Milestone", [])}
 
     requirements = set()
-    for path in sorted((ROOT / "spec").glob("*.md")):
+    for path in sorted((ROOT / "engineering" / "spec").glob("*.md")):
         requirements.update(REQ_DEF.findall(path.read_text(encoding="utf-8")))
 
     def check_refs(path, fm, key, known, what):

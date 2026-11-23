@@ -1,5 +1,5 @@
 //! Messages between the Shakedown runner, its clients and its extension, and the types of the
-//! result file (`spec/contract/result-file.md`).
+//! result file (`engineering/spec/contract/result-file.md`).
 
 pub mod result;
 pub mod time;

@@ -52,7 +52,7 @@ sources:
   - { id: mcp-ext, resource: "Zihuange/arma3-mcp@380af42:game/extension/src/arma3_mcp_extension.cpp (MIT)", read: 2026-11-04 }
   - { id: mcp-decisions, resource: "Zihuange/arma3-mcp@380af42:docs/decisions.md, entries D29 to D34", read: 2026-11-04 }
   - { id: mcp-vision, resource: "Zihuange/arma3-mcp@380af42:docs/vision.md, test record 2026-09-17", read: 2026-11-04 }
-  - { id: t1, resource: "research/10-prior-harness.md", read: 2026-11-04 }
+  - { id: t1, resource: "engineering/research/10-prior-harness.md", read: 2026-11-04 }
 ---
 
 # Making a player act: actions, key handlers and key input

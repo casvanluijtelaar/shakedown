@@ -1,4 +1,4 @@
-//! Spikes SPK-12, SPK-10 and SPK-05 for singleplayer `p1` (`spec/06-open-questions.md`), run
+//! Spikes SPK-12, SPK-10 and SPK-05 for singleplayer `p1` (`engineering/spec/06-open-questions.md`), run
 //! before the M1 work that depends on them. They start the game, so they run only on the test
 //! machine, by hand:
 //!
@@ -6,7 +6,7 @@
 //!     cargo test -p shakedown --test spikes_m01 -- --ignored --nocapture
 //!
 //! `SPK-04`'s singleplayer half runs through the command line in `e2e.rs`
-//! (`nfr_rl_02_spk_04_twenty_checks_each_see_the_start_state`). Results go to `research/`.
+//! (`nfr_rl_02_spk_04_twenty_checks_each_see_the_start_state`). Results go to `engineering/research/`.
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};

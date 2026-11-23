@@ -8,14 +8,14 @@ sources:
   - { id: round, resource: "the research round of 2026-11-15 on the Windows test machine, Arma 3 2.22 stable, CBA_A3 3.19.0 (workshop 450814997), through the installed shakedown 0.1.1 (main at 810e2f7), setups ded2-cba (dedicated, two clients) and sp-cba, loading CBA and both fixtures: every machine made to loadFile, with one exec to all machines, distinct 8 MiB loose files and one 8 MiB file through many junctions under <game>\\skd_spk19, the hold tested by opening the installed fnc_version.sqf for writing, the file changed and the mission restarted by a @reset mission check, skdfx_cba_fnc_version called on every machine and each machine's process id read from status after each reload", read: 2026-11-15 }
   - { id: rpt, resource: "the RPT of every machine of the round's sessions, the line FileServer MaxCacheSize", read: 2026-11-15 }
   - { id: cba, resource: "https://github.com/CBATeam/CBA_A3 at tag v3.19.0, addons/xeh/fnc_compileFunction.sqf (read with gh)", read: 2026-11-15 }
-  - { id: r27, resource: "research/27-spikes-reload.md: the hold, the release table, the approaches tried and the mission restart's time in M6", read: 2026-11-15 }
+  - { id: r27, resource: "engineering/research/27-spikes-reload.md: the hold, the release table, the approaches tried and the mission restart's time in M6", read: 2026-11-15 }
   - { id: m14, resource: "the M14 build of 2026-11-18 on the Windows test machine, shakedown 0.1.4 from the worktree developer/m14, tests/m14.rs: three singleplayer and ten dedicated reloads at level mission-restart through the release files the runner makes in <game>\\skd_release, a changed CfgFunctions function of @skd_fixture in each mode, a file held by skdfx_fnc_holdFile, and the runner log of each run", read: 2026-11-18 }
-  - { id: r10, resource: "research/10-prior-harness.md and research/14-sessions.md: clients kept across a mission change", read: 2026-11-15 }
+  - { id: r10, resource: "engineering/research/10-prior-harness.md and engineering/research/14-sessions.md: clients kept across a mission change", read: 2026-11-15 }
 ---
 
 # Spike SPK-19: making the game let go of a changed file
 
-`SPK-19` (`spec/06-open-questions.md`) asks whether a changed `.sqf` of `@skd_fixture_cba` can reach every machine of a dedicated session with two clients without a game restart, 10 of 10, by a way the framework can bring about every time. It ran as a research round beside M11 on the Windows test machine, about 17 minutes of game runs. **It passed** by `DEF-21`'s first option: the game can be made to let go of a file. Every machine reads a few hundred MiB of other loose files through file patching, the held file is then free to write, and a mission restart takes the change on every machine. ACE3's layout, `DEF-21`'s second option, was not run, since the first passed.
+`SPK-19` (`engineering/spec/06-open-questions.md`) asks whether a changed `.sqf` of `@skd_fixture_cba` can reach every machine of a dedicated session with two clients without a game restart, 10 of 10, by a way the framework can bring about every time. It ran as a research round beside M11 on the Windows test machine, about 17 minutes of game runs. **It passed** by `DEF-21`'s first option: the game can be made to let go of a file. Every machine reads a few hundred MiB of other loose files through file patching, the held file is then free to write, and a mission restart takes the change on every machine. ACE3's layout, `DEF-21`'s second option, was not run, since the first passed.
 
 ## What makes the game let go
 

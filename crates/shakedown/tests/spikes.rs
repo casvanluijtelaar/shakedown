@@ -1,10 +1,10 @@
-//! Spikes SPK-01, SPK-02 and SPK-03 for singleplayer `p1` (`spec/06-open-questions.md`). They
+//! Spikes SPK-01, SPK-02 and SPK-03 for singleplayer `p1` (`engineering/spec/06-open-questions.md`). They
 //! start the game, so they run only on the test machine, by hand:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test spikes -- --ignored --nocapture
 //!
-//! The installed `@shakedown` is taken from `target/shakedown`. Results go to `research/`.
+//! The installed `@shakedown` is taken from `target/shakedown`. Results go to `engineering/research/`.
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};

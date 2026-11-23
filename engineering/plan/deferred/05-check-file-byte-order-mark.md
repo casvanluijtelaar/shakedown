@@ -24,7 +24,7 @@ The test author is told the file has no `@check` line while looking at one. `US-
 
 ## Options
 
-1. Skip a UTF-8 byte order mark at the start of a check file before reading the header, and say in `spec/contract/check-api.md` that one is allowed.
+1. Skip a UTF-8 byte order mark at the start of a check file before reading the header, and say in `engineering/spec/contract/check-api.md` that one is allowed.
 2. Refuse the file with a `check-error` that names the byte order mark and says to save the file as UTF-8 without one.
 
 ## Recommendation
@@ -34,4 +34,4 @@ The first option. The mark carries no meaning in a UTF-8 file, the author did no
 ## Acceptance criteria
 
 1. A check file that starts with a UTF-8 byte order mark and is otherwise a correct check is listed by `list` with its name and an `error` of `null`, and runs to the same outcome as the same file without the mark.
-2. `spec/contract/check-api.md` says a check file may start with a UTF-8 byte order mark.
+2. `engineering/spec/contract/check-api.md` says a check file may start with a UTF-8 byte order mark.

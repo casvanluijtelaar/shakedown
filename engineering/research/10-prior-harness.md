@@ -33,7 +33,7 @@ sources:
   - { id: tjip, resource: "arma-grappling-hook@3f4f7bd:research/tests/mp-jip-state/README.md", read: 2026-11-04 }
   - { id: tdc, resource: "arma-grappling-hook@3f4f7bd:research/tests/mp-disconnect/README.md", read: 2026-11-04 }
   - { id: tclock, resource: "arma-grappling-hook@3f4f7bd:tests/m00-let-go-clock/README.md", read: 2026-11-04 }
-  - { id: prd, resource: "spec/client-requirements.md", read: 2026-11-04 }
+  - { id: prd, resource: "engineering/spec/client-requirements.md", read: 2026-11-04 }
 ---
 
 # The harness of arma-grappling-hook
@@ -194,4 +194,4 @@ A run takes minutes because of how long its missions run, not because of the sta
 [^tjip]: arma-grappling-hook@3f4f7bd:research/tests/mp-jip-state/README.md
 [^tdc]: arma-grappling-hook@3f4f7bd:research/tests/mp-disconnect/README.md
 [^tclock]: arma-grappling-hook@3f4f7bd:tests/m00-let-go-clock/README.md
-[^prd]: spec/client-requirements.md
+[^prd]: engineering/spec/client-requirements.md

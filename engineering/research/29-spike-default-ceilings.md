@@ -7,12 +7,12 @@ generated: { by: "claude-code/developer", at: 2026-11-13T08:13:00-08:00 }
 sources:
   - { id: tests, resource: "crates/shakedown/tests/m10.rs, spk_14_an_actions_effect_reaches_every_machine_within_the_default_wait_ceiling, cfg_01_rst_01_dm_14_m10_findings_in_singleplayer and cfg_01_rst_01_dm_14_m10_findings_on_a_dedicated_server", read: 2026-11-13 }
   - { id: port, resource: "arma-grappling-hook, branch shakedown/m10, acceptance/shakedown/ (its shakedown.toml and ten ported checks), run with the framework built from this repository's branch developer/m10-b", read: 2026-11-13 }
-  - { id: r18, resource: "research/18-test-tools.md", read: 2026-11-13 }
+  - { id: r18, resource: "engineering/research/18-test-tools.md", read: 2026-11-13 }
 ---
 
 # Spike SPK-14: the default ceilings
 
-M10 ran `SPK-14` (`spec/06-open-questions.md`) on the Windows test machine, Arma 3 with CBA_A3 and ACE3 from the Steam Workshop, after the port of arma-grappling-hook's M00 checks. Its pass condition: the 10 s wait ceiling covers the slowest common wait, an action's effect replicated to every client of a dedicated session, in 95 of 100 runs, and no passing run of 50 checks comes within 5 s of a runner ceiling. It passed, so the defaults of `NFR-PF-06` stand as written: wait ceiling 10 s, check timeout 120 s, the runner's grace 10 s, start ceiling 180 s, reset ceiling 15 s. The defaults are those `research/18-test-tools.md` drew from other test tools[^r18]; this is the first measurement of them on real checks.
+M10 ran `SPK-14` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 with CBA_A3 and ACE3 from the Steam Workshop, after the port of arma-grappling-hook's M00 checks. Its pass condition: the 10 s wait ceiling covers the slowest common wait, an action's effect replicated to every client of a dedicated session, in 95 of 100 runs, and no passing run of 50 checks comes within 5 s of a runner ceiling. It passed, so the defaults of `NFR-PF-06` stand as written: wait ceiling 10 s, check timeout 120 s, the runner's grace 10 s, start ceiling 180 s, reset ceiling 15 s. The defaults are those `engineering/research/18-test-tools.md` drew from other test tools[^r18]; this is the first measurement of them on real checks.
 
 ## The slowest common wait
 
@@ -56,4 +56,4 @@ The two tests of the M10 findings[^tests] start a singleplayer session and a ded
 
 [^tests]: `crates/shakedown/tests/m10.rs`, run on 2026-11-13 with `cargo test -p shakedown --test m10 <name> -- --ignored --nocapture --test-threads=1` after `python tools/install.py`.
 [^port]: arma-grappling-hook's `acceptance/shakedown/` on its branch `shakedown/m10`, run with `shakedown run` and its own `shakedown.toml` on 2026-11-13.
-[^r18]: `research/18-test-tools.md`, the default ceilings of other test tools.
+[^r18]: `engineering/research/18-test-tools.md`, the default ceilings of other test tools.

@@ -1,11 +1,11 @@
 //! Spikes SPK-01 and SPK-03 for a dedicated `server`, a game client and a headless client
-//! (`spec/06-open-questions.md`), in one dedicated session with two clients and a headless
+//! (`engineering/spec/06-open-questions.md`), in one dedicated session with two clients and a headless
 //! client. They start the game, so they run only on the test machine, by hand:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test spikes_m02 -- --ignored --nocapture
 //!
-//! The installed `@shakedown` is taken from `target/shakedown`. Results go to `research/`.
+//! The installed `@shakedown` is taken from `target/shakedown`. Results go to `engineering/research/`.
 
 use std::path::PathBuf;
 use std::time::Instant;

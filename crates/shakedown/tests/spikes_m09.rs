@@ -1,4 +1,4 @@
-//! Spikes SPK-16, SPK-17 and SPK-15 (`spec/06-open-questions.md`), run before the M9 work that
+//! Spikes SPK-16, SPK-17 and SPK-15 (`engineering/spec/06-open-questions.md`), run before the M9 work that
 //! depends on them: a crash on demand on each kind of game process, mission time held while
 //! frames go on, and the thresholds of the clock watch. They start the game, so they run only on
 //! the test machine, by hand:
@@ -7,7 +7,7 @@
 //!     cargo test -p shakedown --test spikes_m09 -- --ignored --nocapture --test-threads=1
 //!
 //! The installed `@shakedown` and fixtures are taken from `target/shakedown`. Results go to
-//! `research/28-spikes-health.md`. Nothing here prints a line of an RPT.
+//! `engineering/research/28-spikes-health.md`. Nothing here prints a line of an RPT.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

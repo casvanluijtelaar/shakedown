@@ -34,5 +34,5 @@ Option 1, built by M14. It reaches the level `mission-restart` that `CR-03` asks
 
 ## Acceptance criteria
 
-- A spike in `research/` says, for each option it ran, whether a changed `.sqf` of `@skd_fixture_cba` reaches every machine of a dedicated session with two clients without a game restart, 10 of 10. Done: research `31-spike-reload-release.md`, option 1, 10 of 10.
+- A spike in `engineering/research/` says, for each option it ran, whether a changed `.sqf` of `@skd_fixture_cba` reaches every machine of a dedicated session with two clients without a game restart, 10 of 10. Done: research `31-spike-reload-release.md`, option 1, 10 of 10.
 - `RLD-02`, `P-08`, `NFR-PF-01`, `NFR-PF-02`, `US-054`, `US-055` and `FIX-03` are edited to the level `mission-restart`, and M14 builds against it.

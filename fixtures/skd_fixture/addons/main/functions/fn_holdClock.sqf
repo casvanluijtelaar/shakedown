@@ -1,7 +1,7 @@
 /*
     skdfx_fnc_holdClock [seconds] - in singleplayer, holds p1's mission time still for `seconds`
     of real time (1 to 30) while its frames go on and it keeps answering, then lets it run (FIX-02,
-    spec/contract/fixture-mod.md). Returns true at once; on any other machine, or in a dedicated
+    engineering/spec/contract/fixture-mod.md). Returns true at once; on any other machine, or in a dedicated
     session, it does nothing and returns false.
 */
 params [["_seconds", 0, [0]]];

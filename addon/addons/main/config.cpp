@@ -68,7 +68,7 @@ class CfgFunctions {
             class handOverShow {};
             class handOverClear {};
         };
-        // The check API (spec/contract/check-api.md).
+        // The check API (engineering/spec/contract/check-api.md).
         class api {
             file = "\z\shakedown\addons\main\functions";
             class machines {};

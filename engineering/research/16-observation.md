@@ -31,7 +31,7 @@ sources:
   - { id: cba-events, resource: "CBATeam/CBA_A3@8b15a04:addons/events/fnc_addEventHandler.sqf, fnc_localEvent.sqf, fnc_serverEvent.sqf, fnc_globalEvent.sqf, fnc_targetEvent.sqf", read: 2026-11-04 }
   - { id: mcp-ext, resource: "Zihuange/arma3-mcp@380af42:game/extension/src/arma3_mcp_extension.cpp (MIT)", read: 2026-11-04 }
   - { id: mcp-vision, resource: "Zihuange/arma3-mcp@380af42:docs/vision.md, test record 2026-09-17", read: 2026-11-04 }
-  - { id: t1, resource: "research/10-prior-harness.md", read: 2026-11-04 }
+  - { id: t1, resource: "engineering/research/10-prior-harness.md", read: 2026-11-04 }
 ---
 
 # Observing the game: waits, events, errors, logs, screenshots

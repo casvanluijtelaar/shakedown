@@ -18,7 +18,7 @@ sources:
   - { id: gdpr, resource: "https://gdpr-info.eu/art-4-gdpr/ and https://gdpr-info.eu/art-2-gdpr/ (GDPR Article 4(1) and Article 2(2)(c))", read: 2026-11-04 }
   - { id: cba, resource: "https://github.com/CBATeam/CBA_A3 at 8b15a04bd52ff7acc568a93cf6e90343e43a8a56 (LICENSE.md, README.md License section, addons/*/license.txt)", read: 2026-11-04 }
   - { id: ace, resource: "https://github.com/acemod/ACE3 at 45c25247f7599687e85c5981f150efe37227393b (LICENSE, addons/apl/LICENSE, per-folder LICENSE files)", read: 2026-11-04 }
-  - { id: tools, resource: "research/11-arma-tools.md (T2): repositories, commits and LICENSE files of the Arma tools", read: 2026-11-04 }
+  - { id: tools, resource: "engineering/research/11-arma-tools.md (T2): repositories, commits and LICENSE files of the Arma tools", read: 2026-11-04 }
   - { id: neefay, resource: "https://github.com/Neefay/arma3-llm-harness at 21aac67e8184901e4016ed4effa06c99afd2e067 (docs/ARCHITECTURE.md, host/src/arma_harness/serverroot.py)", read: 2026-11-04 }
   - { id: headswe, resource: "https://github.com/headswe/arma3-mcp at d778d75e87bf7590793297e1afb63558c8b88f14 (README.md, list_players tool)", read: 2026-11-04 }
   - { id: armars, resource: "https://github.com/BrettMayson/arma-rs at 8e7b243ccf6fcf98fbe83a9dd86982336ac660d1 (LICENSE, Cargo.toml) and https://crates.io/api/v1/crates/arma-rs", read: 2026-11-04 }
@@ -211,7 +211,7 @@ Touches CR-24, CR-51, CR-53. An agent tool that returns players must return the 
 [^gdpr]: https://gdpr-info.eu/art-4-gdpr/ (Article 4(1)) and https://gdpr-info.eu/art-2-gdpr/ (Article 2(2)(c)).
 [^cba]: https://github.com/CBATeam/CBA_A3 at 8b15a04b, LICENSE.md, README.md, addons/*/license.txt.
 [^ace]: https://github.com/acemod/ACE3 at 45c25247, LICENSE, addons/apl/LICENSE.
-[^tools]: research/11-arma-tools.md, the T2 survey of repositories and LICENSE files.
+[^tools]: engineering/research/11-arma-tools.md, the T2 survey of repositories and LICENSE files.
 [^neefay]: https://github.com/Neefay/arma3-llm-harness at 21aac67e, docs/ARCHITECTURE.md, host/src/arma_harness/serverroot.py.
 [^headswe]: https://github.com/headswe/arma3-mcp at d778d75e, README.md.
 [^armars]: https://github.com/BrettMayson/arma-rs at 8e7b243c, LICENSE and Cargo.toml; https://crates.io/api/v1/crates/arma-rs.

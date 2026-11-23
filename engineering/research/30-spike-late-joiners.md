@@ -6,13 +6,13 @@ status: stable
 generated: { by: "claude-code/developer", at: 2026-11-14T12:24:30-08:00 }
 sources:
   - { id: tests, resource: "crates/shakedown/tests/m11.rs, spk_18_a_third_client_joins_leaves_and_joins_again_10_of_10, and the same check run ten times from the command line on branch developer/m11", read: 2026-11-14 }
-  - { id: r14, resource: "research/14-sessions.md, section 3 and the spike of a lower DisconnectTimeout", read: 2026-11-14 }
+  - { id: r14, resource: "engineering/research/14-sessions.md, section 3 and the spike of a lower DisconnectTimeout", read: 2026-11-14 }
   - { id: rpt, resource: "the server's RPT of the trial sessions on the test machine, its serverCommand lines", read: 2026-11-14 }
 ---
 
 # Spike SPK-18: joining late, leaving and joining again
 
-M11 ran `SPK-18` (`spec/06-open-questions.md`) on the Windows test machine (an AMD EPYC 9354 virtual machine with 16 GB of memory, Arma 3 2.22 from Steam) before the join and leave of `MCH-01` were settled. Its pass condition: on a dedicated session with two clients, a third game client joins and is `ready` within 60 s, 10 of 10, with the session's memory within the machine's; a client made to leave fires the server's `PlayerDisconnected` within the server's disconnect timeout plus 5 s, 10 of 10; and the same client, joining again under its machine name, is `ready` within 60 s, 10 of 10. It passed, with a way of leaving that neither candidate named, so no fallback applies: `MCH-01` and `US-067` stand, the default leave ceiling stays the disconnect timeout of 15 s plus 5, and the generated `server.cfg` keeps the default disconnect timeout.
+M11 ran `SPK-18` (`engineering/spec/06-open-questions.md`) on the Windows test machine (an AMD EPYC 9354 virtual machine with 16 GB of memory, Arma 3 2.22 from Steam) before the join and leave of `MCH-01` were settled. Its pass condition: on a dedicated session with two clients, a third game client joins and is `ready` within 60 s, 10 of 10, with the session's memory within the machine's; a client made to leave fires the server's `PlayerDisconnected` within the server's disconnect timeout plus 5 s, 10 of 10; and the same client, joining again under its machine name, is `ready` within 60 s, 10 of 10. It passed, with a way of leaving that neither candidate named, so no fallback applies: `MCH-01` and `US-067` stand, the default leave ceiling stays the disconnect timeout of 15 s plus 5, and the generated `server.cfg` keeps the default disconnect timeout.
 
 ## How it was measured
 
@@ -54,5 +54,5 @@ With the server, `p1`, `p2` and the joined `p3` running, the four processes' wor
 - A join's time, about 30 s, is most of a client's start, so a check that joins needs about 40 s of `@timeout` per join; `docs/dedicated-sessions.md` says so.
 
 [^tests]: crates/shakedown/tests/m11.rs, and the ten runs of the same check from the command line
-[^r14]: research/14-sessions.md
+[^r14]: engineering/research/14-sessions.md
 [^rpt]: the server's RPT of the trial sessions

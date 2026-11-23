@@ -22,7 +22,7 @@ sources:
   - { id: hung, resource: "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-ishungappwindow", read: 2026-11-04 }
   - { id: steamreg, resource: "https://gamedev.stackexchange.com/questions/167176 (answer 167219, read through the Stack Exchange API)", read: 2026-11-04 }
   - { id: shadow, resource: "https://support.shadow.tech/hc/en-us/articles/32731841405073-Shadow-PC-and-the-Automatic-Shutdown (updated 2026-07-23)", read: 2026-11-04 }
-  - { id: t1, resource: "research/10-prior-harness.md", read: 2026-11-04 }
+  - { id: t1, resource: "engineering/research/10-prior-harness.md", read: 2026-11-04 }
   - { id: hdoc, resource: "arma-grappling-hook@3f4f7bd:docs/harness.md", read: 2026-11-04 }
   - { id: hrun, resource: "arma-grappling-hook@3f4f7bd:harness/run.ps1", read: 2026-11-04 }
   - { id: f002, resource: "arma-grappling-hook@3f4f7bd:acceptance/findings/m00/002-a-player-who-lets-go-can-stay-hanging-in-the-air-instead-of-falling.md", read: 2026-11-04 }
@@ -33,7 +33,7 @@ sources:
   - { id: m01, resource: "arma-grappling-hook@3f4f7bd:docs/milestones/m01.md, section on the gates", read: 2026-11-04 }
   - { id: r14, resource: "arma-grappling-hook@3f4f7bd:research/14-test-automation.md", read: 2026-11-04 }
   - { id: tmanual, resource: "arma-grappling-hook@3f4f7bd:research/tests/manual-smoke/README.md", read: 2026-11-04 }
-  - { id: prd, resource: "spec/client-requirements.md", read: 2026-11-04 }
+  - { id: prd, resource: "engineering/spec/client-requirements.md", read: 2026-11-04 }
 ---
 
 # Health, stalls and clean stops
@@ -149,7 +149,7 @@ So a stop is a process that ended after the framework asked it to; a crash is a 
 [^hung]: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-ishungappwindow
 [^steamreg]: https://gamedev.stackexchange.com/questions/167176 (answer 167219, read through the Stack Exchange API)
 [^shadow]: https://support.shadow.tech/hc/en-us/articles/32731841405073-Shadow-PC-and-the-Automatic-Shutdown (updated 2026-07-23)
-[^t1]: research/10-prior-harness.md
+[^t1]: engineering/research/10-prior-harness.md
 [^hdoc]: arma-grappling-hook@3f4f7bd:docs/harness.md
 [^hrun]: arma-grappling-hook@3f4f7bd:harness/run.ps1
 [^f002]: arma-grappling-hook@3f4f7bd:acceptance/findings/m00/002-a-player-who-lets-go-can-stay-hanging-in-the-air-instead-of-falling.md
@@ -160,4 +160,4 @@ So a stop is a process that ended after the framework asked it to; a crash is a 
 [^m01]: arma-grappling-hook@3f4f7bd:docs/milestones/m01.md, section on the gates
 [^r14]: arma-grappling-hook@3f4f7bd:research/14-test-automation.md
 [^tmanual]: arma-grappling-hook@3f4f7bd:research/tests/manual-smoke/README.md
-[^prd]: spec/client-requirements.md
+[^prd]: engineering/spec/client-requirements.md

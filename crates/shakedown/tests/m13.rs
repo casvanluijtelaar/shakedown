@@ -175,9 +175,10 @@ fn watched(seen: &Seen, args: &[&str], ceiling: Duration, during: &mut dyn FnMut
 }
 
 fn schema_errors(result: &Value) -> Vec<String> {
-    let schema: Value =
-        serde_json::from_str(&std::fs::read_to_string(repo().join("spec/contract/result.schema.json")).unwrap())
-            .unwrap();
+    let schema: Value = serde_json::from_str(
+        &std::fs::read_to_string(repo().join("engineering/spec/contract/result.schema.json")).unwrap(),
+    )
+    .unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     validator.iter_errors(result).map(|e| e.to_string()).collect()
 }

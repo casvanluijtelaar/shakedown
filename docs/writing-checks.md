@@ -7,7 +7,7 @@ status: draft
 
 # Writing checks
 
-A check is one SQF file that sets up a situation in the running game, makes the mod act, and asserts what should follow. It needs no build step, no `#include`, no macro and no other language. This page covers the file; [The check API](check-api.md) lists every function a check can call. The contract is [spec/contract/check-api.md](../spec/contract/check-api.md).
+A check is one SQF file that sets up a situation in the running game, makes the mod act, and asserts what should follow. It needs no build step, no `#include`, no macro and no other language. This page covers the file; [The check API](check-api.md) lists every function a check can call. The contract is [engineering/spec/contract/check-api.md](../engineering/spec/contract/check-api.md).
 
 ## A check
 

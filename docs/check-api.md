@@ -7,7 +7,7 @@ status: draft
 
 # The check API
 
-A check's body calls these functions, each as `[arguments] call skd_fnc_name`. This page is the reference: every function, its arguments in order, what it returns, an example and how it fails. The pages linked from each section show the functions at work. The contract is [spec/contract/check-api.md](../spec/contract/check-api.md).
+A check's body calls these functions, each as `[arguments] call skd_fnc_name`. This page is the reference: every function, its arguments in order, what it returns, an example and how it fails. The pages linked from each section show the functions at work. The contract is [engineering/spec/contract/check-api.md](../engineering/spec/contract/check-api.md).
 
 ## Rules for every function
 
