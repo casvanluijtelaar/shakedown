@@ -199,6 +199,8 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 - 2026-11-23: The owner wants `docs/` fully rewritten from scratch as a consumer guide, like the wiki: an index, a quickstart, then every feature in detail with examples; milestone reports taken out of `docs/`; the README rewritten fresh; then the GitHub wiki deprecated (last updated at M10, it still says Shakedown is not published). Order: a developer round moves `docs/milestones/` into `plan/`; a writer round rewrites `docs/` and the README (it keeps `guide.txt` verbatim in the agent tools page, which a unit test asserts); a tester round brings the document checks that read `docs/` pages in line; the wiki deprecation is an outward step the owner does, with exact instructions. The planning round for phase 3 waits.
 
+- 2026-11-23: The owner removed the porting guide (`docs/porting-a-suite.md`) and every reference to it in `docs/` and the README (`dfca658`): no public mod besides arma-grappling-hook has a PowerShell suite. `plan/` and `acceptance/` keep their mentions as records. The verify tester is told that finding m19-4 targets the removed page.
+
 ## Knowledge about the tooling
 
 - 2026-11-22: The owner set the PowerShell execution policy for their user to `RemoteSigned` (`CurrentUser`; machine and user policies undefined). Local scripts such as `tools/install.ps1` run with `powershell -File`; a downloaded script needs `Unblock-File` or a signature. Undo: the same command with `Undefined`.
