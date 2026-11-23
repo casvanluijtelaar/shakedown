@@ -201,6 +201,8 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 - 2026-11-23: The owner removed the porting guide (`docs/porting-a-suite.md`) and every reference to it in `docs/` and the README (`dfca658`): no public mod besides arma-grappling-hook has a PowerShell suite. `plan/` and `acceptance/` keep their mentions as records. The verify tester is told that finding m19-4 targets the removed page.
 
+- 2026-11-23: The owner stopped the docs testing: no verify round for the docs findings m19-1 to m19-8. The developer's own in-game tests of m19-5 and m19-6 are the evidence for those fixes; the eight findings stay `addressed` without `verified`, and the bundle check keeps listing them until a later tester round verifies them.
+
 ## Knowledge about the tooling
 
 - 2026-11-22: The owner set the PowerShell execution policy for their user to `RemoteSigned` (`CurrentUser`; machine and user policies undefined). Local scripts such as `tools/install.ps1` run with `powershell -File`; a downloaded script needs `Unblock-File` or a signature. Undo: the same command with `Undefined`.
