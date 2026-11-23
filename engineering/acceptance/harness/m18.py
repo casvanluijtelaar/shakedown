@@ -1,7 +1,7 @@
 r"""The checks of M18 The full health watch: US-093 and US-094's acceptance criteria.
 
 Once per repeat, with no session running, in the project `m18` of its own in the work folder, whose `tests\` holds
-the checks of `acceptance/m18/` and whose setup `ded` is a dedicated server with two clients loading `@skd_fixture`
+the checks of `engineering/acceptance/m18/` and whose setup `ded` is a dedicated server with two clients loading `@skd_fixture`
 alone. One `ded` session: `status --json`, `status` and the `status` tool once every machine has a frame rate and an
 answer time; then `run US-094-starve US-094-after --json` in the background while `status --json` is read twice a
 second in a thread of its own, and, as soon as the starved check runs, p2's process, by the id `status` gives,

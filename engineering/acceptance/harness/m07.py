@@ -1,7 +1,7 @@
 """The checks of M7, reload inside the mission: US-054 and US-058.
 
 They run in two sessions, each watching @skd_fixture in a staged copy of its sources in the project, with
-a rebuild that copies the staged fn_version.sqf into the installed copy, as spec/contract/fixture-mod.md
+a rebuild that copies the staged fn_version.sqf into the installed copy, as engineering/spec/contract/fixture-mod.md
 gives it for a test that reloads a target the way a mod developer does (FIX-03):
 
 - rld7, a dedicated server with two clients, loading @skd_fixture alone, as the M7 demo has it;

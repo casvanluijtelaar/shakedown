@@ -2,7 +2,7 @@
 
 Every part breaks the session it runs in, so each runs in a session of its own, once per repeat
 (`--repeat`), with no session running before it, in the project `m09` in the work folder: the checks of
-`acceptance/m09/` and two setups loading `@skd_fixture` alone, `ded` (a dedicated server with two clients,
+`engineering/acceptance/m09/` and two setups loading `@skd_fixture` alone, `ded` (a dedicated server with two clients,
 as the M9 demo has it) and `sp` (singleplayer). Per repeat:
 
 - `ded` 1, a stall: US-044 on the ready session (a failed check inspected by command and by tool, the

@@ -3,12 +3,12 @@ r"""The checks of M13 Every setup, repeated: US-074, US-075, US-076, US-077, US-
 Each part starts and stops what it needs itself, once per repeat (`--repeat`), with no session running before
 it. The projects, in the work folder:
 
-- `m13each`: the checks of `acceptance/m13/each/` (`US-074-every` with no `@setups`, `US-074-two` naming `sp` and
+- `m13each`: the checks of `engineering/acceptance/m13/each/` (`US-074-every` with no `@setups`, `US-074-two` naming `sp` and
   `dedicated-2`, `US-074-one` naming `sp-cba` and tagged `solo`) and three setups in this order: `sp`
   (singleplayer, `@skd_fixture`), `sp-cba` (singleplayer, CBA and both fixtures) and `dedicated-2` (a dedicated
   server with two clients, `@skd_fixture`).
 - `m13miss`: the same checks and setups, but `sp-cba` also loads the mod `ghost`, whose folder does not exist.
-- `m13rep`: the checks of `acceptance/m13/rep/` and two setups, `sp` (singleplayer) and `ded` (a dedicated server
+- `m13rep`: the checks of `engineering/acceptance/m13/rep/` and two setups, `sp` (singleplayer) and `ded` (a dedicated server
   with two clients), each loading `@skd_fixture` alone.
 - `m13bad`: one check and a `shakedown.toml` whose `slow_step` is `-1` or `"10"`.
 

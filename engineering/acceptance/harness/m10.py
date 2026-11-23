@@ -42,7 +42,7 @@ ACC = Path(__file__).resolve().parent.parent
 SUITE = Path(os.environ.get("SHAKEDOWN_AGH_SUITE", r"C:\Users\Shadow\Documents\arma-grappling-hook"
                             r"\acceptance\shakedown"))
 ORDER = ["dedicated-cba", "sp-cba", "sp-cba-ace"]
-# plan/milestones/m10.md, exit criterion 7: the checks each setup runs.
+# engineering/plan/milestones/m10.md, exit criterion 7: the checks each setup runs.
 EXPECTED = {
     "sp-cba": ["CLB-02-velocity", "CTL-01-defaults", "CTL-01-hold", "CTL-01-keys", "US-009-1", "US-009-1-freed",
                "US-009-2", "US-064-1", "US-064-2"],
@@ -665,12 +665,12 @@ def ec8_agent(ctx):
 
 @check("M10 EC8 SPK-14 NFR-PF-06 the spike is recorded with its pass condition met and NFR-PF-06 names it with the defaults 10 s, 120 s, 10 s, 180 s and 15 s, which the docs give", "offline")
 def ec8_spk14(ctx):
-    nfr = (ctx.repo / "spec" / "05-non-functional-requirements.md").read_text(encoding="utf-8")
+    nfr = (ctx.repo / "engineering" / "spec" / "05-non-functional-requirements.md").read_text(encoding="utf-8")
     line = next(l for l in nfr.splitlines() if l.startswith("- **NFR-PF-06**"))
     for want in ("wait ceiling is 10 s", "check timeout 120 s", "grace 10 s", "start ceiling 180 s", "reset ceiling 15 s",
                  "SPK-14", "29-spike-default-ceilings.md"):
         assert want in line, f"NFR-PF-06 does not say {want!r}: {line}"
-    spike = (ctx.repo / "research" / "29-spike-default-ceilings.md").read_text(encoding="utf-8")
+    spike = (ctx.repo / "engineering" / "research" / "29-spike-default-ceilings.md").read_text(encoding="utf-8")
     assert "It passed" in spike, "research 29 does not record that SPK-14 passed"
     docs = "\n".join(p.read_text(encoding="utf-8") for p in (ctx.repo / "docs").glob("*.md"))
     for want in ("default 10", "120 s", "15 s", "180"):

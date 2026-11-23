@@ -52,7 +52,7 @@ def batch(setup):
 class Context:
     def __init__(self, sh, project, repo, log):
         self.sh, self.project, self.repo, self.log = sh, Path(project), Path(repo), log
-        self.schema = json.loads((self.repo / "spec" / "contract" / "result.schema.json").read_text(encoding="utf-8"))
+        self.schema = json.loads((self.repo / "engineering" / "spec" / "contract" / "result.schema.json").read_text(encoding="utf-8"))
         self.session = None          # the Session JSON of `session start`
         self.stopped = None          # the Session JSON of `session stop`
         self.stop_answer = None

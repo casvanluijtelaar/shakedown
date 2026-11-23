@@ -4,7 +4,7 @@ They share one dedicated session of setup rld: a server, two clients and a headl
 and both fixtures, each fixture watched by reload. @skd_fixture is watched in its installed copy, which
 a test may add fn_new.sqf to and name config.cpp of (FIX-03). @skd_fixture_cba is watched in a staged
 copy of its sources in the project, with a rebuild that copies the staged fnc_version.sqf into the
-installed copy, as spec/contract/fixture-mod.md gives it. Per repeat the batch drives, in this order:
+installed copy, as engineering/spec/contract/fixture-mod.md gives it. Per repeat the batch drives, in this order:
 
 1. US-040: a check run, edited and run again; reload naming the check, by command and by tool.
 2. US-011: a check that sets a public variable, then a @reset mission check.

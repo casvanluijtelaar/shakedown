@@ -1,7 +1,7 @@
 r"""The checks of M15 Hand over to the manual tester: US-083 and US-084.
 
 Each part starts and stops what it needs itself, once per repeat (`--repeat`), with no session running before it,
-in the project `m15` of its own in the work folder. Its `tests\` holds the checks of `acceptance/m15/`; its setups,
+in the project `m15` of its own in the work folder. Its `tests\` holds the checks of `engineering/acceptance/m15/`; its setups,
 in this order, are `sp` (singleplayer) and `ded` (a dedicated server with two clients and a headless client), each
 loading `@skd_fixture` alone.
 

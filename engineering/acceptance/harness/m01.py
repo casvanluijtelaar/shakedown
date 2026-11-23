@@ -7,7 +7,7 @@ import re
 from . import driver
 from .core import batch, check, execution
 
-# SQF check ids, as `list` gives them (their files are in acceptance/checks/).
+# SQF check ids, as `list` gives them (their files are in engineering/acceptance/checks/).
 UNKNOWN_CLASS = "us018/US-018-unknown-class"
 PLACE_POSITION = "us018/US-018-place-position"
 CEILING_NEGATIVE = "us018/US-018-ceiling-negative"

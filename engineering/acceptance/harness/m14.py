@@ -2,7 +2,7 @@ r"""The checks of M14, reload without a game restart: US-081 and US-082.
 
 They run in two sessions of the generated project, each loading CBA, @skd_fixture and @skd_fixture_cba,
 with @skd_fixture_cba watched in the staged copy of its sources that M6 makes in `stage\`, and a rebuild
-that copies the staged fnc_version.sqf into the installed copy, as spec/contract/fixture-mod.md gives it
+that copies the staged fnc_version.sqf into the installed copy, as engineering/spec/contract/fixture-mod.md gives it
 (FIX-03):
 
 - m14, a dedicated server with two clients, as US-081 1, 2 and 4 have it;

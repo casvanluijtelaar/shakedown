@@ -1,4 +1,4 @@
-"""Runs the acceptance suite. See acceptance/README.md for how to use it."""
+"""Runs the acceptance suite. See engineering/acceptance/README.md for how to use it."""
 
 import argparse
 import json
@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parent
+REPO = HERE.parent.parent
 sys.path.insert(0, str(HERE))
 
 from harness import driver, m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19  # noqa: E402,F401  (importing a module registers its checks)

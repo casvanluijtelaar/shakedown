@@ -11,7 +11,7 @@ from . import driver
 from .core import batch, check, execution
 from .m01 import DEMO_ACTION, DEMO_KEY, ended, passed, stopped_in
 
-# SQF check ids, as `list` gives them (their files are in acceptance/checks/).
+# SQF check ids, as `list` gives them (their files are in engineering/acceptance/checks/).
 MACHINES = "us002/US-002-machines"
 GROUPS = "us002/DM-12-groups"
 RL = [f"us008/US-008-start-state-{n:02}" for n in range(1, 21)]

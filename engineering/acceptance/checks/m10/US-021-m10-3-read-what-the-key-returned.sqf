@@ -3,7 +3,7 @@
 
 // docs/acting-through-the-mod.md, "Did the key pass on to the game?": a check that asserts whether a key is consumed calls the keybind's
 // code itself on the player's machine, as skd_fnc_pressKey does, and reads its value. The fixture's signal key
-// counts each call of its down code on the player's unit (spec/contract/fixture-mod.md).
+// counts each call of its down code on the player's unit (engineering/spec/contract/fixture-mod.md).
 private _unit = ["p1"] call skd_fnc_player;
 [{ (_this select 0) setVariable ["skdfx_signalDown", nil, true]; (_this select 0) setVariable ["skdfx_signalUp", nil, true] }, [_unit]] call skd_fnc_cleanup;
 

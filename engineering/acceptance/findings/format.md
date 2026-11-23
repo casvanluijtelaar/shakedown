@@ -7,14 +7,14 @@ status: stable
 
 # Findings format
 
-A finding is one OKF concept of type `Finding`, in its own file in `acceptance/findings/mNN/`. It reports a place where the running system, or a document, breaks a promise the spec makes.
+A finding is one OKF concept of type `Finding`, in its own file in `engineering/acceptance/findings/mNN/`. It reports a place where the running system, or a document, breaks a promise the spec makes.
 
 ## File and number
 
 - The file name is a number and the problem stated as a sentence: `04-the-board-hides-orders-with-no-date.md`.
 - Numbers count up within the milestone folder and are never reused. A new finding takes the number after the highest one in the folder.
 - The `id` is `mNN-n`, such as `m02-4`, and never changes.
-- The milestone folder's `index.md` lists every finding, one line each. The line for the folder in `acceptance/findings/index.md` ends in `/`.
+- The milestone folder's `index.md` lists every finding, one line each. The line for the folder in `engineering/acceptance/findings/index.md` ends in `/`.
 
 ## Frontmatter
 
@@ -41,7 +41,7 @@ verified: []
 
 1. **What the spec promises**, quoted, with the story or requirement ID. A finding that cannot quote the promise is not a finding yet.
 2. **What the system does**, shown as the request and the answer. Enough to reproduce it without the check.
-3. **What it costs**, in the terms of the person the story is written for. This decides whether it is fixed now or goes into `plan/deferred/`.
+3. **What it costs**, in the terms of the person the story is written for. This decides whether it is fixed now or goes into `engineering/plan/deferred/`.
 4. **The check that holds it**, by name.
 
 A finding names no cause and points at no file in the source. Its author has not read the source.

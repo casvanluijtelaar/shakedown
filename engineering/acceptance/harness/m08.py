@@ -3,7 +3,7 @@
 Two parts:
 
 - The start checks of M8 run once per repeat (`--repeat`), each with no session running, each in a
-  project of its own in the work folder: `walk` holds the three checks of `acceptance/walk/` and the
+  project of its own in the work folder: `walk` holds the three checks of `engineering/acceptance/walk/` and the
   setup `dedicated-2` (a dedicated server with two clients loading @skd_fixture alone); `ceil` holds the
   eight ceiling checks of `templates/US-063-ceiling.sqf` and the setup `sp`. Per repeat they drive:
   `run --setup dedicated-2` to its end (US-033), the same run stopped with Ctrl+C in its second check
@@ -278,7 +278,7 @@ def once(ctx, key, fn):
 
 
 def own_project(ctx, name):
-    """The project `walk` (setup dedicated-2, the three checks of acceptance/walk) or `ceil` (setup sp, the
+    """The project `walk` (setup dedicated-2, the three checks of engineering/acceptance/walk) or `ceil` (setup sp, the
     eight ceiling checks), made once per suite run, with the .mcp.json of docs/agent-tools.md."""
     store = keep(ctx)
     if name in store:

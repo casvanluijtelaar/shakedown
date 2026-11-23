@@ -7,7 +7,7 @@ from pathlib import Path
 from . import driver
 from .core import batch, check, execution
 
-# SQF check ids, as `list` gives them (their files are in acceptance/checks/).
+# SQF check ids, as `list` gives them (their files are in engineering/acceptance/checks/).
 STEPS_ONLY = "us037/US-019-steps-only"
 STEP_RECORDS = "us037/US-037-step-records"
 EVIDENCE_PASS = "us037/US-037-evidence-on-pass"

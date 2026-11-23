@@ -1,7 +1,7 @@
 """The checks of M11 Late joiners: US-066, US-067, US-068 and US-069.
 
 Each part starts and stops a session of its own, once per repeat (`--repeat`), with no session running
-before it, in the project `m11` in the work folder: the checks of `acceptance/m11/` and two setups loading
+before it, in the project `m11` in the work folder: the checks of `engineering/acceptance/m11/` and two setups loading
 `@skd_fixture` alone, `ded` (a dedicated server with two clients, one late client `p3` and a headless
 client) and `sp` (singleplayer). Per repeat:
 

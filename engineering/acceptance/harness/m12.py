@@ -1,11 +1,11 @@
 r"""The checks of M12 Shared helpers and mod events: US-070, US-071, US-072 and US-073, and DEF-27's criteria.
 
 Each part starts and stops a session of its own, once per repeat (`--repeat`), with no session running
-before it. The project `m12` in the work folder holds the checks of `acceptance/m12/` in its `tests\`, so
+before it. The project `m12` in the work folder holds the checks of `engineering/acceptance/m12/` in its `tests\`, so
 its library folder is the default `tests\_lib\` (`rope.sqf`, `kit.sqf`, and `sub\deep.sqf`, which is in a
 subfolder and so neither a library file nor a check), and two setups: `ded`, a dedicated server with two
 clients loading CBA and both fixtures, and `sp`, singleplayer loading `@skd_fixture` alone. The project
-`m12key` holds `acceptance/m12key/`: `lib = "helpers"` and one check, run in singleplayer. Per repeat:
+`m12key` holds `engineering/acceptance/m12key/`: `lib = "helpers"` and one check, run in singleplayer. Per repeat:
 
 - `list` from the command line and `list_checks` through MCP in `m12`, with no session (US-070 2).
 - `ded`: a run with no selection (US-070 1 and 2, US-072, US-073); `rope.sqf` edited and `shakedown reload`

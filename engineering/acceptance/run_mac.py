@@ -1,11 +1,11 @@
 """The Mac half of M4's exit criterion 1: US-046's third criterion on macOS, with no game and no runner.
 
-Usage: python3 acceptance/run_mac.py [--install <dir>] [--repeat <n>] [--work <dir>]
+Usage: python3 engineering/acceptance/run_mac.py [--install <dir>] [--repeat <n>] [--work <dir>]
 
 It writes a project with the shakedown.toml of docs/project-file.md, two checks and the .mcp.json
 docs/agent-tools.md gives, starts `shakedown mcp` from that .mcp.json with the install folder on PATH,
 speaks JSON-RPC to it on stdio and judges status, list_checks and guide. It never starts Claude Code,
-the game or Steam. See acceptance/README.md.
+the game or Steam. See engineering/acceptance/README.md.
 """
 
 import argparse
@@ -20,7 +20,7 @@ import traceback
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parent
+REPO = HERE.parent.parent
 sys.path.insert(0, str(HERE))
 
 from harness.mcp import Mcp, structured  # noqa: E402

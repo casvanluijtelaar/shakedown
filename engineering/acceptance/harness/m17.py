@@ -1,7 +1,7 @@
 r"""The checks of M17 ACE interaction: US-089 and US-090's acceptance criteria.
 
 Once per repeat, with no session running, in the project `m17` of its own in the work folder, whose `tests\` holds
-the checks of `acceptance/m17/` and whose `shakedown.toml` names CBA, both fixtures and ACE3 (from the Steam Workshop,
+the checks of `engineering/acceptance/m17/` and whose `shakedown.toml` names CBA, both fixtures and ACE3 (from the Steam Workshop,
 item 463939057, or the `SHAKEDOWN_ACE` variable, with `patch = "ace_main"`). Its setups are `ded-ace` (a dedicated
 server with two clients loading CBA, both fixtures and ACE), `sp-ace` (singleplayer, the same mods) and `sp-noace`
 (singleplayer, CBA and both fixtures, no ACE). One `run --setup <setup> --json` of that setup's checks per setup,

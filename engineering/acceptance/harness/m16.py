@@ -1,7 +1,7 @@
 r"""The checks of M16 A start that explains itself: US-085, US-086, US-087 and DEF-29's acceptance criteria.
 
 Each part starts and stops what it needs itself, once per repeat (`--repeat`), with no session running before it,
-in the project `m16` of its own in the work folder. Its `tests\` holds the check of `acceptance/m16/`; its
+in the project `m16` of its own in the work folder. Its `tests\` holds the check of `engineering/acceptance/m16/`; its
 `shakedown.toml` sets `base_port = 2602` and names the mod `fixture` (`@skd_fixture`, patch `skdfx_main`, with a
 `version` only where a part writes one) and the mod `gone`, whose folder does not exist. Its setups are `sp`
 (singleplayer), `ded` (a dedicated server with two clients), `hung` (`ded` with `start_timeout = 150`, room for p1 to be ready on a cold machine, so p2 alone is still `launched` at the ceiling) and `gap`
