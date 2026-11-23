@@ -203,6 +203,8 @@ Look for a worktree left behind, game or server processes from an interrupted ru
 
 - 2026-11-23: The owner stopped the docs testing: no verify round for the docs findings m19-1 to m19-8. The developer's own in-game tests of m19-5 and m19-6 are the evidence for those fixes; the eight findings stay `addressed` without `verified`, and the bundle check keeps listing them until a later tester round verifies them.
 
+- 2026-11-23: The owner moved the engineering folders under `engineering/`: `spec/`, `plan/`, `research/` and `acceptance/` go to `engineering/<name>/`, and this playbook is `engineering/coordinator.md`. The product stays at the root (`crates/`, `addon/`, `tools/`, `fixtures/`, `e2e/`, `docs/`, the workspace files, `.github/`). The coordinator moved this file itself; a developer round moves the rest and fixes every path outside `acceptance/`; a tester round fixes the paths inside `acceptance/`. Prompts now forbid opening `engineering/coordinator.md` and coordinator commits.
+
 ## Knowledge about the tooling
 
 - 2026-11-22: The owner set the PowerShell execution policy for their user to `RemoteSigned` (`CurrentUser`; machine and user policies undefined). Local scripts such as `tools/install.ps1` run with `powershell -File`; a downloaded script needs `Unblock-File` or a signature. Undo: the same command with `Undefined`.
