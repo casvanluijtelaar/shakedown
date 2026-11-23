@@ -2,7 +2,7 @@
 // @tags US-008 RST-01 m10-2 acceptance
 
 // The control for m10-2: the reset itself does not put back allowDamage or a variable in p1's missionNamespace
-// (docs/check-api.md, "The reset between checks"), and a cleanup that names no machine runs on the lead, the server.
+// (docs/scenes-resets-and-cleanups.md, "What the reset does not touch"), and a cleanup that names no machine runs on the lead, the server.
 ["p1", { player allowDamage false; missionNamespace setVariable ["skd_m10_2", 1]; true }] call skd_fnc_on;
 [{ if (!isNull player) then { player allowDamage true }; missionNamespace setVariable ["skd_m10_2", nil] }] call skd_fnc_cleanup;
 ["p1", { [isDamageAllowed player, missionNamespace getVariable ["skd_m10_2", 0]] }, "==", [false, 1],

@@ -1,7 +1,7 @@
 // @check US-008 A cleanup that names p1 undoes p1's allowDamage and a variable in its missionNamespace though the check fails first
 // @tags US-008 RST-01 m10-2 acceptance
 
-// docs/check-api.md, "Cleanups and ending a check": state local to one client is undone on that client, so its
+// docs/scenes-resets-and-cleanups.md, "Cleanups": state local to one client is undone on that client, so its
 // cleanup names it. The check sets two such pieces of state on p1, registers a cleanup for p1, and fails before
 // it puts anything back itself.
 ["p1 makes its player unhurtable and sets a variable", {

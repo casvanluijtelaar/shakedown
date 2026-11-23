@@ -10,7 +10,7 @@ checks: ["US-052 SEC-02 INT-WIN-03 while a runner runs, runner.json grants read 
 stories: [US-052]
 generated: { by: "claude-code/tester", at: 2026-11-09T03:43:44-08:00 }
 addressed:
-  - { by: "claude-code/developer", at: 2026-11-09T04:17:25-08:00, note: "The runner writes runner.json under a temporary name with a protected access list that grants full control to the current user alone, then renames it into place; the unit test sec_02_a_private_file_grants_the_current_user_only proves the list, and the named check passed 3 of 3. docs/sessions-and-the-runner.md, docs/install.md and docs/milestones/m00.md say so." }
+  - { by: "claude-code/developer", at: 2026-11-09T04:17:25-08:00, note: "The runner writes runner.json under a temporary name with a protected access list that grants full control to the current user alone, then renames it into place; the unit test sec_02_a_private_file_grants_the_current_user_only proves the list, and the named check passed 3 of 3. docs/sessions-and-the-runner.md, docs/install.md and plan/reports/m00.md say so." }
 verified:
   - { by: "claude-code/tester", at: 2026-11-09T04:22:07-08:00 }
 ---
@@ -34,13 +34,13 @@ S-1-5-32-544  (Administrators)  Allow FullControl  inherited
 the current user                Allow FullControl  inherited
 ```
 
-The rules are not protected (`AreAccessRulesProtected` is false), and the file has no rule of its own; all three come from the folder. Any account in the local Administrators group can therefore read the runner token. `docs/milestones/m00.md` says, under Left out, that the file "lives in the user's local application data folder, which only the user can read, and is written with no ACL of its own". On this machine that folder grants the same three principals, so the folder does not keep other administrators out either.
+The rules are not protected (`AreAccessRulesProtected` is false), and the file has no rule of its own; all three come from the folder. Any account in the local Administrators group can therefore read the runner token. `plan/reports/m00.md` says, under Left out, that the file "lives in the user's local application data folder, which only the user can read, and is written with no ACL of its own". On this machine that folder grants the same three principals, so the folder does not keep other administrators out either.
 
 The check allows SYSTEM, which is the operating system itself and not an account a person or program logs on as. It fails only on the Administrators group. 3 of 3 runs failed the same way.
 
 ## What it costs
 
-On a machine with more than one administrator account, another administrator's programs can read the token and drive the session, and so run code in the game as this user's test. The test machine has one user, so the cost there is small. An administrator can also take ownership of any file. Still, the promise is "the current user only", and both the contract and the M0 docs say it holds. Either the runner writes the file with a protected ACL that grants only the current user (and SYSTEM, if the spec allows it), or the spec, the contract and `docs/milestones/m00.md` say what the file's ACL is.
+On a machine with more than one administrator account, another administrator's programs can read the token and drive the session, and so run code in the game as this user's test. The test machine has one user, so the cost there is small. An administrator can also take ownership of any file. Still, the promise is "the current user only", and both the contract and the M0 docs say it holds. Either the runner writes the file with a protected ACL that grants only the current user (and SYSTEM, if the spec allows it), or the spec, the contract and `plan/reports/m00.md` say what the file's ACL is.
 
 ## The check that holds it
 

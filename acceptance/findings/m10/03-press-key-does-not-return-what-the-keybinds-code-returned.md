@@ -8,7 +8,7 @@ status: draft
 raised_by: test
 for: developer
 checks:
-  - "US-021 ACT-02 m10-3 the way docs/check-api.md gives to read what a keybind's code returned runs the fixture's signal down code once and reads false from arma-grappling-hook's let go off a rope"
+  - "US-021 ACT-02 m10-3 the way docs/acting-through-the-mod.md gives to read what a keybind's code returned runs the fixture's signal down code once and reads false from arma-grappling-hook's let go off a rope"
 stories: [US-021]
 generated: { by: "claude-code/tester", at: 2026-11-13T07:10:46-08:00 }
 addressed:

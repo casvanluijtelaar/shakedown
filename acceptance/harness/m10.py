@@ -782,7 +782,7 @@ def m10_5(ctx):
     ctx.log(f"M10 m10-5: the longest wait for a just-created crate on a client took {max(waits[0]):.2f} s")
 
 
-@check("US-021 ACT-02 m10-3 the way docs/check-api.md gives to read what a keybind's code returned runs the fixture's signal down code once and reads false from arma-grappling-hook's let go off a rope",
+@check("US-021 ACT-02 m10-3 the way docs/acting-through-the-mod.md gives to read what a keybind's code returned runs the fixture's signal down code once and reads false from arma-grappling-hook's let go off a rope",
        "session", needs=[M10_3], setup="cba")
 def m10_3(ctx):
     answer, out, result = got(ctx, "cba", "m10-3")

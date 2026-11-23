@@ -1,7 +1,7 @@
 // @check US-021 The documented way to read what a keybind's code returned reaches the code skd_fnc_pressKey calls
 // @tags US-021 ACT-02 m10-3 acceptance
 
-// docs/check-api.md, "Acting through the mod": a check that asserts whether a key is consumed calls the keybind's
+// docs/acting-through-the-mod.md, "Did the key pass on to the game?": a check that asserts whether a key is consumed calls the keybind's
 // code itself on the player's machine, as skd_fnc_pressKey does, and reads its value. The fixture's signal key
 // counts each call of its down code on the player's unit (spec/contract/fixture-mod.md).
 private _unit = ["p1"] call skd_fnc_player;
