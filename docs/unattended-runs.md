@@ -1,13 +1,13 @@
 ---
 type: Documentation
 title: Running a suite unattended
-description: How to run the whole suite with one command that starts and stops its own session, how to stop a run by hand from the console, the command line or an AI agent, the runner ceiling that stops a run that hangs, and how to read the result file of a stopped run.
-status: stable
+description: How to run the whole suite with one command that starts and stops its own session and leaves nothing running, how to stop a run by hand from the console, the command line or an AI agent, the runner ceiling that stops a run that hangs, and how to read the result file of a stopped run.
+status: draft
 ---
 
 # Running a suite unattended
 
-One command runs every check of a setup and leaves nothing behind, whatever happens to the run (`RUN-04`, `RUN-05`, `RUN-06`, `STP-02`). To run a suite in every setup its checks name, with one command, see [Every setup, repeats and slow steps](every-setup-and-repeats.md).
+One command runs every check of a setup and leaves nothing behind, whatever happens to the run. To run a suite in every setup its checks name with one command, see [Every setup, repeats and slow steps](every-setup-and-repeats.md).
 
 ## One command, then walk away
 
@@ -15,25 +15,27 @@ One command runs every check of a setup and leaves nothing behind, whatever happ
 shakedown run --setup dedicated-2
 ```
 
-With no session running, `run --setup` starts a session of that setup, runs every check, and stops the session, whatever the outcomes: passed, failed, stopped by hand or at the runner ceiling. The one exception is a check that hands the session over to a manual tester, which leaves it up ([Handing over to a manual tester](handing-over.md)). Give ids or `--tag` to run fewer. When it ends:
+With no session running, `run --setup` starts a session of that setup, runs every check, and stops the session, whatever the outcomes: passed, failed, stopped by hand or at the runner ceiling. The one exception is a check that hands the session over to a person, which leaves it up ([Handing over to a person](handing-over.md)). Give ids or `--tag` to run fewer. When it ends:
 
-- the exit code says how it went: 0 every check passed, 1 a check failed, 2 none failed and one was `invalid` or the run was stopped;
-- the run folder `.shakedown\runs\<run id>\` holds `result.json`, `logs\<machine>.log` for each machine and `checks\<n>\<machine>.log` for each check execution ([What a run leaves behind](writing-and-running-checks.md#what-a-run-leaves-behind)); every path in `result.json` is relative to that folder;
+- the exit code says how it went: 0 every check passed, 1 a check failed, 2 none failed and one was `invalid`, the run was stopped, or its session failed;
+- the run folder `.shakedown\runs\<run id>\` holds `result.json`, `logs\<machine>.log` for each machine and `checks\<n>\<machine>.log` for each check execution; every path in `result.json` is relative to that folder ([Results and the result file](results.md));
 - no `arma3_x64` or `arma3server_x64` process of the session runs, no port from `base_port` to `base_port` plus 4 is held, the mission copy in the game's `MPMissions` folder is gone, and `shakedown status` shows no session.
 
 The framework writes nothing in the project but `.shakedown\`, which holds a `.gitignore` of `*`, so git never sees a run.
 
 With a session already running, `run` without `--setup` uses it and leaves it `ready` afterwards; `run --setup` naming another setup is refused.
 
+A scheduled task, or a script on a machine with the game, runs such a command and reads the exit code. A session needs a Windows machine with Arma 3 and a logged-in Steam client, and a game client renders only while the machine has a display, so a hosted CI runner cannot run one.
+
 ## Stopping a run by hand
 
-Any of these stop a run alike (`RUN-05`):
+Any of these stop a run alike:
 
 | How | Where |
 |---|---|
-| Ctrl+C or Ctrl+Break | In the console where `shakedown run` runs. A program that drives `shakedown run` sends Ctrl+Break to its process group. |
-| `shakedown run stop` | From any other console, for the active run. With no run active it exits 4. |
-| `run_stop {"run_id": "..."}` | From an AI agent ([Agent tools](agent-tools.md)). |
+| Ctrl+C or Ctrl+Break | In the console where `shakedown run` runs. A program that drives `shakedown run` sends Ctrl+Break to its process group. A further Ctrl+C is taken as the same stop. |
+| `shakedown run stop` | From any other console, for the active run. With no run active it exits 4: `No run is active, so there is nothing to stop.` |
+| `run_stop {"run_id": "..."}` | From an AI agent ([AI agents and the MCP tools](agent-tools.md)). |
 
 What happens:
 
@@ -42,7 +44,13 @@ What happens:
 3. The result file is written with `run.state` `stopped` and `run.stopped_reason` `by-hand`, and the logs are cut out as for any run.
 4. A run that started its own session stops it; a run against a session you started leaves it `ready`, with every machine on the same start, so you can run again at once.
 
-`run stop` and `run_stop` return once the result file is written, with the run's status: its state, how many checks executed and each outcome. `shakedown run` prints its usual lines and summary, then exits 2 unless a check failed:
+`run stop` and `run_stop` return once the result file is written, with the run's status: its state, how many checks executed and each outcome. `shakedown run stop` prints:
+
+```
+run r-20261111-222122-4 stopped: 2 of 3 checks executed. Result: C:\...\.shakedown\runs\r-20261111-222122-4\result.json
+```
+
+`shakedown run` prints its usual lines and summary, then exits 2 unless a check failed:
 
 ```
 pass    first  (2.0 s)
@@ -53,13 +61,14 @@ Run stopped: by-hand.
 1 passed, 0 failed, 1 invalid, 1 not run. Result: C:\...\.shakedown\runs\r-20261111-222122-4\result.json
 ```
 
-A Ctrl+C while `run --setup` is still starting its session lets the start finish, then ends the run at once with every check not run, and stops the session. A mission restart before a `@reset mission` check also finishes before the stop takes the check, so no machine is left half restarted.
-
-`shakedown session stop` during a run stops the run first, with `stopped_reason` `session-stopped`, then the session.
+- A Ctrl+C while `run --setup` is still starting its session lets the start finish, then ends the run at once with every check not run, and stops the session.
+- A mission restart before a `@reset mission` check also finishes before the stop takes the check, so no machine is left half restarted.
+- A stop during a check's reset ends that check at once, but the reset already sent to the machines, with any cleanup it runs, goes on in the game until it ends or reaches its 15 s ceiling.
+- `shakedown session stop` during a run stops the run first, with `stopped_reason` `session-stopped`, then the session.
 
 ## The runner ceiling
 
-A suite you walked away from must end even when something hangs. Every run has a runner ceiling: the sum of the `@timeout` of the checks it executes, plus 60 s, counted from the start of its first check, after any session it starts is ready (`RUN-06`). Resets, mission restarts and cleanups count against it. A check whose `@setups` leaves out the session's setup adds nothing.
+A suite you walked away from must end even when something hangs. Every run has a runner ceiling: the sum of the `@timeout` of the checks it executes, plus 60 s, counted from the start of its first check, after any session it starts is ready. Resets, mission restarts and cleanups count against it. A check whose `@setups` leaves out the session's setup adds nothing.
 
 At the ceiling the run stops as by hand, with `stopped_reason` `run-ceiling`, and the check it was on says so:
 
@@ -78,7 +87,7 @@ The result file of a stopped run is a whole result file, valid against [result.s
 |---|---|
 | `run.state` | `stopped` (a run that ran every check is `finished`). |
 | `run.stopped_reason` | `by-hand`, `run-ceiling` or `session-stopped`; `null` for a finished run. |
-| `checks` | Every check that started, the last one `invalid` / `run-stopped` when the stop came during it, with its script errors and its logs; it lists no steps, since the game's report of them never came. |
+| `checks` | Every check that started, the last one `invalid` / `run-stopped` when the stop came during it, with its script errors and its logs; that one lists no steps, since the game's report of them never came. |
 | `not_run` | Every check that did not start, reason `run-stopped`, one entry per time it was given. |
 | `summary` | `total` counts the checks not run too: `pass + fail + invalid + not_run`. |
 

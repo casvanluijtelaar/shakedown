@@ -1,26 +1,31 @@
 ---
 type: Documentation
-title: Dedicated sessions
-description: How to declare and start a dedicated server with game clients and headless clients on one machine, how a check names each machine and group, how code, waits and agreement reach other machines, how a check makes a client join late, leave and join again, what the reset does across machines, and how to see a session's machines with status.
+title: Dedicated servers, clients and headless clients
+description: How to declare and start a dedicated server with game clients and headless clients on one machine, how a check names each machine and group, how code, waits and agreement reach other machines and when an object is looked up, how a check makes a client join late, leave and join again, what the reset does across machines, and how to see a session's machines with status.
 status: draft
 ---
 
-# Dedicated sessions
+# Dedicated servers, clients and headless clients
 
-A dedicated session is a dedicated server with game clients and headless clients, all on the one Windows machine, all on the one Steam account. A check runs on the server and reaches every other machine by its name. Its contract is [spec/contract/check-api.md](../spec/contract/check-api.md) and [spec/contract/cli.md](../spec/contract/cli.md); the project file keys are in [The project file](project-file.md).
+A dedicated session is a dedicated server with game clients and headless clients, all on the one Windows machine, all on the one Steam account. A check runs on the server and reaches every other machine by its name. The project file keys are in [The project file](project-file.md).
 
 ## Declaring one
 
 ```toml
+base_port = 2402       # the server's game port; it and the next four must be free
+
 [setups.dedicated]
 mode = "dedicated"
 clients = 2            # game clients p1 and p2
 headless = 1           # headless client hc1
 late = 1               # a late game client p3, which a check joins (optional)
-mods = ["cba", "agh"]
+mods = ["cba", "mymod"]
 ```
 
-The server uses `base_port` (default 2402) and the next four ports; the start refuses when one is held, which it reads from the system's UDP table without binding the ports. Those ports are the game's own: `arma3server_x64.exe` and `arma3_x64.exe` open them, so Windows Firewall asks about the game's executables once, the first time the game is run, and never about `shakedown.exe`. A dedicated session loads the framework's addon through the link `<game>\@shakedown`, because a dedicated server and a headless client load an extension only from inside the game folder; the start makes that link when it is missing and points it at the installed `@shakedown` when it points elsewhere. A mod with an extension of its own must also be inside the game folder for the server and headless clients, as `@skd_fixture` is through its link `<game>\@skd_fixture`.
+- **Ports.** The server uses `base_port` (default 2402) and the next four ports; the start refuses when one is held, which it reads from the system's UDP table without binding the ports. Those ports are the game's own: `arma3server_x64.exe` and `arma3_x64.exe` open them, so Windows Firewall asks about the game's executables once, the first time the game is run, and never about `shakedown.exe`.
+- **The framework's addon.** A dedicated session loads the framework's addon through the link `<game>\@shakedown`, because a dedicated server and a headless client load an extension only from inside the game folder. The start makes that link when it is missing and points it at the installed `@shakedown` when it points elsewhere.
+- **Mods with an extension.** A mod with an extension of its own must also be inside the game folder for the server and the headless clients: link it there, as `mklink /J "<game>\@mymod" "C:\path\to\@mymod"`, and give that path in the project file.
+- **The server.** Every server the framework starts is the session's own: `loopback = 1`, BattlEye off, named `shakedown <session id>`, and every client is told to connect to it alone.
 
 ## Starting and stopping
 
@@ -30,9 +35,9 @@ shakedown status
 shakedown session stop
 ```
 
-`session start` starts the server, waits for its mission, then starts every game client and headless client at once, and returns when every machine is ready: a client is ready when its agent answers and the server sees it at client state 10. On the test machine a server with two clients and a headless client is ready in 43 to 45 s, so a `start_timeout` below 60 s cannot hold it. Each game client opens a window, titled `Arma 3 - p1 (<session id>)` once its extension connects; a window renders only while the machine has a display. The server and headless clients have no window.
+`session start` starts the server, waits for its mission, then starts every game client and headless client at once, and returns when every machine is ready: a client is ready when its agent answers and the server sees it at client state 10. A server with two clients and a headless client is ready in 43 to 45 s, so a `start_timeout` below 60 s cannot hold it. Each game client opens a window, titled `Arma 3 - p1 (<session id>)` once its extension connects, and may take the foreground; a window renders only while the machine has a display, such as a connected remote desktop. The server and headless clients have no window.
 
-A start that fails, because a process exits or the start ceiling passes, ends with exit code 4 and stops every process it started. Its message names the machine, what state it was in, and the last 20 lines of its RPT; at the ceiling it lists every machine that was not ready. With `--json` it prints the session with state `failed` and its `reason`. That output often passes 4 KB, so a program that runs `session start` in the background reads its stdout and stderr while it runs: the command writes them as it ends and cannot exit before they are read.
+A start that fails, because a process exits or the start ceiling passes, ends with exit code 4 and stops every process it started. Its message names the machine, what state it was in, and the last 20 lines of its RPT; at the ceiling it lists every machine that was not ready ([Starting a session, and when it fails](starting-and-failed-starts.md)).
 
 `status` works at any time, also while a session starts in another command. It lists each machine from the moment its process is launched, so while the server loads its mission it lists the server alone, and the clients and headless clients appear, each with its process id, once they are started:
 
@@ -52,33 +57,37 @@ The process id finds a machine's window or lets a tool end or suspend that one p
 | Name | Is |
 |---|---|
 | `"server"` | The dedicated server. The check body runs here. It has no player: `player` in the body is `objNull`. |
-| `"p1"` to `"pN"` | The game clients, each with a player unit. |
+| `"p1"` to `"pN"` | The game clients, each with a player unit. Each game process runs under its machine name, so `name player` on `p1` is `p1`. |
 | `"hc1"` to `"hcN"` | The headless clients, with no player. |
 | `"all"` | Every machine, in the order `server`, `p1`..`pN`, `hc1`..`hcN`. |
 | `"clients"` | `p1` to `pN`. |
 | `"headless"` | `hc1` to `hcN`. |
 
-In singleplayer the only machine is `p1`, which `"server"` also names, and `"all"` and `"clients"` are `["p1"]`.
+In singleplayer the only machine is `p1`, which `"server"` also names; `"all"` and `"clients"` are `["p1"]`, and `"headless"` is empty.
 
 ```sqf
 private _p1 = ["p1"] call skd_fnc_player;          // p1's unit, as the server sees it
 private _each = ["all", { profileName }] call skd_fnc_onEach;
-// _each: server -> "server", p1 -> "p1", p2 -> "p2", hc1 -> ...
+// _each: server -> "server", p1 -> "p1", p2 -> "p2", hc1 -> "hc1"
 ```
 
-A check meant to run in both kinds of setup names a player's unit with `skd_fnc_player`, never with `player`, and names machines through `skd_fnc_machines` or a group where a machine may not exist. This check runs unchanged in singleplayer and on a dedicated session:
+### A check for both kinds of setup
+
+A check meant to run in singleplayer and on a dedicated session names a player's unit with `skd_fnc_player`, never with `player`, and names machines through `skd_fnc_machines` or a group where a machine may not exist. This check runs unchanged in both:
 
 ```sqf
 // @check US-019 p1 opens the crate and the server and every client see the kit
 private _p1 = ["p1"] call skd_fnc_player;
 private _on = (call skd_fnc_machines) select { (_x select [0, 2]) != "hc" };   // server and clients
-private _crate = ["skdfx_Crate", AGLToASL [100, 102, 0], 0] call skd_fnc_create;
+private _crate = ["mymod_Crate", AGLToASL [100, 102, 0], 0] call skd_fnc_create;
 ["p1", AGLToASL [100, 100, 0], 0] call skd_fnc_place;
 private _kits = { { _x == "FirstAidKit" } count items (_this select 0) };
 private _before = ["server", _kits, [_p1]] call skd_fnc_on;
 ["p1", _crate, "Open crate"] call skd_fnc_useAction;
 [_on, _kits, "==", _before + 1, "p1's first aid kits", 10, [_p1]] call skd_fnc_expectEach;
 ```
+
+In singleplayer `_on` is `["p1"]`; on a dedicated session with a headless client it is `["server", "p1", "p2"]`.
 
 ## Code, waits and agreement across machines
 
@@ -92,31 +101,37 @@ flag agrees: the machines did not agree within 2 s (tolerance 0): p2 read 6 wher
 
 `reason.machine` is `p2`, and the result's `evidence.observed` holds each machine's value.
 
-`skd_fnc_useAction` waits for the action and fires it on the acting client; `"server"` or a headless client as the acting machine ends `check-error`, since it has no player. `skd_fnc_pressKey` presses the keybind on the named machine. `skd_fnc_create` creates on the server and returns there before every other machine sees the object in place; `skd_fnc_place` sets a unit where it is local, and returns once the server sees it there. `skd_fnc_setDate` and `skd_fnc_setWeather` set the date and weather on the server and on every other machine, and return once every machine reads them.
+What each function does across machines:
+
+- `skd_fnc_useAction` waits for the action and fires it on the acting client; `"server"` or a headless client as the acting machine ends `check-error`, since it has no player.
+- `skd_fnc_pressKey` presses the keybind on the named machine.
+- `skd_fnc_create` creates on the server and returns there before every other machine sees the object in place.
+- `skd_fnc_place` sets a unit where it is local, and returns once the server sees it there.
+- `skd_fnc_setDate` and `skd_fnc_setWeather` set the date and weather on the server and on every other machine, and return once every machine reads them.
+
+### When an object is looked up
 
 A check that reads a just-created object on another machine waits for that machine to see it where it was put, since at first the machine can see no object, or the object at the spot the engine made it:
 
 ```sqf
-private _crate = ["skdfx_Crate", AGLToASL [100, 102, 0], 0] call skd_fnc_create;
+private _crate = ["mymod_Crate", AGLToASL [100, 102, 0], 0] call skd_fnc_create;
 ["p2", {
     private _c = _this select 0;
     !isNull _c && { (getPosASL _c) distance2D [100, 102, 0] < 0.1 }
 }, "p2 sees the crate in place", 5, [_crate]] call skd_fnc_waitUntil;
 ```
 
-Which functions look an object in `args` up, and when:
-
 | Function | When the object in `args` is looked up on the target | A machine that does not know it yet |
 |---|---|---|
 | `skd_fnc_waitUntil`, `skd_fnc_tryWaitUntil`, `skd_fnc_expectOn`, `skd_fnc_expectEach`, `skd_fnc_expectAgree` | Before every evaluation, every frame. | Reads `objNull` until the object reaches it, then the object. |
-| `skd_fnc_useAction` (its `target`) | Every frame while it waits for the action. | Waits for it, within the ceiling. |
+| `skd_fnc_useAction`, `skd_fnc_useAceAction` (their `target`) | Every frame while it waits for the action. | Waits for it, within the ceiling. |
 | `skd_fnc_on`, `skd_fnc_onEach`, `skd_fnc_cleanup` | Once, when the code starts there. | Gets `objNull` for the whole run of the code. |
 
 So wait first, then act: `skd_fnc_on` sent at once after `skd_fnc_create` can get `objNull` on a client, and code that polls the object inside it then reads `objNull` until its ceiling. After the wait above, the client has the object, and a `skd_fnc_on` that follows gets it.
 
 ## Joining late, leaving and joining again
 
-A setup's `late` clients are named after the clients it starts: `clients = 2` and `late = 1` give `p1` and `p2` at the start and the late `p3`, which no session start launches. A check makes a game client join, leave and join again; the contract is [Joining and leaving](../spec/contract/check-api.md#joining-and-leaving).
+A setup's `late` clients are named after the clients it starts: `clients = 2` and `late = 1` give `p1` and `p2` at the start and the late `p3`, which no session start launches. A check makes a game client join, leave and join again:
 
 ```sqf
 // @check US-066 a client that joins late sees the crate the others see
@@ -124,7 +139,7 @@ A setup's `late` clients are named after the clients it starts: `clients = 2` an
 // @timeout 240
 
 private _crate = ["a crate with a flag on the server", {
-    private _c = ["skdfx_Crate", AGLToASL [120, 110, 0], 0] call skd_fnc_create;
+    private _c = ["mymod_Crate", AGLToASL [120, 110, 0], 0] call skd_fnc_create;
     ["server", { (_this select 0) setVariable ["flag", 7, true] }, [_c]] call skd_fnc_on;
     _c
 }] call skd_fnc_step;
@@ -140,28 +155,34 @@ private _crate = ["a crate with a flag on the server", {
 ["p2"] call skd_fnc_join;     // p2 is back with start number 2 and a new unit
 ```
 
-- **`skd_fnc_join`** starts a new process for the machine, with its own profile folder `machines\<name>-<start>`. A late client's first join is start 1; a client that left and joins again takes the next start number of its name. It returns once the client is ready, as a start's client is: its agent answers and the server sees it at client state 10. On the test machine a join takes about 30 s, so give the check an `@timeout` that leaves room for it; the join's own ceiling defaults to the setup's `start_timeout`, cut to the time the check has left. `status` lists the machine from its launch; `skd_fnc_machines`, `"all"` and `"clients"` include it once it is ready.
-- **`skd_fnc_leave`** has the server kick the client by its name, which the server takes at once, then ends the client's process, and returns once the server's `PlayerDisconnected` event has fired for it, which on the test machine is a fraction of a second. The machine is then gone from `status` and from `skd_fnc_machines`; its start ends `stopped` in the result file, not `lost`, so the check goes on and the session stays `ready`. Its unit stays where it stood, as a body, until the reset before the next check deletes it, so a client that joins again in the same check gets a new unit beside that body; a check that reads what the mod did about the leave reads it on the server or the clients that stay.
-- **A join that fails** is the environment's failure: a client that is not ready within the ceiling, or whose process exits during the join, ends the check `invalid` / `machine-lost` naming it, with its last 20 RPT lines in the evidence and, for an exit, its exit code. Its process is stopped and the session stays `ready` without it.
-- **A wrong machine** is the check's mistake: joining or leaving `server`, a headless client, a machine the setup does not name, a client already in or one already out, or anything in singleplayer, ends the check `fail` / `check-error` with the machines that can join and leave at that moment:
+- **`[machine, ceiling] call skd_fnc_join`** starts a new process for the machine, with its own profile folder `machines\<name>-<start>`. A late client's first join is start 1; a client that left and joins again takes the next start number of its name. It returns once the client is ready, as a start's client is: its agent answers and the server sees it at client state 10. A join takes about 30 s, so give the check an `@timeout` that leaves room for it, about 40 s per join; the join's own ceiling defaults to the setup's `start_timeout`, cut to the time the check has left. `status` lists the machine from its launch; `skd_fnc_machines`, `"all"` and `"clients"` include it once it is ready, `skd_fnc_player` gives its unit, and the result file records the versions it loaded.
+- **`[machine, ceiling] call skd_fnc_leave`** has the server kick the client by its name, which drops it at once rather than after its disconnect timeout, then ends the client's process, and returns once the server's `PlayerDisconnected` event has fired for it, a fraction of a second later. Its ceiling defaults to 20 s, the server's disconnect timeout of 15 s plus 5. The machine is then gone from `status` and from `skd_fnc_machines`; its start ends `stopped` in the result file, not `lost`, so the check goes on and the session stays `ready`. Its unit stays where it stood, as a body, until the reset before the next check deletes it, so a client that joins again in the same check gets a new unit beside that body. A check that reads what the mod did about the leave reads it on the server or the clients that stay.
+- **A join that fails** is the environment's failure: a client that is not ready within the ceiling, or whose process exits during the join, ends the check `invalid` / `machine-lost` naming it, with its last 20 RPT lines in the evidence and, for an exit, its exit code. Its process is stopped and the session stays `ready` without it. A leave whose `PlayerDisconnected` has not fired within the ceiling ends the check the same way.
+- **A wrong machine** is the check's mistake: joining or leaving `server`, a headless client, a machine the setup does not name, a client already in or one already out ends the check `fail` / `check-error` with the machines that can join and leave at that moment:
 
   ```
   skd_fnc_join: p1 is in the session already. The machines that can join now: p3; that can leave now: p1, p2.
   ```
 
-Each join and leave is a step of the check, `join p3` or `leave p2`, with its start and duration in the result file, and the result file lists every start of a machine that took part, each with the mod versions it loaded.
+  In singleplayer either function ends the check `fail` / `check-error`: `skd_fnc_leave: joining and leaving needs a dedicated session; ...`.
+
+Each join and leave is a step of the check, `join p3` or `leave p2`, with its start and duration in the result file, and the result file lists every start of a machine that took part, each with the mod versions it loaded. Restarting the server during a session is not something a check can do.
 
 ## The reset across machines
 
-Before every check, and on `shakedown reset`, every machine is brought back to the state of the mission's start, in four phases the runner drives on every machine at once: the previous check's cleanups run, each on the machine it names (the server unless it names another); each client frees its player (alive again after a death, out of any vehicle); each machine deletes what was created on it since the start, restores its own player's loadout, health, position, direction and animation, and sets the server's start date and weather; then each machine checks the result, the server also every player's position as it sees it. On the test machine a reset after a check that changed everything takes about 0.75 s, and one with nothing to undo about 0.45 s.
+Before every check, and on `shakedown reset`, every machine is brought back to the state of the mission's start, in four phases the runner drives on every machine at once: the previous check's cleanups run, each on the machine it names (the server unless it names another); each client frees its player (alive again after a death, out of any vehicle); each machine deletes what was created on it since the start, restores its own player's loadout, health, position, direction and animation, and sets the server's start date and weather; then each machine checks the result, the server also every player's position as it sees it. A reset after a check that changed everything takes about 0.75 s, and one with nothing to undo about 0.45 s.
 
 A player killed in a check respawns at once and is back at its start position for the next check; the body is deleted, and the client keeps its start number 1.
 
 Before those phases the reset brings the session back to the machines it started with: a late client that joined leaves, and a client that left joins again, which takes about as long as its join. The units clients left behind when they left are deleted with the rest of what the check created, so a client that joined again stands alone at its start position. A client that left and joined again in the check keeps that start. So every check starts with the setup's clients and no late one.
 
 ```
-shakedown reset
+> shakedown reset
 reset done in 0.579 s
 ```
 
-`reset` is refused while a run is in progress and on a broken session; a reset that does not hold within 15 s exits 4 with what did not match, each item naming its machine, and leaves the session broken.
+`reset` is refused while a run is in progress and on a broken session; a reset that does not hold within 15 s exits 4 with what did not match, each item naming its machine, and leaves the session broken ([Scenes, resets and cleanups](scenes-resets-and-cleanups.md#when-the-reset-fails)).
+
+## A mission restart on a dedicated session
+
+A `@reset mission` check, and a reload at level `mission-restart`, restart the mission: the game clients and headless clients are stopped, the server kicks any user it still lists and restarts the mission, and fresh client and headless client processes join it, each with its start number one higher. The server keeps its process. With two clients and a headless client this takes about 48 s, most of it the clients' own start ([A check that needs a fresh mission](scenes-resets-and-cleanups.md#a-check-that-needs-a-fresh-mission)).
