@@ -1899,6 +1899,24 @@ mod tests {
         validate(&r);
     }
 
+    /// `RLD-03`, `US-081`: a run whose reloads include one of level `mission-restart` is valid
+    /// against the schema, at the reload's level and at a file's.
+    #[test]
+    fn us_081_rld_03_a_result_with_a_mission_restart_reload_is_valid_against_the_schema() {
+        let mut r = sample("pass");
+        r.reloads.push(json!({
+            "id": "rl-1", "state": "done", "level": "mission-restart",
+            "files": [
+                {"path": "C:\\mod\\addons\\main\\functions\\fnc_a.sqf", "level": "mission-restart", "reason": "x"},
+                {"path": "C:\\mod\\addons\\main\\functions\\fnc_b.sqf", "level": "game-restart", "reason": "y"},
+                {"path": "C:\\mod\\tests\\smoke.sqf", "level": "none", "reason": "z"}
+            ],
+            "machines": ["p1"], "reason": null,
+            "started_at": "2026-11-05T12:00:00.000Z", "duration_s": 12.5
+        }));
+        validate(&r);
+    }
+
     #[test]
     fn res_01_a_failing_result_is_valid_against_the_schema() {
         let r = sample("fail");
