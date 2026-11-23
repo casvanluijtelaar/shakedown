@@ -1,6 +1,6 @@
 //! M0 exit criterion 2: the demo five times in a row, each leaving nothing running. It takes
 //! about nine minutes, so it is kept out of the end-to-end run and runs only by name, when a
-//! milestone closes, on the test machine:
+//! milestone closes, on a Windows machine with Arma 3:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test demo_repeat -- --ignored --nocapture

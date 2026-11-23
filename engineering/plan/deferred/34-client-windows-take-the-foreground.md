@@ -41,7 +41,7 @@ Option 1, gated by the spike below, when the owner decides the nuisance is worth
 
 The change needs `INT-AR-02` or `INT-WIN-01` to name the start state, `INT-WIN-04` to say that the game windows the framework starts do not take the foreground either, and `docs/handing-over.md` to tell the person to restore `p1` from the taskbar before looking through it.
 
-**Spike.** On the test machine, with Steam running, the change built into a scratch branch:
+**Spike.** On a Windows machine with Arma 3 and Steam running, the change built into a scratch branch:
 
 1. With a window of another program in the foreground and a person giving input, and again after more than 200 s with no input, start 10 dedicated sessions (a server, two clients, a headless client) and 10 singleplayer sessions. A helper samples `GetForegroundWindow` every 100 ms from before each start until `ready` plus 30 s, and the minimised state of each client window.
 2. On one dedicated session and one singleplayer session, run 50 passing checks each, as `SPK-22` did, sampling every machine's `health` from `status`.
@@ -54,7 +54,7 @@ What would show a regression: `spk_22_frame_rate_and_answer_time_over_50_passing
 
 ## Acceptance criteria
 
-- The spike above passes on the test machine with a display, and its result is written up as research.
+- The spike above passes on a Windows machine with a display, and its result is written up as research.
 - No game client window the framework starts takes the foreground: a helper that samples `GetForegroundWindow` through 10 dedicated and 10 singleplayer starts finds no `arma3_x64` window in the foreground.
 - The tests named under the recommendation pass with the change.
 - `INT-AR-02` or `INT-WIN-01`, `INT-WIN-04` and `docs/handing-over.md` say what the recommendation names.

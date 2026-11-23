@@ -2,8 +2,8 @@
 //! object and on itself, through ACE's key-up code (`US-089`, `ACT-04`, `INT-ACE-03`, `RES-01`),
 //! and an ACE action that cannot be used says why (`US-090`, `DM-03`, `DM-04`). They run the e2e
 //! project's ACE checks, `e2e/tests/ace/`, against the fixture's ACE actions with ACE3 from the
-//! Steam Workshop. They drive the installed `shakedown` and the game, so they run only on the test
-//! machine, by hand, with no runner running:
+//! Steam Workshop. They drive the installed `shakedown` and the game, so they run only on a Windows machine
+//! with Arma 3, by hand, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m17 -- --ignored --nocapture --test-threads=1

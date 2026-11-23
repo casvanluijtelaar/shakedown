@@ -1,7 +1,7 @@
 ---
 type: Research
 title: "Spike SPK-20: the time from launch to connected"
-description: "How long each kind of game process takes from its launch to its extension's connect, over 20 singleplayer starts and 20 dedicated starts with CBA, ACE and the fixture on the test machine in M16, why a connect ceiling of twice the slowest does not fit under 90 s, and a singleplayer start that hung in the engine's graphics start and held the machine for the whole start ceiling."
+description: "How long each kind of game process takes from its launch to its extension's connect, over 20 singleplayer starts and 20 dedicated starts with CBA, ACE and the fixture on a Windows machine in M16, why a connect ceiling of twice the slowest does not fit under 90 s, and a singleplayer start that hung in the engine's graphics start and held the machine for the whole start ceiling."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-19T21:42:48Z }
 sources:
@@ -12,13 +12,13 @@ sources:
 
 # Spike SPK-20: the time from launch to connected
 
-M16 ran `SPK-20` (`engineering/spec/06-open-questions.md`) on the Windows test machine before building the connect ceiling of `SES-10`. Its pass condition: over 20 starts per kind of machine, cold and warm, the slowest launch-to-`connected` time of each kind is known, and a connect ceiling of twice it is under 90 s. It failed on the singleplayer client, whose slowest healthy start connected 90.3 s after its launch. `SES-10` keeps the reason in `session.json` and has no connect ceiling; a hung client fails the start at the start ceiling of `SES-04`, and `DEF-28` stays open[^def28].
+M16 ran `SPK-20` (`engineering/spec/06-open-questions.md`) on a Windows machine before building the connect ceiling of `SES-10`. Its pass condition: over 20 starts per kind of machine, cold and warm, the slowest launch-to-`connected` time of each kind is known, and a connect ceiling of twice it is under 90 s. It failed on the singleplayer client, whose slowest healthy start connected 90.3 s after its launch. `SES-10` keeps the reason in `session.json` and has no connect ceiling; a hung client fails the start at the start ceiling of `SES-04`, and `DEF-28` stays open[^def28].
 
 ## How it was measured
 
 A script[^script] ran `shakedown session start` and `shakedown session stop` in a loop, with the framework built for M16 (0.1.6), against a project loading CBA_A3 and ACE3 from the Workshop and `@skd_fixture`: the heaviest set of mods the framework's first user starts (`sp-cba-ace` in arma-grappling-hook). 20 singleplayer starts ran first, then 20 dedicated starts of a server, two game clients and a headless client. For each machine, the time is from the runner's `started process` line to its `extension connected` line in `runner.log`. The extension connects on the in-game agent's first call, in the session mission's `postInit`, so `connected` comes once the game has started, loaded the mission and run its `postInit`, a few seconds before `ready`.
 
-The first singleplayer start ran after no game had run on the machine for a while, the coldest start this machine gives without a reboot; the dedicated starts all came after the singleplayer ones, so none of them is cold.
+The first singleplayer start ran after no game had run on the machine for a while, the coldest start the machine gives without a reboot; the dedicated starts all came after the singleplayer ones, so none of them is cold.
 
 ## Results
 

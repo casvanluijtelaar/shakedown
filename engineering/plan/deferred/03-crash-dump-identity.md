@@ -31,7 +31,7 @@ A person who zips a run folder to share a failure shares the account's Steam ID 
 
 ## Recommendation
 
-Leave it for the MVP, with the warning in `docs/`; take the first option once a run folder is shared outside the owner's machine.
+Leave it for the MVP, with the warning in `docs/`; take the first option once a run folder is shared outside the user's machine.
 
 ## Acceptance criteria
 

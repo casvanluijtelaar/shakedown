@@ -1,6 +1,6 @@
 //! Spikes SPK-01 and SPK-03 for a dedicated `server`, a game client and a headless client
 //! (`engineering/spec/06-open-questions.md`), in one dedicated session with two clients and a headless
-//! client. They start the game, so they run only on the test machine, by hand:
+//! client. They start the game, so they run only on a Windows machine with Arma 3, by hand:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test spikes_m02 -- --ignored --nocapture
@@ -42,7 +42,7 @@ fn memory() -> (u64, u64) {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 async fn spk_01_spk_03_dedicated_server_client_headless() {
     let e2e = plain(repo().join("e2e"));
     let project = config::load(&e2e).unwrap();

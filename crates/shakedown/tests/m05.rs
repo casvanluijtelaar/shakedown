@@ -3,7 +3,7 @@
 //! (`US-052`, `NFR-SC-01`, `NFR-SC-03`, `SEC-04`), a process without the token (`US-053`,
 //! `SEC-03`, `NFR-SC-02`) and a runner a client cannot reach (`US-060`, `P-01`). They drive the
 //! installed `shakedown` through its command line, its MCP server and its port, and the game, so
-//! they run only on the test machine, by hand, one at a time, with no runner running:
+//! they run only on a Windows machine with Arma 3, by hand, one at a time, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m05 -- --ignored --nocapture --test-threads=1
@@ -464,7 +464,7 @@ fn hello(port: u16, line: &Value) -> Option<String> {
 /// it: by closing a kill-on-close job that holds it, without and with breakaway allowed, and by
 /// ending each process of its tree. Needs no game.
 #[test]
-#[ignore = "starts runners on this machine; run by hand"]
+#[ignore = "starts runners locally; run by hand"]
 fn ses_08_us_007_the_runner_outlives_the_host_ending_shakedown_mcp() {
     assert_no_runner();
     let dir = project("ses08");
@@ -564,7 +564,7 @@ fn claude(prompt: &str, tool: &str, ceiling: Duration) -> String {
 /// M2 check runs against it; the runner is killed with `taskkill /F` and no game process is left
 /// within 10 s; the next runner start clears the mission copy and marks the session `runner-died`.
 #[test]
-#[ignore = "starts Claude Code and the game; run by hand on the test machine"]
+#[ignore = "starts Claude Code and the game; run by hand on a Windows machine with Arma 3"]
 fn spk_06_us_007_a_session_started_through_claude_code_outlives_it() {
     let dir = repo().join("e2e").join("grappling-hook");
     let _guard = Guard::new(&dir);
@@ -642,7 +642,7 @@ fn spk_06_us_007_a_session_started_through_claude_code_outlives_it() {
 /// next `status` shows no runner and no session, and the next `session start` succeeds, with no
 /// mission copy of the dead session left and the dead session marked `runner-died`.
 #[test]
-#[ignore = "starts the game; run by hand on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn us_035_nfr_rl_03_the_runner_killed_during_a_run_leaves_no_game_5_of_5() {
     let dir = project("us035");
     let _guard = Guard::new(&dir);
@@ -709,14 +709,14 @@ fn us_035_nfr_rl_03_the_runner_killed_during_a_run_leaves_no_game_5_of_5() {
     println!("NFR-RL-03: 5 of 5, times {times:?}");
 }
 
-/// A runner started the way this machine starts it when breakaway is refused, through WMI
+/// A runner started the way the client starts it when breakaway is refused, through WMI
 /// (`INT-WIN-02`), lives through its session's start, a run and the next runner's recovery,
 /// round after round (`US-007`, `US-035`, `NFR-RL-03`). Each round starts the runner by WMI,
 /// holds a handle on it, starts a dedicated session, runs a check that is still running when the
 /// test kills the runner, and checks that the runner ended only by that kill: a runner that ends
 /// before it fails the test with its exit code. `SKD_ROUNDS` sets the rounds, 10 by default.
 #[test]
-#[ignore = "starts the game; run by hand on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn us_035_nfr_rl_03_a_runner_started_by_wmi_ends_only_when_killed() {
     let rounds: u32 = std::env::var("SKD_ROUNDS")
         .ok()
@@ -813,7 +813,7 @@ fn us_035_nfr_rl_03_a_runner_started_by_wmi_ends_only_when_killed() {
 
 /// `US-052`, `US-053`, `US-060` and `US-007` criterion 2, in one dedicated session.
 #[test]
-#[ignore = "starts the game; run by hand on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn us_052_us_053_us_060_us_007_local_control_audit_and_an_unreachable_runner() {
     let dir = project("us052");
     let _guard = Guard::new(&dir);

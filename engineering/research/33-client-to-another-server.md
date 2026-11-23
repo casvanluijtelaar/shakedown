@@ -1,7 +1,7 @@
 ---
 type: Research
 title: "Moving a client to another server from a check"
-description: "What SQF code sent to a dedicated session's game client can do to make it join another server, tried on the test machine in M16 against a second loopback server: connectToServer, endMission and the multiplayer pause menu's Abort, none of which took the client off the session's server while no one was connected to the machine's desktop."
+description: "What SQF code sent to a dedicated session's game client can do to make it join another server, tried on a Windows machine in M16 against a second loopback server: connectToServer, endMission and the multiplayer pause menu's Abort, none of which took the client off the session's server while no one was connected to the machine's desktop."
 status: draft
 generated: { by: "claude-code/developer", at: 2026-11-20T07:10:00Z }
 sources:
@@ -11,7 +11,7 @@ sources:
 
 # Moving a client to another server from a check
 
-`SEC-05` leaves one way for a session's client to reach a server that is not the session's own: code a check sends. M16 built the guard for it, the in-game agent comparing `serverName` with `shakedown <session id>` at every mission start, and tried to drive that path on the test machine[^trial], with a second dedicated server named `other` on loopback beside a session's own, both loading `@skd_fixture` and `@shakedown`.
+`SEC-05` leaves one way for a session's client to reach a server that is not the session's own: code a check sends. M16 built the guard for it, the in-game agent comparing `serverName` with `shakedown <session id>` at every mission start, and tried to drive that path on a Windows machine[^trial], with a second dedicated server named `other` on loopback beside a session's own, both loading `@skd_fixture` and `@shakedown`.
 
 ## What was tried
 
@@ -28,7 +28,7 @@ The scripts spawned in `uiNamespace` kept running past each attempt (their `diag
 
 ## What it means
 
-`connectToServer` acts only outside a mission. Without a rendered window, nothing tried here took a client out of its mission, so code a check sends could not make a client join another server on the test machine as the framework runs it. The guard of `SEC-05` stays as built: it costs one comparison at each mission start, and the end-to-end tests of M16 show it does not fire on the session's own server. Whether the Abort path works with the owner connected, so the window renders, is left to the owner look of `US-088`, which runs the test[^test] that drives it.
+`connectToServer` acts only outside a mission. Without a rendered window, nothing tried here took a client out of its mission, so code a check sends could not make a client join another server on a Windows machine as the framework runs it. The guard of `SEC-05` stays as built: it costs one comparison at each mission start, and the end-to-end tests of M16 show it does not fire on the session's own server. Whether the Abort path works with a visible desktop, so the window renders, is left to the owner look of `US-088`, which runs the test[^test] that drives it.
 
 [^trial]: Trials on 2026-11-20 between 06:58 and 07:06 UTC, session `s-20261120-065803`.
 [^test]: The test aborts `p2` through the pause menu and joins `other` from a script spawned in `uiNamespace`.

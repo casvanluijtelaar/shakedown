@@ -3,7 +3,7 @@
 //! makes it `invalid` / `unhealthy` naming the client and its frame rate, the flag clears, and the
 //! next check passes (`US-094`, `HLT-01`, `DM-05`, `DM-06`). They drive the installed `shakedown`
 //! and the game on a dedicated session with two clients and a headless client loading the
-//! fixture, so they run only on the test machine, by hand, with no runner running:
+//! fixture, so they run only on a Windows machine with Arma 3, by hand, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m18 -- --ignored --nocapture --test-threads=1

@@ -31,7 +31,7 @@ A result or a log can lose a machine name or a word of an error message, and a r
 
 ## Recommendation
 
-Leave it until an account on a test machine shows it; then the first option, because it keeps the redaction simple and tells the user exactly what to change.
+Leave it until an account in use shows it; then the first option, because it keeps the redaction simple and tells the user exactly what to change.
 
 ## Acceptance criteria
 

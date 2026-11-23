@@ -18,7 +18,7 @@ status: stable
 
 The runner waits for the machines in `wait_ready` (`runner/session.rs`), the loop behind `P-02` steps 6 to 8. On each turn it ends the start early only for a process that exited (`win::exited`), with "`<machine>` exited with code `<n>` before it was ready" or, for code 53, the Steam message. A process that still runs is only waited on: its machine stays `launched` (the machine status machine of `engineering/spec/01-domain-model.md`: "The process runs; its extension has not connected"), and nothing compares how long it has been `launched` with how long a machine takes to connect. Only when `start_timeout` passes does the loop fail the start with "the session was not ready within the start ceiling of 180 s", naming each machine not `ready` and its state, the reason's machine being the one that got least far (`SES-04`), and `P-10` then stops every process (`SES-04`, `US-004`). The same loop brings machines back for a mission restart and a game restart (`P-08`), with the same ceiling.
 
-A dedicated start of a server, two clients and a headless client is `ready` in 43 to 45 s on the test machine (`docs/dedicated-sessions.md`), so a hung client is found about 135 s after the start would have been ready. The prior harness met such hangs: three of five singleplayer starts with ACE stalled at different steps, and one start hung while addons loaded (research `17-health.md`).
+A dedicated start of a server, two clients and a headless client is `ready` in 43 to 45 s on a Windows machine with 16 GB of RAM (`docs/dedicated-sessions.md`), so a hung client is found about 135 s after the start would have been ready. The prior harness met such hangs: three of five singleplayer starts with ACE stalled at different steps, and one start hung while addons loaded (research `17-health.md`).
 
 ## The gap
 
@@ -41,5 +41,5 @@ For option 1 on its own: It needs no window, holds for every kind of machine and
 
 1. A start in which one game process runs but its extension never connects ends `failed` with exit 4 within the connect ceiling of that machine's launch plus 5 s, well before the start ceiling, and the reason names that machine, its state `launched` and the last 20 lines of its RPT (`SES-04`).
 2. No game process of that start runs after `session start` returns, and a new `session start` is accepted (`US-004` criterion 3).
-3. Over 20 starts of each setup kind on the test machine, cold and warm, no healthy start fails at the connect ceiling.
+3. Over 20 starts of each setup kind on a Windows machine with Arma 3, cold and warm, no healthy start fails at the connect ceiling.
 4. `SES-04`, `P-02` step 8, `NFR-PF-06` and `docs/sessions-and-the-runner.md` state the connect ceiling.

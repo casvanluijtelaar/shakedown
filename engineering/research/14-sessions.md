@@ -30,7 +30,7 @@ sources:
 
 # Sessions: starting, keeping and resetting the game
 
-A session is the set of game processes a run keeps up while many checks run against it: one singleplayer game, or a dedicated server with game clients and headless clients (`CR-01`)[^prd]. This topic covers how each process starts, how state is reset between checks (`CR-02`), what joining, leaving and mission changes do (`CR-04`), how several clients share one machine, and what each path costs. Commands and parameters are checked on the Bohemia Interactive Community Wiki for game 2.22, the current stable branch; none needs the profiling or development branch. Timings come from `arma-grappling-hook`'s harness on the test machine[^t1]; any other timing is marked **needs a spike**.
+A session is the set of game processes a run keeps up while many checks run against it: one singleplayer game, or a dedicated server with game clients and headless clients (`CR-01`)[^prd]. This topic covers how each process starts, how state is reset between checks (`CR-02`), what joining, leaving and mission changes do (`CR-04`), how several clients share one machine, and what each path costs. Commands and parameters are checked on the Bohemia Interactive Community Wiki for game 2.22, the current stable branch; none needs the profiling or development branch. Timings come from `arma-grappling-hook`'s harness on a Windows machine[^t1]; any other timing is marked **needs a spike**.
 
 ## 1. Starting each process
 
@@ -46,7 +46,7 @@ What each start option does:
 
 | Option | Effect | Source |
 |---|---|---|
-| `-autotest=<cfg>` | Runs the listed missions one after another and exits; on the test machine exit code 0 when all passed, 1 otherwise, and the next mission starts about 1 s after the last ended | [^startup][^hdoc] |
+| `-autotest=<cfg>` | Runs the listed missions one after another and exits; on a Windows machine exit code 0 when all passed, 1 otherwise, and the next mission starts about 1 s after the last ended | [^startup][^hdoc] |
 | `-autoInit` | The server initialises the mission as the first client would; ignored unless `server.cfg` has `persistent = 1`; mission parameters then return only their defaults | [^startup] |
 | `-filePatching` | Lets the game load unpacked data; a server accepts such clients only with `allowedFilePatching` (1 headless clients, 2 all clients) | [^startup][^servercfg] |
 | `-world=empty` | No default world and no main menu intro at start, for faster loading | [^startup] |
@@ -77,7 +77,7 @@ The `-autotest` list fixes the missions at start, and the game exits after the l
 
 ## 3. Leaving, joining and mission changes
 
-- **Join in progress.** With `-autoInit` the server starts the mission before anyone is in, so every client joins in progress[^tjip]. A joining client's `time` starts at 0 and jumps to the server's after about 2.5 s on average[^time]. Without `-autoInit` the server waits in the lobby, and on the test machine mission time stayed at 0 for about a minute after the mission started[^tjip].
+- **Join in progress.** With `-autoInit` the server starts the mission before anyone is in, so every client joins in progress[^tjip]. A joining client's `time` starts at 0 and jumps to the server's after about 2.5 s on average[^time]. Without `-autoInit` the server waits in the lobby, and on a Windows machine mission time stayed at 0 for about a minute after the mission started[^tjip].
 - **Leaving.** A clean leave fires `PlayerDisconnected` and `HandleDisconnect` within 0.11 s, but `OnUserDisconnected` only when the process ends; a crash fires all three about 15.6 s after the process ended[^tdc]. `HandleDisconnect` fires only on the server and not for a player who controlled no unit[^meh]. The server's `DisconnectTimeout` defaults to 15 s, range 1 to 90[^servercfg], which matches the 15 s the harness saw an ended process stay listed[^hdoc].
 - **Rejoining.** A client that left could not get back into a mission with `disabledAI = 1` and no respawn; with base respawn it rejoined in under 20 s[^r14][^tdc]. Objects a client created stay, owned by the server, after it leaves[^tdc].
 - **Mission change with clients connected.** In about one change in two, the engine left a client in a mission it never loaded, or a headless client without a role; the harness restarts every client for each mission[^hdoc]. A client kicked while it runs comes back at once, with script errors; a machine still listed when the next mission loads keeps its slot[^hdoc]. A server that waited in the lobby went back to the first mission of its cycle once clients joined[^hdoc].
@@ -91,7 +91,7 @@ The `-autotest` list fixes the missions at start, and the game exits after the l
 - Headless clients need `headlessClients[]` and `localClient[]` with `127.0.0.1`; any number can run on one machine[^hc][^servercfg].
 - A server uses its game port and the next four (Steam query +1, Steam +2, VON +3, BattlEye +4); a second server on one machine should sit at least 100 ports higher[^ds]. The harness uses 2402[^hrun].
 - Each instance gets its own `-profiles` folder and `-name`, so each writes its own RPT[^r14][^hrun].
-- Memory: the test machine has 16 GB; a server and two full game clients fit, more players are headless clients[^r14]. Per-instance memory has not been measured **(needs a spike)**.
+- Memory: on a machine with 16 GB, a server and two full game clients fit, more players are headless clients[^r14]. Per-instance memory has not been measured **(needs a spike)**.
 
 ## 5. How fast each path is
 

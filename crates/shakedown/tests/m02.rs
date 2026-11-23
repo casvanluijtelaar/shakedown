@@ -2,10 +2,13 @@
 //! one machine, the stories `US-002`, `US-004`, `US-008`, `US-009`, `US-017`, `US-019`, `US-020`,
 //! `US-025` and `US-026`, the reset across machines (`NFR-RL-02`, `NFR-PF-04`, the dedicated half
 //! of `SPK-04`) and the demo. They drive the installed `shakedown` command against the game, so
-//! they run only on the test machine, by hand, one at a time:
+//! they run only on a Windows machine with Arma 3, by hand, one at a time:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m02 -- --ignored --nocapture --test-threads=1
+//!
+//! The setup `ded-agh` loads the arma-grappling-hook build from the clone named by the environment
+//! variable `SHAKEDOWN_AGH_REPO`, or from a clone beside this repository when it is unset.
 //!
 //! The demo alone (exit criterion 2) is `m2_demo_us_009_ten_times_on_a_dedicated_session`.
 
@@ -32,7 +35,16 @@ fn shakedown() -> PathBuf {
 
 const GAME: &str = r"C:\Program Files (x86)\Steam\steamapps\common\Arma 3";
 const CBA: &str = r"C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997";
-const AGH: &str = r"C:\Users\Shadow\Documents\arma-grappling-hook\.hemttout\build";
+
+/// The arma-grappling-hook build HEMTT leaves in `.hemttout\build`: of the clone named by
+/// `SHAKEDOWN_AGH_REPO`, or of the clone beside this repository when it is unset.
+fn agh_build() -> PathBuf {
+    std::env::var_os("SHAKEDOWN_AGH_REPO")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| repo().join("..").join("arma-grappling-hook"))
+        .join(".hemttout")
+        .join("build")
+}
 
 /// Runs the installed command in `project`; returns the exit code and stdout parsed as JSON.
 fn cmd(project: &Path, args: &[&str]) -> (i32, Value) {
@@ -62,6 +74,7 @@ fn project(name: &str, checks: &[(String, String)]) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("skd-m02-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("tests")).unwrap();
+    let agh = agh_build().display().to_string();
     let toml = format!(
         r#"game = '{GAME}'
 
@@ -74,7 +87,7 @@ path = '{GAME}\@skd_fixture'
 patch = "skdfx_main"
 
 [mods.agh]
-path = '{AGH}'
+path = '{agh}'
 patch = "agh_main"
 
 [setups.sp]
@@ -340,7 +353,7 @@ fn baseline() -> String {
 /// dedicated session with two clients and a headless client, the `reset` command after a check
 /// that changed everything (`US-008` 3), and `status` (`INS-02`, `INS-04`).
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_002_us_008_us_009_us_017_us_019_us_020_us_025_us_026_on_a_dedicated_session() {
     let probe = probe();
     let dirty = dirty(1);
@@ -583,7 +596,7 @@ private _start = ((skd_test_start get "p2") select 0) select 0;
 /// see p2 facing its baseline (finding `m06-1`). The check leaves on p2 a script that kills p2
 /// once it stands at its start again.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_008_rst_01_rst_05_a_player_killed_as_the_reset_puts_it_back_faces_its_baseline() {
     const DIE: &str = r#"["p2 dies once it stands at its start again", {
     ["p2", {
@@ -666,7 +679,7 @@ fn us_008_rst_01_rst_05_a_player_killed_as_the_reset_puts_it_back_faces_its_base
 /// `US-004` 2: a start ceiling of 30 s, shorter than a dedicated start, ends `failed` naming each
 /// machine that was not ready. A new start is accepted after each.
 #[test]
-#[ignore = "starts Arma 3 three times; run on the test machine"]
+#[ignore = "starts Arma 3 three times; run by hand on a Windows machine with Arma 3"]
 fn us_004_a_start_that_never_becomes_ready_ends_failed_and_leaves_nothing() {
     let dir = project("start", &[]);
     assert!(game_pids().is_empty(), "no game may run when this test starts");
@@ -765,7 +778,7 @@ fn us_004_a_start_that_never_becomes_ready_ends_failed_and_leaves_nothing() {
 /// dedicated session with two clients and a headless client, each changing everything, each
 /// seeing the start state on every machine; every reset under 2 s.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn nfr_rl_02_nfr_pf_04_spk_04_twenty_checks_on_a_dedicated_session() {
     let mut checks = vec![("n/00".to_string(), check("NFR-RL-02 Record the start state", &probe()))];
     for n in 1..=20 {
@@ -814,7 +827,7 @@ fn nfr_rl_02_nfr_pf_04_spk_04_twenty_checks_on_a_dedicated_session() {
 /// dedicated session with two clients, 10 times against one session; and exit criterion 4: the
 /// M1 demo check unchanged in the same session.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn m2_demo_us_009_ten_times_on_a_dedicated_session() {
     let demo_dir = repo().join("e2e").join("grappling-hook");
     let t = Instant::now();

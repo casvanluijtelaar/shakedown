@@ -217,7 +217,7 @@ All three give vocabulary for CR-50: a setup block, a test block, a teardown, ta
 
 ## Needs a spike
 
-- **Round-trip time.** Pass when 100 calls of `1+1` to the server, and to one client through the hub, have a median under 100 ms and no call over 1 s on the test machine. Neefay's 20 to 60 ms is its own number on 2.22[^neefay].
+- **Round-trip time.** Pass when 100 calls of `1+1` to the server, and to one client through the hub, have a median under 100 ms and no call over 1 s on a Windows machine. Neefay's 20 to 60 ms is its own number on 2.22[^neefay].
 - **Large results.** Pass when a 1 MB string result comes back intact through the 10 KB output buffer by chunking[^headswe].
 - **`remoteExecCall` of code to a client with no framework mod.** Pass when the result and its errors come back, under a mission with no `CfgRemoteExec` and under one in whitelist mode.
 - **Two rendering clients from one Steam account against a local server.** Pass when both join and stay connected for 10 minutes with `kickDuplicate = 0`. Neefay sets it but starts one rendering client[^neefay]. This belongs to T5.

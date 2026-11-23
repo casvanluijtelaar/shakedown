@@ -16,7 +16,7 @@ status: stable
 
 ## Current behaviour
 
-The runner redacts everything it sends a client and every RPT of a session it stops, and a failed start stops its processes. Whether the output of a failed `session start`, its `reason` and the RPTs it leaves hold the Steam ID or the Steam name has not been searched on the test machine.
+The runner redacts everything it sends a client and every RPT of a session it stops, and a failed start stops its processes. Whether the output of a failed `session start`, its `reason` and the RPTs it leaves hold the Steam ID or the Steam name has not been searched.
 
 ## The gap
 

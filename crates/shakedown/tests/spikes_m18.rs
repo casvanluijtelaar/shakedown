@@ -1,7 +1,7 @@
 //! Spike SPK-22 (`engineering/spec/06-open-questions.md`), run before M18 sets the thresholds of the frame
 //! rate and answer time watch (`HLT-01`): each machine's frame rate and answer time over 50
 //! passing checks in singleplayer and on a dedicated session with two clients, and how fast a
-//! client starved of CPU is flagged. They start the game, so they run only on the test machine,
+//! client starved of CPU is flagged. They start the game, so they run only on a Windows machine with Arma 3,
 //! by hand:
 //!
 //!     python tools/install.py
@@ -123,7 +123,7 @@ async fn watch<F: std::future::Future>(session: &session::Session, until: F) -> 
 /// SPK-22, part one: 50 passing checks in singleplayer and 50 on a dedicated session with two
 /// clients and a headless client, each machine's frame rate and answer time recorded.
 #[tokio::test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 async fn spk_22_frame_rate_and_answer_time_over_50_passing_checks() {
     let runner = runner().await;
     let project = std::env::temp_dir().join(format!("skd-spk22-{}", std::process::id()));
@@ -211,7 +211,7 @@ fn duty() -> (u64, u64) {
 /// flagged within 15 s, 5 rounds on one dedicated session with two clients and a headless client;
 /// and its flag clears once it runs freely again.
 #[tokio::test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 async fn spk_22_a_starved_client_is_flagged() {
     let runner = runner().await;
     let Some(s) = start(&runner, "dedicated").await else {

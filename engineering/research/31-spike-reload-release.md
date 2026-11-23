@@ -1,21 +1,21 @@
 ---
 type: Research
 title: "Spike SPK-19: making the game let go of a changed file"
-description: "What makes Arma 3 let go of a loose mod file it holds - reading between 256 and 512 MiB of other loose files through file patching, which the framework can make every machine do with one 8 MiB file reached through many junctions - and that a changed .sqf of @skd_fixture_cba then reaches every machine of a dedicated session with two clients through a mission restart, 10 of 10, and of a singleplayer session, 10 of 10, with the time each reload takes against a game start, measured on the test machine beside M11."
+description: "What makes Arma 3 let go of a loose mod file it holds - reading between 256 and 512 MiB of other loose files through file patching, which the framework can make every machine do with one 8 MiB file reached through many junctions - and that a changed .sqf of @skd_fixture_cba then reaches every machine of a dedicated session with two clients through a mission restart, 10 of 10, and of a singleplayer session, 10 of 10, with the time each reload takes against a game start, measured on a Windows machine beside M11."
 status: draft
 generated: { by: "claude-code/developer", at: 2026-11-15T07:45:00-08:00 }
 sources:
-  - { id: round, resource: "the research round of 2026-11-15 on the Windows test machine, Arma 3 2.22 stable, CBA_A3 3.19.0 (workshop 450814997), through the installed shakedown 0.1.1 (main at 810e2f7), setups ded2-cba (dedicated, two clients) and sp-cba, loading CBA and both fixtures: every machine made to loadFile, with one exec to all machines, distinct 8 MiB loose files and one 8 MiB file through many junctions under <game>\\skd_spk19, the hold tested by opening the installed fnc_version.sqf for writing, the file changed and the mission restarted by a @reset mission check, skdfx_cba_fnc_version called on every machine and each machine's process id read from status after each reload", read: 2026-11-15 }
+  - { id: round, resource: "the research round of 2026-11-15 on a Windows machine, Arma 3 2.22 stable, CBA_A3 3.19.0 (workshop 450814997), through the installed shakedown 0.1.1 (main at 810e2f7), setups ded2-cba (dedicated, two clients) and sp-cba, loading CBA and both fixtures: every machine made to loadFile, with one exec to all machines, distinct 8 MiB loose files and one 8 MiB file through many junctions under <game>\\skd_spk19, the hold tested by opening the installed fnc_version.sqf for writing, the file changed and the mission restarted by a @reset mission check, skdfx_cba_fnc_version called on every machine and each machine's process id read from status after each reload", read: 2026-11-15 }
   - { id: rpt, resource: "the RPT of every machine of the round's sessions, the line FileServer MaxCacheSize", read: 2026-11-15 }
   - { id: cba, resource: "https://github.com/CBATeam/CBA_A3 at tag v3.19.0, addons/xeh/fnc_compileFunction.sqf (read with gh)", read: 2026-11-15 }
   - { id: r27, resource: "engineering/research/27-spikes-reload.md: the hold, the release table, the approaches tried and the mission restart's time in M6", read: 2026-11-15 }
-  - { id: m14, resource: "the M14 build of 2026-11-18 on the Windows test machine, shakedown 0.1.4 from the worktree developer/m14, tests/m14.rs: three singleplayer and ten dedicated reloads at level mission-restart through the release files the runner makes in <game>\\skd_release, a changed CfgFunctions function of @skd_fixture in each mode, a file held by skdfx_fnc_holdFile, and the runner log of each run", read: 2026-11-18 }
+  - { id: m14, resource: "the M14 build of 2026-11-18 on a Windows machine, shakedown 0.1.4 from the worktree developer/m14, tests/m14.rs: three singleplayer and ten dedicated reloads at level mission-restart through the release files the runner makes in <game>\\skd_release, a changed CfgFunctions function of @skd_fixture in each mode, a file held by skdfx_fnc_holdFile, and the runner log of each run", read: 2026-11-18 }
   - { id: r10, resource: "engineering/research/10-prior-harness.md and engineering/research/14-sessions.md: clients kept across a mission change", read: 2026-11-15 }
 ---
 
 # Spike SPK-19: making the game let go of a changed file
 
-`SPK-19` (`engineering/spec/06-open-questions.md`) asks whether a changed `.sqf` of `@skd_fixture_cba` can reach every machine of a dedicated session with two clients without a game restart, 10 of 10, by a way the framework can bring about every time. It ran as a research round beside M11 on the Windows test machine, about 17 minutes of game runs. **It passed** by `DEF-21`'s first option: the game can be made to let go of a file. Every machine reads a few hundred MiB of other loose files through file patching, the held file is then free to write, and a mission restart takes the change on every machine. ACE3's layout, `DEF-21`'s second option, was not run, since the first passed.
+`SPK-19` (`engineering/spec/06-open-questions.md`) asks whether a changed `.sqf` of `@skd_fixture_cba` can reach every machine of a dedicated session with two clients without a game restart, 10 of 10, by a way the framework can bring about every time. It ran as a research round beside M11 on a Windows machine, about 17 minutes of game runs. **It passed** by `DEF-21`'s first option: the game can be made to let go of a file. Every machine reads a few hundred MiB of other loose files through file patching, the held file is then free to write, and a mission restart takes the change on every machine. ACE3's layout, `DEF-21`'s second option, was not run, since the first passed.
 
 ## What makes the game let go
 
@@ -64,7 +64,7 @@ The times are wall-clock times of the command line calls, the `run` of the resta
 - **The release files** are one 8 MiB file and 80 junctions to its folder, in a folder of the game folder that no PBO covers. A file under a prefix a PBO covers is not found through file patching[^r27].
 - **New and deleted files, config and the other kinds stay `game-restart`.** Nothing in this round changes why they need it.
 - **Text injection (`DEF-21` option 3) is not needed.** It existed to get past the hold. It also needs a mission restart for a final function, so on a dedicated session it costs the same client start.
-- **G2's 30 s on a dedicated session stays out of reach for mod code.** The reload keeps the server but costs a client start, about 55 s on this machine. Getting under 30 s needs clients kept across a mission restart, or an in-place recompile of functions that are not final (`SPK-09`).
+- **G2's 30 s on a dedicated session stays out of reach for mod code.** The reload keeps the server but costs a client start, about 55 s on a Windows machine with 16 GB of memory. Getting under 30 s needs clients kept across a mission restart, or an in-place recompile of functions that are not final (`SPK-09`).
 
 ## Built in M14
 
@@ -76,7 +76,7 @@ M14 built the reload this round found, as `RLD-07` and `P-08` step 2 say, and me
 | `ded2-cba`: server, `p1`, `p2` | 10 | 10 of 10 | 50.7 to 52.0 s, 51.3 s on average | - |
 
 - **Every read freed the file at the first try.** The read of the 80 paths took 5 to 7 s on each machine, all at once.
-- **The first reload on a game folder makes the release files.** Making 80 junctions with `mklink` took about 40 s on the test machine, once; the files are kept.
+- **The first reload on a game folder makes the release files.** Making 80 junctions with `mklink` took about 40 s on a Windows machine, once; the files are kept.
 - **A `CfgFunctions` function needs a recompile after the mission restart.** Research 27 found that the Functions Library copies an addon's function compiled at the game start into each new mission[^r27], so a kept process runs the old function. The reload therefore has every machine recompile, with `BIS_fnc_recompile`, each `CfgFunctions` function whose file it changed, found by its config's `file`. A changed `fn_version.sqf` of `@skd_fixture` then reached `p1` in singleplayer and the kept server and the new clients of a dedicated session. arma-grappling-hook's functions are `CfgFunctions` functions, so its reloads take this path.
 - **A held file falls back.** With the CBA target held by `p1`'s process through the fixture's extension, both reads left it held, the Restart Manager named `p1`'s process, and the reload restarted the game and took the change.
 - **A client hung in one start.** In a first dedicated run, the seventh reload's new `p2` process ran but never connected, and the reload failed at the start ceiling of 180 s. That is a client start, as `DEF-28` describes, not the release; a second run of ten passed 10 of 10.

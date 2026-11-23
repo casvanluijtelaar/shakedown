@@ -1,17 +1,17 @@
 ---
 type: Research
 title: "Spike SPK-06: the runner outlives its client and dies with its game"
-description: "How Claude Code holds and ends a stdio MCP server on Windows, which way of starting the runner leaves the client's job and process tree, that a dedicated session started from one Claude Code session is found ready by the next, and how fast the game ends when the runner is killed, on the test machine in M5."
+description: "How Claude Code holds and ends a stdio MCP server on Windows, which way of starting the runner leaves the client's job and process tree, that a dedicated session started from one Claude Code session is found ready by the next, and how fast the game ends when the runner is killed, on a Windows machine in M5."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-09T11:10:00+01:00 }
 sources:
-  - { id: probe, resource: "a stdio MCP server in Python, written for this spike, run under `claude -p` (Claude Code 2.1.319) with `--mcp-config`, recording its job object and starting three children by the three ways of INT-WIN-02, on the Windows test machine, 2026-11-09", read: 2026-11-09 }
-  - { id: tests, resource: "crates/shakedown/tests/m05.rs, ses_08_us_007_the_runner_outlives_the_host_ending_shakedown_mcp, spk_06_us_007_a_session_started_through_claude_code_outlives_it, us_035_nfr_rl_03_the_runner_killed_during_a_run_leaves_no_game_5_of_5 and us_035_nfr_rl_03_a_runner_started_by_wmi_ends_only_when_killed, runs of 2026-11-09 on the Windows test machine, Arma 3 2.22 stable", read: 2026-11-09 }
+  - { id: probe, resource: "a stdio MCP server in Python, written for this spike, run under `claude -p` (Claude Code 2.1.319) with `--mcp-config`, recording its job object and starting three children by the three ways of INT-WIN-02, on a Windows machine, 2026-11-09", read: 2026-11-09 }
+  - { id: tests, resource: "crates/shakedown/tests/m05.rs, ses_08_us_007_the_runner_outlives_the_host_ending_shakedown_mcp, spk_06_us_007_a_session_started_through_claude_code_outlives_it, us_035_nfr_rl_03_the_runner_killed_during_a_run_leaves_no_game_5_of_5 and us_035_nfr_rl_03_a_runner_started_by_wmi_ends_only_when_killed, runs of 2026-11-09 on a Windows machine, Arma 3 2.22 stable", read: 2026-11-09 }
 ---
 
 # Spike SPK-06: the runner outlives its client and dies with its game
 
-M5 ran `SPK-06` (`engineering/spec/06-open-questions.md`) on the Windows test machine with Claude Code 2.1.319 (`claude -p`, headless), the project's `.mcp.json` of `e2e/grappling-hook` passed with `--mcp-config`, and the install folder on `PATH`. The spike passed: the runner is started through the relay of `INT-WIN-02`, with WMI as its fallback, and no scheduled task is needed.
+M5 ran `SPK-06` (`engineering/spec/06-open-questions.md`) on a Windows machine with Claude Code 2.1.319 (`claude -p`, headless), the project's `.mcp.json` of `e2e/grappling-hook` passed with `--mcp-config`, and the install folder on `PATH`. The spike passed: the runner is started through the relay of `INT-WIN-02`, with WMI as its fallback, and no scheduled task is needed.
 
 ## How Claude Code holds and ends a stdio server
 

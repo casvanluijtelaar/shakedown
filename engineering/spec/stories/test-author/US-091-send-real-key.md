@@ -19,7 +19,7 @@ Deprecated with `ACT-05`: a key posted to the game's window does not reach the g
 
 1. A check sends a key bound to the fixture's CBA keybind to `p1`'s window while another window has the focus: the keybind's code runs once on `p1`, and the focused window and the foreground are unchanged.
 2. A key the fixture's handler passes on reaches the game's own action on `p1`, and a key it consumes does not.
-3. It holds with the Shadow stream connected and disconnected.
+3. It holds with the desktop shown and with no desktop shown.
 
 ## Next to
 

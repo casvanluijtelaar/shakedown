@@ -2,7 +2,7 @@
 //! (`INT-ACE-02`); the answers to the findings of the port of arma-grappling-hook (`m10-1`,
 //! `m10-2`, `m10-5`); and the measurement of `SPK-14`. The ACE tests load CBA_A3 and ACE3 from
 //! the Steam Workshop folder, the others the installed fixture. They start the game,
-//! so they run only on the test machine, by hand, one at a time, with no runner running:
+//! so they run only on a Windows machine with Arma 3, by hand, one at a time, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m10 -- --ignored --nocapture --test-threads=1
@@ -177,7 +177,7 @@ fn wound_then_heal(dir: &Path) {
 
 /// `INT-ACE-02` in singleplayer with CBA and ACE.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn int_ace_02_the_reset_heals_the_player_in_full_in_singleplayer() {
     let dir = project("sp");
     let _session = start(&dir, "sp-ace");
@@ -186,7 +186,7 @@ fn int_ace_02_the_reset_heals_the_player_in_full_in_singleplayer() {
 
 /// `INT-ACE-02` on a dedicated server with two clients, each healed where its player is local.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn int_ace_02_the_reset_heals_every_player_in_full_on_a_dedicated_server() {
     let dir = project("ded");
     let _session = start(&dir, "ded-ace");
@@ -292,7 +292,7 @@ fn run_findings(dir: &Path) {
 /// `CFG-01` (`m10-1`): a mod path that climbs out of the project folder loads in the game; with it,
 /// `RST-01` (`m10-2`) and `DM-14` (`m10-5`) in singleplayer.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn cfg_01_rst_01_dm_14_m10_findings_in_singleplayer() {
     let dir = findings_project();
     let _session = start(&dir, "sp");
@@ -303,7 +303,7 @@ fn cfg_01_rst_01_dm_14_m10_findings_in_singleplayer() {
 /// every machine for an object the server just created) on a dedicated server with two clients
 /// and a headless client.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn cfg_01_rst_01_dm_14_m10_findings_on_a_dedicated_server() {
     let dir = findings_project();
     let _session = start(&dir, "ded");
@@ -315,7 +315,7 @@ fn cfg_01_rst_01_dm_14_m10_findings_on_a_dedicated_server() {
 /// passing check came to its runner ceiling. Prints every measure; the pass condition is in
 /// `engineering/spec/06-open-questions.md`.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn spk_14_an_actions_effect_reaches_every_machine_within_the_default_wait_ceiling() {
     let dir = repo()
         .join("target")

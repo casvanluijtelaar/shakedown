@@ -1,7 +1,7 @@
 //! M1's end-to-end tests: the stories `US-018`, `US-021`, `US-022` and `US-039`, the rest of the
 //! check API a real check needs, the reset between checks (`NFR-RL-02`, the singleplayer half of
 //! `SPK-04`) and the demo. They drive the installed `shakedown` command against the game, so they
-//! run only on the test machine, by hand, one at a time:
+//! run only on a Windows machine with Arma 3, by hand, one at a time:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m01 -- --ignored --nocapture --test-threads=1
@@ -189,7 +189,7 @@ fn checks_of(list: &[(&str, &str, &str)]) -> Vec<(String, String)> {
 /// `US-018`, `US-021`, `US-022` (with CBA), `US-039`, and every other check API function M1
 /// builds, in one session of `sp-cba`; then `US-022` criterion 2 in a session without CBA.
 #[test]
-#[ignore = "starts Arma 3 twice; run on the test machine"]
+#[ignore = "starts Arma 3 twice; run by hand on a Windows machine with Arma 3"]
 fn us_018_us_021_us_022_us_039_and_the_check_api() {
     let list = [
         // US-018 1 to 3, each in a step, so the failed step's path is in the evidence (4).
@@ -526,7 +526,7 @@ fn twenty(n: usize) -> String {
 /// the player (dying, in a car, moved and hurt and stripped), each seeing the start state the
 /// first one saw, with the reset under 2 s.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn nfr_rl_02_spk_04_twenty_checks_each_see_the_start_state() {
     let checks: Vec<(String, String)> = (1..=20).map(|n| (format!("rl/{n:02}"), twenty(n))).collect();
     let dir = project("twenty", &checks);
@@ -572,7 +572,7 @@ fn nfr_rl_02_spk_04_twenty_checks_each_see_the_start_state() {
 /// M1 exit criterion 2: the demo check, arma-grappling-hook's `US-009` rewritten, passes 10 times
 /// out of 10, each in one run together with a second check, against one session.
 #[test]
-#[ignore = "starts Arma 3 with CBA and arma-grappling-hook; run on the test machine"]
+#[ignore = "starts Arma 3 with CBA and arma-grappling-hook; run by hand on a Windows machine with Arma 3"]
 fn m1_demo_us_009_ten_times_with_a_second_check() {
     let dir = repo().join("e2e").join("grappling-hook");
     let session = Session::start(&dir, "sp");
@@ -599,7 +599,7 @@ fn m1_demo_us_009_ten_times_with_a_second_check() {
 /// its own in the game, and prints a line per execution, the second of `a` carrying `#2` right
 /// after its check id, before the duration.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_031_m01_3_a_check_given_twice_runs_twice_in_the_order_given() {
     let body = r#"["ran", { ["tick", diag_tickTime] call skd_fnc_evidence; true }] call skd_fnc_step;"#;
     let dir = project(

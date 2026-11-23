@@ -1,6 +1,6 @@
 //! Spikes SPK-07 and SPK-13 (`engineering/spec/06-open-questions.md`), run before the M3 work that depends
 //! on them: the `ScriptError` mission event on every machine kind and every kind of code, and
-//! reading a running game's RPT. They start the game, so they run only on the test machine, by
+//! reading a running game's RPT. They start the game, so they run only on a Windows machine with Arma 3, by
 //! hand:
 //!
 //!     python tools/install.py
@@ -279,7 +279,7 @@ fn file_errors(profile: &Path) -> Vec<String> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 async fn spk_07_spk_13_dedicated_server_client_headless() {
     let (runner, session) = start("dedicated").await;
     let missed = spk_07(&session, "server").await;
@@ -299,7 +299,7 @@ async fn spk_07_spk_13_dedicated_server_client_headless() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 async fn spk_07_spk_13_singleplayer_p1() {
     let (runner, session) = start("sp-fixture").await;
     let missed = spk_07(&session, "p1").await;
@@ -318,7 +318,7 @@ async fn spk_07_spk_13_singleplayer_p1() {
 /// Which ways of taking the value of called code whose last statement is an assignment, which
 /// returns nothing, make the engine report `GIAS pre stack size violation`.
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 async fn engine_fact_the_value_of_code_ending_in_an_assignment() {
     let (runner, session) = start("sp-fixture").await;
     value(&session, "p1", HANDLER, json!([])).await;

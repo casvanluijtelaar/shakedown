@@ -1,7 +1,7 @@
 ---
 type: Research
 title: "Spike SPK-14: the default ceilings"
-description: "How long an action's effect takes to reach every machine of a dedicated session, measured 100 times, and how near the passing checks of the ported arma-grappling-hook suite and of the framework's own end-to-end runs came to the wait ceiling, the check timeout, the reset ceiling and the start ceiling, on the test machine in M10."
+description: "How long an action's effect takes to reach every machine of a dedicated session, measured 100 times, and how near the passing checks of the ported arma-grappling-hook suite and of the framework's own end-to-end runs came to the wait ceiling, the check timeout, the reset ceiling and the start ceiling, on a Windows machine in M10."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-13T08:13:00-08:00 }
 sources:
@@ -12,7 +12,7 @@ sources:
 
 # Spike SPK-14: the default ceilings
 
-M10 ran `SPK-14` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 with CBA_A3 and ACE3 from the Steam Workshop, after the port of arma-grappling-hook's M00 checks. Its pass condition: the 10 s wait ceiling covers the slowest common wait, an action's effect replicated to every client of a dedicated session, in 95 of 100 runs, and no passing run of 50 checks comes within 5 s of a runner ceiling. It passed, so the defaults of `NFR-PF-06` stand as written: wait ceiling 10 s, check timeout 120 s, the runner's grace 10 s, start ceiling 180 s, reset ceiling 15 s. The defaults are those `engineering/research/18-test-tools.md` drew from other test tools[^r18]; this is the first measurement of them on real checks.
+M10 ran `SPK-14` (`engineering/spec/06-open-questions.md`) on a Windows machine, Arma 3 with CBA_A3 and ACE3 from the Steam Workshop, after the port of arma-grappling-hook's M00 checks. Its pass condition: the 10 s wait ceiling covers the slowest common wait, an action's effect replicated to every client of a dedicated session, in 95 of 100 runs, and no passing run of 50 checks comes within 5 s of a runner ceiling. It passed, so the defaults of `NFR-PF-06` stand as written: wait ceiling 10 s, check timeout 120 s, the runner's grace 10 s, start ceiling 180 s, reset ceiling 15 s. The defaults are those `engineering/research/18-test-tools.md` drew from other test tools[^r18]; this is the first measurement of them on real checks.
 
 ## The slowest common wait
 

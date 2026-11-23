@@ -1,7 +1,7 @@
 //! M11's tests: a client that joins a dedicated session late (`US-066`), leaves and joins again
 //! (`US-067`), a join that never becomes ready (`US-068`), a join or leave of a machine that
 //! cannot (`US-069`), and the measurement of `SPK-18`. They drive the installed `shakedown`, the
-//! fixture `@skd_fixture` and the game, so they run only on the test machine, by hand, one at a
+//! fixture `@skd_fixture` and the game, so they run only on a Windows machine with Arma 3, by hand, one at a
 //! time, with no runner running:
 //!
 //!     python tools/install.py
@@ -342,7 +342,7 @@ fn starts(result: &Value, name: &str) -> Vec<(u64, String)> {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_066_us_067_mch_01_a_client_joins_late_leaves_and_joins_again() {
     let dir = project("feature");
     let session = start(&dir, "ded");
@@ -460,7 +460,7 @@ fn us_066_us_067_mch_01_a_client_joins_late_leaves_and_joins_again() {
 /// after each rejoin verifies, five times over in one session, with a leave alone and a leave and
 /// a join in one check (m12-1).
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_067_rst_01_the_unit_a_client_left_is_deleted_by_the_next_reset_5_of_5() {
     let dir = project("bodies");
     let session = start(&dir, "ded");
@@ -478,7 +478,7 @@ fn us_067_rst_01_the_unit_a_client_left_is_deleted_by_the_next_reset_5_of_5() {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_068_mch_01_a_joining_client_that_never_becomes_ready() {
     let dir = project("hang");
     let session = start(&dir, "ded");
@@ -547,7 +547,7 @@ fn us_068_mch_01_a_joining_client_that_never_becomes_ready() {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_069_mch_01_dm_04_joining_or_leaving_a_machine_that_cannot() {
     let dir = project("wrong");
     let session = start(&dir, "ded");
@@ -590,7 +590,7 @@ fn us_069_mch_01_dm_04_joining_or_leaving_a_machine_that_cannot() {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn spk_18_a_third_client_joins_leaves_and_joins_again_10_of_10() {
     let dir = project("spike");
     let session = start(&dir, "ded");

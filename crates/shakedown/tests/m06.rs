@@ -1,8 +1,8 @@
 //! M6's tests: the mission restart of a check with `@reset mission` (`US-011`, `US-012`,
 //! `RST-06`), orders across a mission restart (spike `SPK-01`, `NFR-RL-04`), the game's hold on
 //! the files it read (spike `SPK-08`), and `reload` (`US-040`, `US-055`, `US-056`, `US-057`,
-//! `RLD-01` to `RLD-06`, and the time of `NFR-PF-02`). They drive the installed `shakedown` and the game, so they run only on the test
-//! machine, by hand, one at a time, with no runner running:
+//! `RLD-01` to `RLD-06`, and the time of `NFR-PF-02`). They drive the installed `shakedown` and the game, so they run only on a Windows machine
+//! with Arma 3, by hand, one at a time, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m06 -- --ignored --nocapture --test-threads=1
@@ -314,7 +314,7 @@ const IS_NIL: &str = r#"["every machine starts with no such variable", {
 /// only, so the file cannot be changed, and it reads the content it holds; once its process has
 /// ended the file is free.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn spk_08_the_game_holds_a_mod_file_it_read_and_a_stopped_session_frees_it() {
     let dir = project("spk08", &[]);
     let file = install().join(r"fixtures\skdfx_cba\addons\main\functions\fnc_version.sqf");
@@ -344,7 +344,7 @@ fn spk_08_the_game_holds_a_mod_file_it_read_and_a_stopped_session_frees_it() {
 /// round trips to `p1` while three checks with `@reset mission` restart its mission; each is
 /// answered `2` once, and the count `p1` kept equals the round trips sent.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn spk_01_nfr_rl_04_us_011_no_order_lost_or_run_twice_across_mission_restarts_in_singleplayer() {
     let checks = [
         ("set", check("US-011 sets a public variable", "", SET_VAR)),
@@ -393,7 +393,7 @@ fn spk_01_nfr_rl_04_us_011_no_order_lost_or_run_twice_across_mission_restarts_in
 /// and 2, and the time of ten mission restarts (`SPK-08`'s measurement of level B): round trips to
 /// the server and to `p1` while ten checks with `@reset mission` restart the mission.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn spk_01_nfr_rl_04_us_011_mission_restarts_on_a_dedicated_session() {
     let checks = [
         ("set", check("US-011 sets a public variable", "", SET_VAR)),
@@ -487,7 +487,7 @@ fn spk_01_nfr_rl_04_us_011_mission_restarts_on_a_dedicated_session() {
 /// the session broken; then `reload` of `config.cpp` restarts the game and brings every machine
 /// back `ready` with a new start number.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_012_us_057_a_mission_restart_that_loses_p2_breaks_the_session_and_a_game_restart_mends_it() {
     let checks = [
         (
@@ -578,7 +578,7 @@ fn us_012_us_057_a_mission_restart_that_loses_p2_breaks_the_session_and_a_game_r
 /// `US-040`, `US-056` 1 and 2, and a change `RLD-02` gives level `mission-restart` in
 /// singleplayer, through the command line and the `reload` tool.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
     let one = check(
         "US-040 an assertion edited between runs",
@@ -692,7 +692,7 @@ fn us_040_us_056_reload_a_check_a_new_file_and_config_in_singleplayer() {
 /// and the check after the first passes from the start state, the server kept and every client a
 /// new start.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_055_nfr_pf_02_ten_reloads_of_a_changed_function_on_a_dedicated_session() {
     let dir = project(
         "us055",
@@ -761,7 +761,7 @@ fn us_055_nfr_pf_02_ten_reloads_of_a_changed_function_on_a_dedicated_session() {
 /// asked after it is refused naming `shakedown reload`, and a reload brings every machine back
 /// with a new start number on the new code.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_057_a_reload_that_loses_p2_breaks_the_session_and_a_reload_mends_it() {
     let dir = project(
         "us057",

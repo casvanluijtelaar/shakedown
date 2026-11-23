@@ -1,7 +1,7 @@
 ---
 type: Research
 title: "Spikes SPK-21 and SPK-11: ACE interaction by its path, and a key posted to the game's window"
-description: "That ACE3 3.21.2's own key-up code runs an interaction action found by its path of action names once when its condition holds and not when it does not, on an object and on the player, in singleplayer and on a dedicated client, 10 of 10 each; and that a key press posted as window messages to the game's own window reaches neither a display-46 key handler nor a CBA keybind, even with the game in the foreground, so ACT-05 is dropped; run on the test machine in M17."
+description: "That ACE3 3.21.2's own key-up code runs an interaction action found by its path of action names once when its condition holds and not when it does not, on an object and on the player, in singleplayer and on a dedicated client, 10 of 10 each; and that a key press posted as window messages to the game's own window reaches neither a display-46 key handler nor a CBA keybind, even with the game in the foreground, so ACT-05 is dropped; run on a Windows machine in M17."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-21T19:36:23Z }
 sources:
@@ -15,7 +15,7 @@ sources:
 
 # Spikes SPK-21 and SPK-11: ACE interaction by its path, and a key posted to the game's window
 
-M17 ran both spikes of `engineering/spec/06-open-questions.md` on the Windows test machine before the work that depends on them. `SPK-21` passed: the framework performs an ACE interaction action through ACE's own key-up code. `SPK-11` failed: a key posted to the game's window does not reach the game, so `ACT-05` is dropped and `US-091` and `US-092` are deprecated, as `engineering/plan/milestones/m17.md` provides.
+M17 ran both spikes of `engineering/spec/06-open-questions.md` on a Windows machine before the work that depends on them. `SPK-21` passed: the framework performs an ACE interaction action through ACE's own key-up code. `SPK-11` failed: a key posted to the game's window does not reach the game, so `ACT-05` is dropped and `US-091` and `US-092` are deprecated, as `engineering/plan/milestones/m17.md` provides.
 
 ## SPK-21: ACE interaction by its path
 
@@ -23,7 +23,7 @@ M17 ran both spikes of `engineering/spec/06-open-questions.md` on the Windows te
 
 On the ACE3 version current when the milestone starts, an action of a mod's ACE interaction menu, on an object and on the player itself, found by its path of action names, runs its statement once on the acting client when its condition holds and not when it does not, in singleplayer and on a dedicated client, 10 of 10.
 
-ACE3 3.21.2 is the latest release on 2026-11-21[^ace-release], the version `INT-ACE-01` names, and the version the Workshop copy on the test machine loads (`ace_main`'s `versionStr` reads `3.21.2.113`).
+ACE3 3.21.2 is the latest release on 2026-11-21[^ace-release], the version `INT-ACE-01` names, and the version the Workshop copy on a Windows machine loads (`ace_main`'s `versionStr` reads `3.21.2.113`).
 
 ### How ACE performs an action
 
@@ -57,7 +57,7 @@ The statement ran with `_target` and `this` the crate. A path whose last name di
 
 ### The pass condition
 
-With `-noPause`, the game not in the foreground and another window focused, posted `WM_KEYDOWN`/`WM_KEYUP` fire a display-46 `KeyDown` handler and a CBA keybind once; the focused window and the foreground are unchanged, with the Shadow stream connected and disconnected.
+With `-noPause`, the game not in the foreground and another window focused, posted `WM_KEYDOWN`/`WM_KEYUP` fire a display-46 `KeyDown` handler and a CBA keybind once; the focused window and the foreground are unchanged, with a remote desktop connected and disconnected.
 
 ### What was run
 
@@ -67,7 +67,7 @@ An external script that enumerated the game's windows and posted the messages wa
 
 Both posts returned success each time, 11 presses in all, and in the 10 s after them neither handler recorded a key and the keybind's counter stayed 0. The game reported `isGameFocused` true throughout: it was the foreground window, the case most favourable to the input, and still nothing arrived.
 
-Arma 3 reads the keyboard through DirectInput, whose device state does not come from window messages, and a device at the foreground cooperative level is unacquired in the background[^dicoop], so no posted message can reach it. Input that does reach it is either the global input stream (`SendInput`), which types on the machine's keyboard and is ruled out by CLAUDE.md, or code inside the engine's input path, which `EP-01` and `NFR-LG-01` rule out. The case "another window focused" and the Shadow stream's two states were not run, since the condition already failed in the favourable case.
+Arma 3 reads the keyboard through DirectInput, whose device state does not come from window messages, and a device at the foreground cooperative level is unacquired in the background[^dicoop], so no posted message can reach it. Input that does reach it is either the global input stream (`SendInput`), which types on the machine's keyboard and is ruled out by CLAUDE.md, or code inside the engine's input path, which `EP-01` and `NFR-LG-01` rule out. The case "another window focused" and the two states of a remote desktop connection were not run, since the condition already failed in the favourable case.
 
 The window found was not identified by its class name, because the external script that would have listed it was refused; the game process has one visible top-level window.
 

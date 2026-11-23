@@ -12,7 +12,7 @@ verified: [{ by: "human:casvanluijtelaar", at: 2026-11-04T23:46:25+01:00 }]
 
 # US-052 Only the local user controls the session, and every piece of code sent to it is recorded
 
-As a test author, I want to know that only I can run code in my test session and see every piece of code that was run in it, so that a test machine is not a door into my game.
+As a test author, I want to know that only I can run code in my test session and see every piece of code that was run in it, so that a running session is not a door into my game.
 
 ## Acceptance criteria
 

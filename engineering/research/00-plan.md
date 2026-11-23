@@ -49,10 +49,10 @@ Questions:
 - What does `acceptance/run.ps1` add: suite files, cases, filters, setups per check?
 - What do its checks look like in SQF, and which helpers (`acc_lib.sqf`) does every check need? That is the first draft of the check API's vocabulary.
 - What has it measured: start times, mission change times, stall thresholds, start options tried?
-- Where has it failed or been flaky, from its findings, docs and coordinator playbook: the Shadow stream and the stopped clock, clients kept across a mission change, kicks with one Steam ID, ACE's random falls?
+- Where has it failed or been flaky, from its findings, docs and coordinator playbook: the cut remote desktop connection and the stopped clock, clients kept across a mission change, kicks with one Steam ID, ACE's random falls?
 - What should the framework keep, what replace, and what does it make unnecessary?
 
-Gate: the files in `../arma-grappling-hook` at commit `3f4f7bd`, cited by path. Its measurements count as measured on the test machine, with their date.
+Gate: the files in `../arma-grappling-hook` at commit `3f4f7bd`, cited by path. Its measurements count as measured on a Windows machine, with their date.
 
 ### T2 Existing Arma automation, MCP and debug tools
 
@@ -115,7 +115,7 @@ Gate: the BI wiki pages on startup parameters and server configuration, and T1's
 Questions:
 - How does a check move a player, turn them, aim and look, from code: commands for position, direction, animation, and walking a unit to a point?
 - How does a check use a mod's actions: `addAction` entries, ACE interaction menu entries, CBA keybinds and their handlers?
-- How can key input reach one game window without taking over the desktop: window messages, input injection per process, DirectInput and raw input limits, what Arma actually reads? Does it work while the window is in the background, and over Shadow?
+- How can key input reach one game window without taking over the desktop: window messages, input injection per process, DirectInput and raw input limits, what Arma actually reads? Does it work while the window is in the background, and with no remote desktop connected?
 - Building a scene: creating objects, units and vehicles, setting time, weather and terrain position, and removing them again.
 
 Gate: the BI wiki, CBA's and ACE's docs, Microsoft's Win32 documentation for any input API. Input claims about Arma are **needs a spike** unless a tool in T2 shows them working.
@@ -139,7 +139,7 @@ Gate: the BI wiki and CBA's docs.
 `CR-05`, `CR-06`, `CR-30`, `CR-31`.
 
 Questions:
-- How do we tell a healthy session from a stalled one: game time advancing, frame rate, every machine answering? What did the Shadow stream do in T1?
+- How do we tell a healthy session from a stalled one: game time advancing, frame rate, every machine answering? What did a cut remote desktop connection do in T1?
 - What happens to the game when its window loses focus, is minimised or is not shown?
 - How does the runner stop every process it started, even when the runner itself crashes (Windows job objects, process trees)?
 - How is the environment checked before a run: Steam running and logged in, the game and mods installed, versions?
@@ -196,7 +196,7 @@ Gate: the post or issue itself, quoted with its link.
 
 ## Decisions for this research
 
-- **No measurements on the test machine.** The research is desk research. Every timing and every claim about game behaviour that only a run can settle is marked **needs a spike**, with its pass condition, for the plan.
+- **No measurements on a Windows machine.** The research is desk research. Every timing and every claim about game behaviour that only a run can settle is marked **needs a spike**, with its pass condition, for the plan.
 - **The stable branch.** Engine features are checked against Arma 3's current stable branch. A feature that exists only on the profiling or development branch is recorded with its branch, and recommended only where it makes the framework much better or simpler. `01-best-of-breed.md` names each one.
 - **Discord through the owner.** No tool reads Discord: automating a user account breaks Discord's terms, and a bot needs the server's admins. The owner runs the searches below in the ACE Discord and pastes what is useful into the session. The research cites such a source as `discord:ace/<channel>/<date>`, with no usernames, and marks every claim from it **unverified** until a public source or a spike confirms it. T12 also uses forums, Reddit and GitHub issues and discussions.
 - **One session.** The MVP topics run in one session. T12 gets a short pass.

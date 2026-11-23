@@ -1,17 +1,17 @@
 ---
 type: Research
 title: "Spikes SPK-16, SPK-17 and SPK-15: crashes, a held clock and the clock watch"
-description: "What a crash on demand through the fixture's extension does to each kind of game process, how singleplayer mission time is held while frames go on, and what each machine's heartbeat and clocks measured over 50 passing checks in singleplayer and on a dedicated session, with how fast a suspended and a killed client are seen, on the test machine in M9."
+description: "What a crash on demand through the fixture's extension does to each kind of game process, how singleplayer mission time is held while frames go on, and what each machine's heartbeat and clocks measured over 50 passing checks in singleplayer and on a dedicated session, with how fast a suspended and a killed client are seen, on a Windows machine in M9."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-12T12:40:00+01:00 }
 sources:
-  - { id: tests, resource: "crates/shakedown/tests/spikes_m09.rs, spk_16_a_crash_on_demand_on_each_kind_of_game_process, spk_16_the_headless_client_after_its_crash, spk_17_mission_time_held_while_frames_go_on, spk_15_heartbeats_over_50_passing_checks and spk_15_a_suspended_and_a_killed_client_are_flagged, runs of 2026-11-12 on the Windows test machine, Arma 3 2.22 stable, the e2e setups sp-fixture and dedicated (a server, two clients and a headless client loading @skd_fixture)", read: 2026-11-12 }
+  - { id: tests, resource: "crates/shakedown/tests/spikes_m09.rs, spk_16_a_crash_on_demand_on_each_kind_of_game_process, spk_16_the_headless_client_after_its_crash, spk_17_mission_time_held_while_frames_go_on, spk_15_heartbeats_over_50_passing_checks and spk_15_a_suspended_and_a_killed_client_are_flagged, runs of 2026-11-12 on a Windows machine, Arma 3 2.22 stable, the e2e setups sp-fixture and dedicated (a server, two clients and a headless client loading @skd_fixture)", read: 2026-11-12 }
   - { id: r17, resource: "engineering/research/17-health.md", read: 2026-11-12 }
 ---
 
 # Spikes SPK-16, SPK-17 and SPK-15: crashes, a held clock and the clock watch
 
-M9 ran `SPK-16`, `SPK-17` and `SPK-15` (`engineering/spec/06-open-questions.md`) on the Windows test machine, each before the work that depends on it, from the tests in `crates/shakedown/tests/spikes_m09.rs`[^tests]. Each test starts its sessions through the runner's own library, as `session start` does, and ends every process it started.
+M9 ran `SPK-16`, `SPK-17` and `SPK-15` (`engineering/spec/06-open-questions.md`) on a Windows machine, each before the work that depends on it, from the tests in `crates/shakedown/tests/spikes_m09.rs`[^tests]. Each test starts its sessions through the runner's own library, as `session start` does, and ends every process it started.
 
 ## SPK-16: a crash on demand
 
@@ -77,7 +77,7 @@ A suspended process sends no heartbeat at all, so the clock watch cannot judge i
 
 Each time the session went `broken` with the machine's message, and every other process went on running.
 
-The Shadow stream cut was not driven: nobody could cut the owner's stream during the spike. What research `17-health.md` reports of it, mission time standing still while frames go on at about 19 a second[^r17], is what `SPK-17`'s held clock reproduces, and the watch flags that in about 5 s; that the cut itself is flagged waits for the owner's run of `US-059`.
+The cut remote desktop connection was not driven: nobody could cut the connection during the spike. What research `17-health.md` reports of it, mission time standing still while frames go on at about 19 a second[^r17], is what `SPK-17`'s held clock reproduces, and the watch flags that in about 5 s; that the cut itself is flagged waits for the owner's run of `US-059`.
 
 **Forces:** `HLT-02` keeps its thresholds, says when a flag clears and from when a clock counts as stopped, and adds the 10 s heartbeat gap; `P-07` takes the gap as its third way to see a stall. The clock watch changes outcomes, as `HLT-02` says, so the fallback is not needed.
 

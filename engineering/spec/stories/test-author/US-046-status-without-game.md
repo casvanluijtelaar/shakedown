@@ -18,7 +18,7 @@ As a test author, I want to see at any time whether a session runs, what state e
 
 1. During a run, `shakedown status --json` returns the session with each machine's state and `last_answer_at`, and the run with `done`, `total` and `current_check`; the MCP tool `status` returns the same.
 2. With no runner running, `shakedown status` exits 0 saying no runner runs, and starts nothing.
-3. On the Mac, with no game installed, `shakedown mcp` starts and its `status` tool answers `runner` `not-running`; `list_checks` and `guide` answer too.
+3. On macOS, with no game installed, `shakedown mcp` starts and its `status` tool answers `runner` `not-running`; `list_checks` and `guide` answer too.
 
 ## Next to
 

@@ -2,7 +2,7 @@
 //! stopped by hand with Ctrl+Break, `run stop` and `run_stop` (`US-034`), `session stop` and
 //! `session_stop` (`US-036`), and a run stopped at its runner ceiling (`US-063`), in singleplayer
 //! and on a dedicated session with two clients. They drive the installed `shakedown` and the
-//! game, so they run only on the test machine, by hand, one at a time, with no runner running:
+//! game, so they run only on a Windows machine with Arma 3, by hand, one at a time, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m08 -- --ignored --nocapture --test-threads=1
@@ -399,7 +399,7 @@ fn ctrl_break_with_setup(dir: &Path, setup: &str) {
 }
 
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_034_stp_02_ctrl_break_stops_a_run_that_started_its_own_session_in_singleplayer() {
     let dir = project("brk-sp");
     ctrl_break_with_setup(&dir, "sp");
@@ -409,7 +409,7 @@ fn us_034_stp_02_ctrl_break_stops_a_run_that_started_its_own_session_in_singlepl
 /// run and leave the session `ready` with every start number kept; through MCP, the eight checks
 /// of `US-063` stop at the runner ceiling.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_034_us_063_a_stopped_run_leaves_its_session_ready_in_singleplayer() {
     let dir = project("stop-sp");
     let _s = Session::start(&dir, "sp");
@@ -509,7 +509,7 @@ fn ceiling_stopped(result: &Value) {
 
 /// `US-063` 1 and 2 with `--setup sp`: the run stops at its ceiling and stops its session.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_063_run_06_the_runner_ceiling_stops_a_run_that_started_its_own_session() {
     let dir = project("ceil-sp");
     steam();
@@ -529,7 +529,7 @@ fn us_063_run_06_the_runner_ceiling_stops_a_run_that_started_its_own_session() {
 /// `US-033` 1 to 3 and `US-034` 1 and 3 on a dedicated session with two clients, and `US-036`
 /// through the command line and `session_stop`.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_033_us_034_us_036_walk_away_on_a_dedicated_session() {
     let dir = project("ded2");
 

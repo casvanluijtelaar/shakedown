@@ -2,12 +2,12 @@
 //! the RPT scan, each machine's log kept with the run and per check, the `logs` command, the
 //! redaction of the Steam identity, `DEF-09`, and the demo. The stories `US-024`, `US-027`,
 //! `US-028`, `US-029`, `US-030`, `US-064` and `US-065`. They drive the installed `shakedown`
-//! command against the game, so they run only on the test machine, by hand, one at a time:
+//! command against the game, so they run only on a Windows machine with Arma 3, by hand, one at a time:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m03 -- --ignored --nocapture --test-threads=1
 //!
-//! The Steam ID and the Steam names are read from this machine's Steam files at run time and
+//! The Steam ID and the Steam names are read from the local Steam files at run time and
 //! never printed: a test says only whether it found them.
 
 use std::path::{Path, PathBuf};
@@ -186,7 +186,7 @@ fn checks_of(list: &[(&str, &str, &str)]) -> Vec<(String, String)> {
         .collect()
 }
 
-/// The Steam ID and the two names of the account Steam last logged in with, from this machine's
+/// The Steam ID and the two names of the account Steam last logged in with, from the local
 /// `loginusers.vdf`, read at run time.
 fn identity() -> Vec<String> {
     let out = Command::new("reg")
@@ -302,7 +302,7 @@ const IDENTITY: &str = r#"private _id = ["p1", { [getPlayerUID player, profileNa
 /// `US-024`, `US-027`, `US-028`, `US-029`, `US-030`, `US-064` and `US-065` in one dedicated
 /// session with two clients and a headless client.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_024_us_027_us_028_us_029_us_030_us_064_us_065_on_a_dedicated_session() {
     let ids = identity();
     let list = [
@@ -549,7 +549,7 @@ const DIRTY: &str = r#"["create on every machine", {
 /// not found` line in the server's RPT. The reset that had every machine delete every entity it
 /// recorded left 125 to 253 such lines over 21 resets of the same kind.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn def_09_twenty_resets_leave_no_object_not_found_line_on_the_server() {
     let mut list: Vec<(String, String)> = (1..=20)
         .map(|n| {
@@ -589,7 +589,7 @@ fn def_09_twenty_resets_leave_no_object_not_found_line_on_the_server() {
 /// that step with each machine's last value and log excerpt, and the run folder names no Steam
 /// account.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn m3_demo_us_024_the_rope_check_fails_with_its_evidence() {
     let ids = identity();
     let demo = repo().join("e2e").join("grappling-hook");

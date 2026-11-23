@@ -2,7 +2,7 @@
 //! changed function reloaded with no files given and the checks a finding names rerun by its tag
 //! (`US-054`, `RUN-01`, `RLD-03`, `RLD-06`), timed against `NFR-PF-02`, in singleplayer and on a
 //! dedicated session with two clients. They drive the installed `shakedown` and the game, so they
-//! run only on the test machine, by hand, one at a time, with no runner running:
+//! run only on a Windows machine with Arma 3, by hand, one at a time, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m07 -- --ignored --nocapture --test-threads=1
@@ -444,13 +444,13 @@ fn reload_loop(name: &str, setup: &str, names: &[&str], target_s: f64) {
 }
 
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_054_us_058_nfr_pf_02_reload_during_a_run_and_rerun_by_finding_in_singleplayer() {
     reload_loop("sp", "sp", &["p1"], PF_02_SP_S);
 }
 
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_054_us_058_nfr_pf_02_reload_during_a_run_and_rerun_by_finding_on_a_dedicated_session() {
     reload_loop("ded2", "ded2", &["server", "p1", "p2"], PF_02_DED_S);
 }

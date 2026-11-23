@@ -1,9 +1,12 @@
 //! Spikes SPK-12, SPK-10 and SPK-05 for singleplayer `p1` (`engineering/spec/06-open-questions.md`), run
-//! before the M1 work that depends on them. They start the game, so they run only on the test
-//! machine, by hand:
+//! before the M1 work that depends on them. They start the game, so they run only on a Windows machine
+//! with Arma 3, by hand:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test spikes_m01 -- --ignored --nocapture
+//!
+//! The arma-grappling-hook spike loads the build of the clone named by the environment variable
+//! `SHAKEDOWN_AGH_REPO`, or of a clone beside this repository when it is unset.
 //!
 //! `SPK-04`'s singleplayer half runs through the command line in `e2e.rs`
 //! (`nfr_rl_02_spk_04_twenty_checks_each_see_the_start_state`). Results go to `engineering/research/`.
@@ -23,6 +26,21 @@ fn repo() -> PathBuf {
 fn plain(p: PathBuf) -> PathBuf {
     let p = std::fs::canonicalize(p).unwrap();
     PathBuf::from(p.to_string_lossy().trim_start_matches(r"\\?\"))
+}
+
+/// The arma-grappling-hook build HEMTT leaves in `.hemttout\build`: of the clone named by
+/// `SHAKEDOWN_AGH_REPO`, or of the clone beside this repository when it is unset.
+fn agh_build() -> PathBuf {
+    let repo = std::env::var_os("SHAKEDOWN_AGH_REPO")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| repo().join("..").join("arma-grappling-hook"));
+    let build = repo.join(".hemttout").join("build");
+    assert!(
+        build.is_dir(),
+        "no arma-grappling-hook build at {}: build that clone with `hemtt build`, or set SHAKEDOWN_AGH_REPO to its folder",
+        build.display()
+    );
+    plain(build)
 }
 
 async fn start() -> (std::sync::Arc<Runner>, std::sync::Arc<session::Session>) {
@@ -52,7 +70,7 @@ async fn value(session: &session::Session, source: &str, ceiling: f64) -> Value 
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 async fn spk_12_spk_10_spk_05_singleplayer_p1() {
     let (runner, session) = start().await;
 
@@ -264,7 +282,7 @@ async fn spk_12_spk_10_spk_05_singleplayer_p1() {
 /// `skd_fnc_pressKey` (`ACT-02`, `ACT-03`), and whether a created vehicle's randomisation is off
 /// when its variable is set before its init runs (`SCN-01`).
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "starts Arma 3 with CBA and arma-grappling-hook; run on the test machine"]
+#[ignore = "starts Arma 3 with CBA and arma-grappling-hook; run by hand on a Windows machine with Arma 3"]
 async fn int_cba_01_keybind_registry_probe() {
     let e2e = plain(repo().join("e2e"));
     let project = config::load(&e2e).unwrap();
@@ -281,7 +299,7 @@ async fn int_cba_01_keybind_registry_probe() {
         },
         config::Mod {
             name: "agh".into(),
-            path: PathBuf::from(r"C:\Users\Shadow\Documents\arma-grappling-hook\.hemttout\build"),
+            path: agh_build(),
             patch: Some("agh_main".into()),
             version: None,
             source: None,

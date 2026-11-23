@@ -75,7 +75,7 @@ HEMTT does the build. `hemtt dev` builds the mod into `.hemttout/dev` unbinarize
 **Forces:**
 - Every process of a reload-capable session starts with `-filePatching`, and the framework's server config sets `allowedFilePatching = 2`. `CR-01`, `CR-03`.
 - The mod under test is loaded from a HEMTT dev build (or an equivalent linked unpacked tree), not from a packed release. The framework does not build mods (PRD scope), so it states this as a precondition and checks it before a run. `CR-06`.
-- On one test machine every process reads the same Arma 3 folder, so one dev build reaches the server, all clients and the headless clients at once. A Linux server or a second machine needs its own copy or link: **needs a spike** when that setup comes up.
+- On one machine every process reads the same Arma 3 folder, so one dev build reaches the server, all clients and the headless clients at once. A Linux server or a second machine needs its own copy or link: **needs a spike** when that setup comes up.
 - A change that adds or removes a file, or touches config, is a game restart. `CR-03`.
 
 ## What can be reloaded
@@ -146,7 +146,7 @@ String tables, models (`.p3d`), textures and sounds were not covered by the sour
 
 ## How a reload reaches every machine
 
-- Files: on one test machine every process reads the same linked dev build, so nothing is copied.
+- Files: on one machine every process reads the same linked dev build, so nothing is copied.
 - Level A: the runner sends the recompile order to every machine over its own channel, or the server sends it with `remoteExec` to all (`0`). Each machine compiles its own copy; `publicVariable` of a final value would make it final on the receivers too[^wiki-compilefinal], so code is never broadcast as a value.
 - Level B: the server restarts the mission and every connected client and headless client loads it again. How, and whether clients stay connected, is T5's question.
 - The reload is done when every machine reports the new version of each function, for example a hash of `toString` of the function, which the agent returns per machine. `CR-22`.

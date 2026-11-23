@@ -1,7 +1,7 @@
 //! M15's tests: a check hands its situation over to a manual tester (`US-083`, `MAN-01`,
 //! `RUN-04`, `STP-02`, `SES-06`, `INS-02`), and a hand over to a machine with no screen is the
 //! author's mistake (`US-084`, `DM-04`). They drive the installed `shakedown` and the game, so they
-//! run only on the test machine, by hand, with no runner running:
+//! run only on a Windows machine with Arma 3, by hand, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m15 -- --ignored --nocapture --test-threads=1

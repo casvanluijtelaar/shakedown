@@ -1,7 +1,7 @@
 //! Spikes SPK-16, SPK-17 and SPK-15 (`engineering/spec/06-open-questions.md`), run before the M9 work that
 //! depends on them: a crash on demand on each kind of game process, mission time held while
 //! frames go on, and the thresholds of the clock watch. They start the game, so they run only on
-//! the test machine, by hand:
+//! a Windows machine with Arma 3, by hand:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test spikes_m09 -- --ignored --nocapture --test-threads=1
@@ -120,7 +120,7 @@ async fn crash(session: &session::Session, machine: &str, label: &str) -> bool {
 /// SPK-16: the fixture's crash on singleplayer `p1`, a dedicated `server`, a client and a
 /// headless client, 5 rounds each.
 #[tokio::test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 async fn spk_16_a_crash_on_demand_on_each_kind_of_game_process() {
     let runner = runner().await;
     let mut passed = std::collections::BTreeMap::<&str, u32>::new();
@@ -181,7 +181,7 @@ addMissionEventHandler ["EachFrame", {
 
 /// SPK-17: each candidate hold, 10 times for 8 s in singleplayer.
 #[tokio::test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 async fn spk_17_mission_time_held_while_frames_go_on() {
     let runner = runner().await;
     let s = start(&runner, "sp-fixture").await.expect("a session");
@@ -251,7 +251,7 @@ fn windows_of(pid: u32) -> String {
 /// SPK-16, the headless client alone: how long it lives after the fixture's crash, with the
 /// server and the clients still up, and what its process shows meanwhile.
 #[tokio::test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 async fn spk_16_the_headless_client_after_its_crash() {
     let runner = runner().await;
     for round in 1..=4 {
@@ -348,7 +348,7 @@ async fn watch_beats<F: std::future::Future>(session: &session::Session, until: 
 /// SPK-15, part one: 50 passing checks in singleplayer and 50 on a dedicated session with two
 /// clients and a headless client, each machine's heartbeat gap and clock ratio recorded.
 #[tokio::test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 async fn spk_15_heartbeats_over_50_passing_checks() {
     let runner = runner().await;
     let project = std::env::temp_dir().join(format!("skd-spk15-{}", std::process::id()));
@@ -419,7 +419,7 @@ async fn until_lost(session: &session::Session, machine: &str) -> Option<f64> {
 /// SPK-15, part two: a suspended client and a killed client are each flagged within 15 s, 5
 /// rounds on a dedicated session with two clients and a headless client.
 #[tokio::test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 async fn spk_15_a_suspended_and_a_killed_client_are_flagged() {
     let runner = runner().await;
     let (mut suspended, mut killed) = (0, 0);

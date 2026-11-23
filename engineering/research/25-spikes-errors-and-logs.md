@@ -1,16 +1,16 @@
 ---
 type: Research
 title: "Spikes SPK-07 and SPK-13: script errors and live RPTs"
-description: "What the ScriptError mission event caught on a singleplayer p1, a dedicated server, a game client and a headless client for every kind of code against what each RPT showed, and how soon a reader beside a running game sees a diag_log line in its RPT, on the test machine in M3, with the RPT's error format and what taking the value of code that ends in an assignment does, found on the way."
+description: "What the ScriptError mission event caught on a singleplayer p1, a dedicated server, a game client and a headless client for every kind of code against what each RPT showed, and how soon a reader beside a running game sees a diag_log line in its RPT, on a Windows machine in M3, with the RPT's error format and what taking the value of code that ends in an assignment does, found on the way."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-06T08:30:00+01:00 }
 sources:
-  - { id: spikes, resource: "crates/shakedown/tests/spikes_m03.rs, spk_07_spk_13_dedicated_server_client_headless, spk_07_spk_13_singleplayer_p1 and engine_fact_the_value_of_code_ending_in_an_assignment, two runs of 2026-11-06 on the Windows test machine, Arma 3 2.22.154089 stable", read: 2026-11-06 }
+  - { id: spikes, resource: "crates/shakedown/tests/spikes_m03.rs, spk_07_spk_13_dedicated_server_client_headless, spk_07_spk_13_singleplayer_p1 and engine_fact_the_value_of_code_ending_in_an_assignment, two runs of 2026-11-06 on a Windows machine, Arma 3 2.22.154089 stable", read: 2026-11-06 }
 ---
 
 # Spikes SPK-07 and SPK-13: script errors and live RPTs
 
-M3 ran `SPK-07` and `SPK-13` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, once in a dedicated session the runner started (a server, two game clients `p1` and `p2`, a headless client `hc1`) and once in a singleplayer session, each loading the fixture `@skd_fixture` with its `skdfx_fnc_throw`. The owner was connected through Shadow PC, so the client windows rendered. Both run again after `python tools/install.py` with `cargo test -p shakedown --test spikes_m03 -- --ignored --nocapture --test-threads=1`.
+M3 ran `SPK-07` and `SPK-13` (`engineering/spec/06-open-questions.md`) on a Windows machine, Arma 3 2.22.154089 stable, once in a dedicated session the runner started (a server, two game clients `p1` and `p2`, a headless client `hc1`) and once in a singleplayer session, each loading the fixture `@skd_fixture` with its `skdfx_fnc_throw`. The client windows rendered. Both run again after `python tools/install.py` with `cargo test -p shakedown --test spikes_m03 -- --ignored --nocapture --test-threads=1`.
 
 ## SPK-07: passed
 
@@ -70,4 +70,4 @@ The quoted code of the first two lines runs on over lines without a timestamp wh
 
 An assignment returns nothing, so the value of code whose last statement is one, such as `{ skd_a = 1 }`, is nothing. Taking that value raises an error and ends the script there: `private _r = [] call { skd_a = 1 }` raises `GIAS pre stack size violation`, `_b set [0, ...]` raises `GIO pre stack size violation` and `[...] param [0]` raises `GIAR pre stack size violation`, while the same call as a statement of its own raises nothing[^spikes]. Wrapped in a `switch`, `private _r = switch (true) do { default { [] call { skd_a = 1 } } }` raises nothing and leaves `_r` nil, and code that returns a value returns it unchanged. The framework took the value of a step's code this way before M3, so a step that ended in an assignment raised that error unseen; it takes it through a `switch`.
 
-[^spikes]: crates/shakedown/tests/spikes_m03.rs, spk_07_spk_13_dedicated_server_client_headless, spk_07_spk_13_singleplayer_p1 and engine_fact_the_value_of_code_ending_in_an_assignment, two runs of 2026-11-06 on the Windows test machine, Arma 3 2.22.154089 stable
+[^spikes]: crates/shakedown/tests/spikes_m03.rs, spk_07_spk_13_dedicated_server_client_headless, spk_07_spk_13_singleplayer_p1 and engine_fact_the_value_of_code_ending_in_an_assignment, two runs of 2026-11-06 on a Windows machine, Arma 3 2.22.154089 stable

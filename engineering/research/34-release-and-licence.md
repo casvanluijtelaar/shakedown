@@ -52,7 +52,7 @@ The repository on GitHub is public and has no licence[^scan]. Searching it and i
 
 - **No Steam ID.** The one number in the form of a Steam ID is the made-up `76561190000000042` of the redaction test in `crates/shakedown/src/logs.rs`. The Steam ID printed in the M16 build reached no file or commit, as the coordinator playbook records.
 - **No token, password or user path.**
-- **The owner's name and work e-mail** are in the commit metadata and in the coordinator playbook's note on the test machine's git identity, and the internal address of the agentic engineering guide is in `CLAUDE.md`. All of them are already public; whether to keep them is the owner's call.
+- **The owner's name and work e-mail** are in the commit metadata and in the coordinator playbook's note on the git identity, and the internal address of the agentic engineering guide is in `CLAUDE.md`. All of them are already public; whether to keep them is the owner's call.
 - **The fixture mods** are this repository's own test targets. They belong in the source and stay out of the release zip, as `DEF-30` recommends[^def30].
 
 ## What this means for the spec

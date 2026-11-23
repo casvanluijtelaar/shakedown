@@ -1,5 +1,5 @@
 //! End-to-end tests that drive the installed `shakedown` command against the game. They run only
-//! on the test machine, by hand:
+//! on a Windows machine with Arma 3, by hand:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test e2e -- --ignored --nocapture --test-threads=1
@@ -106,7 +106,7 @@ const SYNTAX: &str = "// @check US-038 A body with a syntax error\n\nprivate _a 
 const SYNTAX_FIXED: &str = "// @check US-038 A body with a syntax error\n\nprivate _a = 1;\n_a = _a * 2;\n";
 
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_037_us_038_checks_in_one_session() {
     let dir = project(
         "us037",
@@ -267,7 +267,7 @@ fn us_037_us_038_checks_in_one_session() {
 }
 
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn run_04_the_demo_starts_and_stops_its_own_session() {
     let (code, run) = cmd(&repo().join("e2e"), &["run", "--setup", "sp", "smoke"]);
     assert_eq!(code, 0, "{run}");

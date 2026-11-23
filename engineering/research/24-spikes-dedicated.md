@@ -1,18 +1,18 @@
 ---
 type: Research
 title: "Spikes SPK-01, SPK-03 and SPK-04 on a dedicated session"
-description: "What the round trip through the extension and its callback and the session token through the environment measured on a dedicated server, a game client and a headless client, and what the reset in place measured over 20 checks on a dedicated session with two clients and a headless client, on the test machine in M2, with the engine facts found on the way."
+description: "What the round trip through the extension and its callback and the session token through the environment measured on a dedicated server, a game client and a headless client, and what the reset in place measured over 20 checks on a dedicated session with two clients and a headless client, on a Windows machine in M2, with the engine facts found on the way."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-06T10:45:00+01:00 }
 sources:
-  - { id: spikes, resource: "crates/shakedown/tests/spikes_m02.rs, spk_01_spk_03_dedicated_server_client_headless, run of 2026-11-06 on the Windows test machine (session s-20261106-091201), Arma 3 2.22.154089 stable", read: 2026-11-06 }
+  - { id: spikes, resource: "crates/shakedown/tests/spikes_m02.rs, spk_01_spk_03_dedicated_server_client_headless, run of 2026-11-06 on a Windows machine (session s-20261106-091201), Arma 3 2.22.154089 stable", read: 2026-11-06 }
   - { id: twenty, resource: "crates/shakedown/tests/m02.rs, nfr_rl_02_nfr_pf_04_spk_04_twenty_checks_on_a_dedicated_session, and the reset lines of %LOCALAPPDATA%\\Shakedown\\runner.log, runs of 2026-11-06", read: 2026-11-06 }
   - { id: m01, resource: "crates/shakedown/tests/m01.rs, nfr_rl_02_spk_04_twenty_checks_each_see_the_start_state, run of 2026-11-06 with the reset of M2", read: 2026-11-06 }
 ---
 
 # Spikes SPK-01, SPK-03 and SPK-04 on a dedicated session
 
-M2 ran the server, client and headless client parts of `SPK-01` and `SPK-03` and the dedicated half of `SPK-04` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, in a dedicated session the runner started: `arma3server_x64.exe` as `server` with `-autoInit`, then two `arma3_x64.exe` game clients `p1` and `p2` and one headless client `hc1` once the server was ready. The owner was connected through Shadow PC, so the client windows rendered. Each runs again after `python tools/install.py` with `cargo test -p shakedown --test spikes_m02 -- --ignored --nocapture` and, for `SPK-04`, `cargo test -p shakedown --test m02 nfr_rl_02 -- --ignored --nocapture`.
+M2 ran the server, client and headless client parts of `SPK-01` and `SPK-03` and the dedicated half of `SPK-04` (`engineering/spec/06-open-questions.md`) on a Windows machine, Arma 3 2.22.154089 stable, in a dedicated session the runner started: `arma3server_x64.exe` as `server` with `-autoInit`, then two `arma3_x64.exe` game clients `p1` and `p2` and one headless client `hc1` once the server was ready. The client windows rendered. Each runs again after `python tools/install.py` with `cargo test -p shakedown --test spikes_m02 -- --ignored --nocapture` and, for `SPK-04`, `cargo test -p shakedown --test m02 nfr_rl_02 -- --ignored --nocapture`.
 
 ## SPK-01, server, client and headless client: passed
 
@@ -64,6 +64,6 @@ With the same reset, singleplayer's 20 checks of `NFR-RL-02` all passed again, w
 - **Memory**: with the server, two game clients and the headless client up, the machine had 12,287 MB of its 16 GB in use, 6,822 MB of it in the four game processes[^spikes].
 - **A respawned player** on a dedicated session with `respawn = 3` and `respawnDelay = 0` is a new unit at the `respawn_west` marker at once; the `EntityRespawned` mission event gives the new and the old unit, and the old one is the body the reset deletes (`RST-05`)[^twenty].
 
-[^spikes]: crates/shakedown/tests/spikes_m02.rs, spk_01_spk_03_dedicated_server_client_headless, run of 2026-11-06 on the Windows test machine (session s-20261106-091201), Arma 3 2.22.154089 stable
+[^spikes]: crates/shakedown/tests/spikes_m02.rs, spk_01_spk_03_dedicated_server_client_headless, run of 2026-11-06 on a Windows machine (session s-20261106-091201), Arma 3 2.22.154089 stable
 [^twenty]: crates/shakedown/tests/m02.rs, nfr_rl_02_nfr_pf_04_spk_04_twenty_checks_on_a_dedicated_session, and the reset lines of %LOCALAPPDATA%\Shakedown\runner.log, runs of 2026-11-06
 [^m01]: crates/shakedown/tests/m01.rs, nfr_rl_02_spk_04_twenty_checks_each_see_the_start_state, run of 2026-11-06 with the reset of M2

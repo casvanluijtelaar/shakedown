@@ -1,19 +1,19 @@
 ---
 type: Research
 title: "Spikes SPK-01, SPK-02 and SPK-03 in singleplayer"
-description: "What the round trip through the extension and its callback, large orders and results, and the session token through the environment measured on singleplayer p1 on the test machine in M0, with the engine facts the walking skeleton found on the way."
+description: "What the round trip through the extension and its callback, large orders and results, and the session token through the environment measured on singleplayer p1 on a Windows machine in M0, with the engine facts the walking skeleton found on the way."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-05T17:30:00+01:00 }
 sources:
-  - { id: spikes, resource: "crates/shakedown/tests/spikes.rs, runs of 2026-11-05 on the Windows test machine (sessions s-20261105-161417, s-20261105-161619, s-20261105-161740 and one after)", read: 2026-11-05 }
+  - { id: spikes, resource: "crates/shakedown/tests/spikes.rs, runs of 2026-11-05 on a Windows machine (sessions s-20261105-161417, s-20261105-161619, s-20261105-161740 and one after)", read: 2026-11-05 }
   - { id: probe, resource: "An -autotest mission of the developer's scratch folder logging toJSON, fromJSON, compile, ScriptError and terminate behaviour with diag_log, 2026-11-05, Arma 3 2.22.154089 stable", read: 2026-11-05 }
   - { id: e2e, resource: "crates/shakedown/tests/e2e.rs, us_037_us_038_checks_in_one_session, 2026-11-05", read: 2026-11-05 }
-  - { id: rpt, resource: "RPT files of the spike and probe sessions on the test machine, 2026-11-05", read: 2026-11-05 }
+  - { id: rpt, resource: "RPT files of the spike and probe sessions on a Windows machine, 2026-11-05", read: 2026-11-05 }
 ---
 
 # Spikes SPK-01, SPK-02 and SPK-03 in singleplayer
 
-M0 ran the singleplayer `p1` parts of `SPK-01` and `SPK-03` and the whole of `SPK-02` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, with the extension built on `arma-rs` 1.13.0 and the in-game agent of `addon/`. The game ran in a window with no person connected through Shadow PC. Each spike runs again with `cargo test -p shakedown --test spikes -- --ignored --nocapture` after `python tools/install.py`[^spikes].
+M0 ran the singleplayer `p1` parts of `SPK-01` and `SPK-03` and the whole of `SPK-02` (`engineering/spec/06-open-questions.md`) on a Windows machine, Arma 3 2.22.154089 stable, with the extension built on `arma-rs` 1.13.0 and the in-game agent of `addon/`. The game ran in a window with nobody connected by remote desktop. Each spike runs again with `cargo test -p shakedown --test spikes -- --ignored --nocapture` after `python tools/install.py`[^spikes].
 
 ## SPK-01, singleplayer p1: passed
 
@@ -67,11 +67,11 @@ The game process started by the runner read `SHAKEDOWN_RUNNER`, `SHAKEDOWN_SESSI
 - **`toJSON` keeps 6 significant digits**: `123456789` becomes `1.23457e+08`, and `1048578` arrives as `1048580`[^probe][^spikes]. SQF numbers are 32-bit floats, and `toFixed` keeps their full value (`123456789.25 toFixed 3` is `123456792.000`). The agent sends the clocks of `OBS-05` as text with fixed decimals, and the runner reads them as numbers.
 - **`toJSON` writes an object as `null`**, a hashmap as an object, and nil as `null`; `fromJSON` returns a hashmap for an object, and `null` arrives as nil[^probe]. The agent encodes values by `DM-13` before `toJSON`.
 - **`terminate` does not stop a script until it next suspends**: a script that terminated itself ran its loop on to its end[^probe]. A check API function that fails therefore terminates the body and then waits with `waitUntil { false }`, so it never returns.
-- **`productVersion`** on the test machine is `["Arma 3","Arma3",222,154089,"Stable",false,"Windows","x64",""]`, which the agent reports as `2.22.154089 stable`[^probe].
+- **`productVersion`** on a Windows machine is `["Arma 3","Arma3",222,154089,"Stable",false,"Windows","x64",""]`, which the agent reports as `2.22.154089 stable`[^probe].
 - **A singleplayer client loads an extension from a mod given by its absolute path** outside the game folder[^rpt]; only a dedicated server needs the junction of `INT-AR-06`.
 - **The first starts of the game on a cold machine failed** three times in a row, each with `Error 20 reading file` on a different `enoch` PBO and `Application terminated intentionally` about 5 s after start; the fourth and every later start worked[^rpt]. Python read the same files in full without error. Nothing in the framework caused it; a session start that meets it fails with the game's exit and its RPT lines (`SES-04`).
 
-[^spikes]: crates/shakedown/tests/spikes.rs, runs of 2026-11-05 on the Windows test machine (sessions s-20261105-161417, s-20261105-161619, s-20261105-161740 and one after)
+[^spikes]: crates/shakedown/tests/spikes.rs, runs of 2026-11-05 on a Windows machine (sessions s-20261105-161417, s-20261105-161619, s-20261105-161740 and one after)
 [^probe]: An -autotest mission of the developer's scratch folder logging toJSON, fromJSON, compile, ScriptError and terminate behaviour with diag_log, 2026-11-05, Arma 3 2.22.154089 stable
 [^e2e]: crates/shakedown/tests/e2e.rs, us_037_us_038_checks_in_one_session, 2026-11-05
-[^rpt]: RPT files of the spike and probe sessions on the test machine, 2026-11-05
+[^rpt]: RPT files of the spike and probe sessions on a Windows machine, 2026-11-05

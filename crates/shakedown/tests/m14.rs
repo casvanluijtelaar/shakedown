@@ -2,7 +2,7 @@
 //! made to let go of the file by reading the release files (`US-081`, `US-054`, `US-055`,
 //! `RLD-02`, `RLD-05`, `RLD-07`, `P-08`, `NFR-PF-01`, `NFR-PF-02`), and a file still held falling
 //! back to a game restart that names its holder (`US-082`, `FIX-04`). They drive the installed
-//! `shakedown` and the game, so they run only on the test machine, by hand, one at a time, with no
+//! `shakedown` and the game, so they run only on a Windows machine with Arma 3, by hand, one at a time, with no
 //! runner running:
 //!
 //!     python tools/install.py
@@ -265,7 +265,7 @@ fn reload(dir: &Path, level: &str, files: usize) -> (Value, f64) {
 ///   `game-restart` whose file names the file, `p1` and that the game did not let go of it, and the
 ///   check after sees the new value on a new start of `p1`.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_081_us_082_us_054_us_055_reload_by_mission_restart_in_singleplayer() {
     let dir = project("sp");
     let _targets = Targets::new();
@@ -349,7 +349,7 @@ fn us_081_us_082_us_054_us_055_reload_by_mission_restart_in_singleplayer() {
 /// `CfgFunctions` function changed too; the server keeps its process, the clients are new starts,
 /// and every machine runs the new code, 10 of 10. Prints the times `NFR-PF-02` is set from.
 #[test]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_081_us_054_us_055_nfr_pf_02_ten_reloads_by_mission_restart_on_a_dedicated_session() {
     let dir = project("ded");
     let _targets = Targets::new();

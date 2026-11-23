@@ -1,5 +1,5 @@
 //! Spikes SPK-01, SPK-02 and SPK-03 for singleplayer `p1` (`engineering/spec/06-open-questions.md`). They
-//! start the game, so they run only on the test machine, by hand:
+//! start the game, so they run only on a Windows machine with Arma 3, by hand:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test spikes -- --ignored --nocapture
@@ -50,7 +50,7 @@ fn rpt_text(session: &session::Session) -> String {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 async fn spk_01_spk_02_spk_03_singleplayer_p1() {
     let (runner, session) = start().await;
     let pid = session.view()["machines"][0]["pid"].as_u64().unwrap();
@@ -212,7 +212,7 @@ async fn spk_01_spk_02_spk_03_singleplayer_p1() {
 /// SPK-02: where the time of a large order goes inside the game, by size: fromJSON of the order,
 /// compile of a source holding a long string literal, and toJSON of a long result.
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "starts Arma 3; run on the test machine"]
+#[ignore = "starts Arma 3; run by hand on a Windows machine with Arma 3"]
 async fn spk_02_cost_by_size() {
     let (runner, session) = start().await;
     let probe = r#"

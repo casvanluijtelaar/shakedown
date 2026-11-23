@@ -20,7 +20,7 @@ Each principle has an ID of the form `EP-nn`. A change to the stack names the pr
 - **EP-06** The outer runner owns the verdict. Processes, ceilings and `invalid` belong to a process outside the game that keeps working when a game stops answering; steps, waits and assertions belong to the SQF inside it, which sees the game (the Unreal Gauntlet split; research `18-test-tools.md`).
 - **EP-07** One result, every front end. The command line and the MCP server call the same runner requests and return the same JSON, defined once (`NFR-US-03`).
 - **EP-08** Few dependencies, each looked up. A dependency earns its place by doing what cannot be written in an afternoon; its version is looked up when it is added or changed (CLAUDE.md).
-- **EP-09** Testable without the game. Every part has tests that run without Arma 3, on GitHub Actions; only end-to-end tests need the test machine (CLAUDE.md, "Local first").
+- **EP-09** Testable without the game. Every part has tests that run without Arma 3, on GitHub Actions; only end-to-end tests need a Windows machine with Arma 3 (CLAUDE.md, "Local first").
 
 ## The stack
 
@@ -76,7 +76,7 @@ What is written in the project instead of taken as a dependency: the FNV-1a hash
 | Tool schemas that take their shared shapes from `result.schema.json` | | | + | | | | + | | + |
 | TOML project file | | | + | | | | | + | + |
 
-The one cost: SQF cannot be unit-tested outside the game (EP-09). The in-game agent is kept small, and the end-to-end tests on the test machine cover it.
+The one cost: SQF cannot be unit-tested outside the game (EP-09). The in-game agent is kept small, and the end-to-end tests on a Windows machine with Arma 3 cover it.
 
 ## Alternatives rejected
 
@@ -91,11 +91,11 @@ The one cost: SQF cannot be unit-tested outside the game (EP-09). The in-game ag
 | Go for the runner | The runner | A second toolchain beside the extension's Rust (EP-03). |
 | The MCP server owning the game processes | The runner | Claude Code ends a stdio server's process tree when its session stops, which would end the game session (EP-06; `INT-CC-02`). |
 | Streamable HTTP for the MCP server | Agent tools | A listening socket needs `Origin` checks and a bearer token; stdio confines access to the launching client and needs neither (EP-05). It can come later for a remote agent. |
-| The TypeScript or Python MCP SDK | Agent tools | A second runtime on the test machine (EP-03). `rmcp` speaks 2026-07-28. |
+| The TypeScript or Python MCP SDK | Agent tools | A second runtime on the user's machine (EP-03). `rmcp` speaks 2026-07-28. |
 | `remoteExec` as the only route between machines | Control | `CfgRemoteExec` in a mod or mission can block it, a result does not say which machines answered, and the runner could not see a machine that stopped answering (EP-06). It is `SPK-01`'s fallback for a machine kind whose callback does not fire. |
 | The check API as CBA-style macros | Check API | A check sent at run time is compiled from a string with `compile`, which does not run the preprocessor, and a macro header ties checks to CBA (EP-04). |
 | Checks in YAML (Maestro) or another language | Check API | The PRD fixes SQF (`CR-50`, EP-04). |
-| Check metadata as an SQF call (`[name, tags, ...] call skd_fnc_check`) | Check API | The runner could not list checks without a running game, and an AI agent on the Mac could not either (`RUN-02`, EP-09). |
+| Check metadata as an SQF call (`[name, tags, ...] call skd_fnc_check`) | Check API | The runner could not list checks without a running game, and an AI agent on macOS or Linux could not either (`RUN-02`, EP-09). |
 | Results as `diag_log` lines read from the RPT | Results | A client's last lines were lost when it was ended; the RPT is evidence, not a channel (research `10-prior-harness.md`). |
 | `-autotest` lists of checks, a mission per check | Sessions | The list is fixed at start and a mission change under connected clients broke one time in two (research `14-sessions.md`). |
 | JSON or YAML for the project file | Configuration | TOML takes comments and is the Rust toolchain's own format; JSON takes no comments, and YAML's implicit typing turns a mistyped value into a different value instead of an error (EP-08). |
@@ -113,7 +113,7 @@ These sit at the repository root, beside `docs/` and `README.md`; `engineering/`
 | `crates/shakedown-protocol/` | The message types between runner and extension, and the result file types that generate the schemas. |
 | `addon/` | The HEMTT project of the `@shakedown` addon: the in-game agent and the check API in SQF. |
 | `fixtures/` | The source of the fixture mods `@skd_fixture` and `@skd_fixture_cba`, HEMTT projects whose behaviour is [contract/fixture-mod.md](contract/fixture-mod.md), and the crate of the fixture's extension `skdfx_x64.dll` (`FIX-01`), a member of the workspace. |
-| `e2e/` | The framework developer's end-to-end project: a `shakedown.toml` and SQF checks against the fixture mods, run on the test machine by the ignored tests in `crates/shakedown/tests/`. |
+| `e2e/` | The framework developer's end-to-end project: a `shakedown.toml` and SQF checks against the fixture mods, run on a Windows machine with Arma 3 by the ignored tests in `crates/shakedown/tests/`. Its `grappling-hook/` project and the tests that load arma-grappling-hook expect that mod's clone beside this repository's clone; the tests that write their own project read the clone's folder from the environment variable `SHAKEDOWN_AGH_REPO` when it is set. |
 | `tools/install.py` | Builds the framework and assembles the install folder, by default `target/shakedown/`. |
 | `tools/install.ps1` | The one-line install of a release (`DST-03`), published with each release; its tests are `tools/test_install.ps1`. |
 | `tools/package.py` | Checks a release tag against the workspace version, builds the binary, the extension and the addon, writes `THIRD-PARTY-LICENSES.txt` from `Cargo.lock` and `cargo metadata`, and assembles the release zip and its `.sha256` in `target/dist/` (`DST-01`, `NFR-LG-04`); its tests are `tools/test_package.py`. |

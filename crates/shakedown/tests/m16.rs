@@ -3,7 +3,7 @@
 //! (`US-086`, `ENV-01`), a client that hangs in its start fails it and the reason is kept in
 //! `session.json` (`US-087`, `SES-04`, `SES-10`), and a client sent to another server is ended
 //! (`US-088`, `SEC-05`). They drive the installed `shakedown` and, but for `US-085`, the game, so
-//! they run only on the test machine, by hand, with no runner running:
+//! they run only on a Windows machine with Arma 3, by hand, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m16 -- --ignored --nocapture --test-threads=1
@@ -389,9 +389,9 @@ fn other_server(session_folder: &Path, port: u16) -> OtherServer {
 ///
 /// The check's code aborts `p2` to the main menu through the multiplayer pause menu and joins the
 /// other server from there, since `connectToServer` does nothing inside a mission (research
-/// `33-client-to-another-server.md`). Without the owner connected through Shadow PC, so that the
-/// client windows render, the abort did nothing on the test machine and the test fails at the
-/// wait; it is an owner look.
+/// `33-client-to-another-server.md`). The abort needs client windows that render, so a
+/// desktop on screen: without one it does nothing and the test fails at the wait; it is an
+/// owner look.
 #[test]
 #[ignore]
 fn us_088_sec_05_a_client_sent_to_another_server_is_ended() {

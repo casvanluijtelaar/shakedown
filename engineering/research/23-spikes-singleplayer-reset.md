@@ -1,11 +1,11 @@
 ---
 type: Research
 title: "Spikes SPK-04, SPK-05, SPK-10 and SPK-12 in singleplayer"
-description: "What the reset in place, the player's death and endMission under -autotest, an action fired with action User, and net ids measured in a singleplayer session on the test machine in M1, with what CBA's keybind registry and a created vehicle showed on the way."
+description: "What the reset in place, the player's death and endMission under -autotest, an action fired with action User, and net ids measured in a singleplayer session on a Windows machine in M1, with what CBA's keybind registry and a created vehicle showed on the way."
 status: stable
 generated: { by: "claude-code/developer", at: 2026-11-05T19:45:00+01:00 }
 sources:
-  - { id: spikes, resource: "crates/shakedown/tests/spikes_m01.rs, spk_12_spk_10_spk_05_singleplayer_p1, run of 2026-11-05 on the Windows test machine (session s-20261105-185201), Arma 3 2.22.154089 stable", read: 2026-11-05 }
+  - { id: spikes, resource: "crates/shakedown/tests/spikes_m01.rs, spk_12_spk_10_spk_05_singleplayer_p1, run of 2026-11-05 on a Windows machine (session s-20261105-185201), Arma 3 2.22.154089 stable", read: 2026-11-05 }
   - { id: probe, resource: "crates/shakedown/tests/spikes_m01.rs, int_cba_01_keybind_registry_probe, run of 2026-11-05 with CBA_A3 3.19.0.260808 and arma-grappling-hook 0.1.0 (session s-20261105-185602)", read: 2026-11-05 }
   - { id: twenty, resource: "crates/shakedown/tests/m01.rs, nfr_rl_02_spk_04_twenty_checks_each_see_the_start_state, and the reset lines of %LOCALAPPDATA%\\Shakedown\\runner.log, runs of 2026-11-05", read: 2026-11-05 }
   - { id: demo, resource: "e2e/grappling-hook runs of 2026-11-05 against one session, with the reset failures of sessions s-20261105-191502 and s-20261105-191625 in runner.log", read: 2026-11-05 }
@@ -13,7 +13,7 @@ sources:
 
 # Spikes SPK-04, SPK-05, SPK-10 and SPK-12 in singleplayer
 
-M1 ran `SPK-12`, `SPK-10` and `SPK-05` whole and the singleplayer half of `SPK-04` (`engineering/spec/06-open-questions.md`) on the Windows test machine, Arma 3 2.22.154089 stable, in a session the runner started with `-autotest`. The game ran in a window with no person connected through Shadow PC. Each runs again with `cargo test -p shakedown --test spikes_m01 -- --ignored --nocapture` and, for `SPK-04`, `cargo test -p shakedown --test m01 nfr_rl_02 -- --ignored --nocapture`, after `python tools/install.py`.
+M1 ran `SPK-12`, `SPK-10` and `SPK-05` whole and the singleplayer half of `SPK-04` (`engineering/spec/06-open-questions.md`) on a Windows machine, Arma 3 2.22.154089 stable, in a session the runner started with `-autotest`. The game ran in a window with nobody connected by remote desktop. Each runs again with `cargo test -p shakedown --test spikes_m01 -- --ignored --nocapture` and, for `SPK-04`, `cargo test -p shakedown --test m01 nfr_rl_02 -- --ignored --nocapture`, after `python tools/install.py`.
 
 ## SPK-12: passed
 

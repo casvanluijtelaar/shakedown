@@ -125,7 +125,7 @@ What this forces:
 
 What this forces:
 - The runner starts every process from the Steam installation, never from a copy.
-- It runs one session at a time on the test machine, which already matches the "one game at a time" working rule.
+- It runs one session at a time on a Windows machine, which already matches the "one game at a time" working rule.
 - Each process gets its own profile folder and `-name`[^startup].
 
 Touches CR-01, CR-04, CR-41. Whether several rendering clients under one Steam account can join one local server is a technical question, **needs a spike** in T5 (pass condition: two clients join and stay 10 minutes).
@@ -162,7 +162,7 @@ Touches the PRD's section 7 constraint, and every component.
 
 - **Steam IDs reach the extension on every call.** Since 2.12, the engine passes the extension a context whose first value is "Steam 64bit userID of the local machine, same as getPlayerUID", before every call unless the extension sets `RVFeature_ContextNoDefaultCall`[^wikiext]. arma-rs exposes this as the call context's caller[^armars].
 - **Scripts can read Steam IDs too.** `getPlayerUID` returns the player's steamID64 in multiplayer[^uid]. Tools in T2 return names and UIDs as data: `headswe`'s `list_players` returns "Name, UID, owner id"[^headswe].
-- **The profile name is the account's unless set.** Player names come from the profile, which `-name=` sets per process[^startup]. The test machine's Steam account name may appear wherever the framework does not set one. Whether the RPT and server logs of a local session write player names and Steam IDs is **needs a spike**: pass when a grep of every RPT and server log of a two-client session for the account's steamID64 and Steam name finds none, after the framework's settings are applied.
+- **The profile name is the account's unless set.** Player names come from the profile, which `-name=` sets per process[^startup]. The machine's Steam account name may appear wherever the framework does not set one. Whether the RPT and server logs of a local session write player names and Steam IDs is **needs a spike**: pass when a grep of every RPT and server log of a two-client session for the account's steamID64 and Steam name finds none, after the framework's settings are applied.
 - **This is personal data.** Under the GDPR, personal data is information about an identifiable person, by reference to "an identifier such as a name, an identification number ... an online identifier"[^gdpr]. A steamID64 and a Steam name are that.
   - Processing "by a natural person in the course of a purely personal or household activity" is outside the GDPR[^gdpr]. The owner testing on their own machine likely is.
   - Committing result files or logs to a repository that is later made public publishes them, and that is no longer purely personal. This is **owner's judgment**, but avoiding it costs little.

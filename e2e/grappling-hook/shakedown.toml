@@ -1,8 +1,10 @@
 # The M1 demo project: arma-grappling-hook checks rewritten as Shakedown checks
 # (engineering/plan/milestones/m01.md). It loads CBA_A3 from the Steam Workshop and the arma-grappling-hook
-# build that HEMTT leaves in that repository's .hemttout\build; Shakedown does not build it. For
-# the M6 demo, reload watches the mod's addons folder, and a game-restart reload runs its own
-# `hemtt build` while no game process runs (RLD-06, docs/reloading.md).
+# build that HEMTT leaves in that repository's .hemttout\build; Shakedown does not build it. Its
+# paths are relative to this folder and expect the arma-grappling-hook clone beside this
+# repository's clone, in the same folder. For the M6 demo, reload watches the mod's addons folder,
+# and a game-restart reload runs its own `hemtt build` while no game process runs (RLD-06,
+# docs/reloading.md).
 game = 'C:\Program Files (x86)\Steam\steamapps\common\Arma 3'
 tests = "tests"
 
@@ -11,11 +13,11 @@ path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\450814997
 patch = "cba_main"
 
 [mods.agh]
-path = 'C:\Users\Shadow\Documents\arma-grappling-hook\.hemttout\build'
+path = '..\..\..\arma-grappling-hook\.hemttout\build'
 patch = "agh_main"
-source = 'C:\Users\Shadow\Documents\arma-grappling-hook\addons'
+source = '..\..\..\arma-grappling-hook\addons'
 prefix = 'z\agh\addons'
-rebuild = 'cd /d C:\Users\Shadow\Documents\arma-grappling-hook && hemtt build'
+rebuild = 'cd /d ..\..\..\arma-grappling-hook && hemtt build'
 
 [setups.sp]
 mode = "singleplayer"

@@ -3,13 +3,13 @@
 //! command line and the MCP protocol on stdio. The stories `US-001`, `US-003`, `US-005`,
 //! `US-013`, `US-014`, `US-023`, `US-031`, `US-032`, `US-042`, `US-046`, `US-047`, `US-048`,
 //! `US-049`, `US-050`, `US-051`, `US-061` and `US-062`, `NFR-PF-03`, `DEF-10` and `DEF-12`. They
-//! drive the installed `shakedown` against the game, so they run only on the test machine, by
+//! drive the installed `shakedown` against the game, so they run only on a Windows machine with Arma 3, by
 //! hand, one at a time:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m04 -- --ignored --nocapture --test-threads=1
 //!
-//! The Steam ID and the Steam names are read from this machine's Steam files at run time and
+//! The Steam ID and the Steam names are read from the local Steam files at run time and
 //! never printed: a test says only how many it found.
 
 mod support;
@@ -870,7 +870,7 @@ fn us_013_us_014_us_023_us_042_us_050_us_062_nfr_pf_03_on_a_dedicated_session() 
     assert_eq!(mcp.call("session_stop", json!({})).data()["state"], "stopped");
 }
 
-/// The Steam ID and the two names of the account Steam last logged in with, from this machine's
+/// The Steam ID and the two names of the account Steam last logged in with, from the local
 /// `loginusers.vdf`, read at run time.
 fn identity() -> Vec<String> {
     let out = Command::new("reg")

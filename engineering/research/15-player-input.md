@@ -131,7 +131,7 @@ What it forces:
 
 - **`SendInput` breaks the rule "never take over the desktop"**: it needs the game in the foreground and types into whatever has the focus. The framework does not use it. Touches `CR-15` and PRD section 7.
 - **Background key input is not shown possible. Needs a spike.** Pass condition: with the game client started with `-noPause`, its window not in the foreground and another window focused, a helper posts `WM_KEYDOWN` and `WM_KEYUP` with the right scan code in `lParam` to the game's window; a `KeyDown` handler on display 46 logs the DIK code, and a CBA keybind's down code runs once. The focused window receives nothing and the foreground does not change. If it fails, a second spike tries input from inside the game process (an extension that feeds the engine's input path), with the same pass condition; that path is **unverified** and may need hooking the engine.
-- **Over Shadow: needs a spike.** The client renders only while the owner is connected through Shadow PC. Pass condition: the first spike passes both with the owner connected and with the stream disconnected.
+- **Without a visible desktop: needs a spike.** On a machine reached by remote desktop, the client may render only while someone is connected. Pass condition: the first spike passes both with a remote desktop connected and disconnected.
 - **Until a spike passes, `CR-15` stays a `should` that the MVP does not need**: every key path of `CR-12` is covered by calling handlers. Touches `CR-15`, `CR-12`.
 
 ## 6. Building a scene and removing it
@@ -154,7 +154,7 @@ What it forces:
 | `doMove`, `lookAt`, `doWatch` on a player's unit | On a client, `player doMove _p` reaches within 2 m with `moveToCompleted` true within a ceiling; `player lookAt _p` turns `eyeDirection` towards `_p` by more than 45 degrees. |
 | `action ["User", ...]` and the action's condition and radius | Out of radius the script does not run; in radius with the condition true it runs once. |
 | Background key input by window messages | With `-noPause`, game not in the foreground, posted `WM_KEYDOWN`/`WM_KEYUP` fire a display-46 `KeyDown` handler and a CBA keybind once; the focused window and the foreground are unchanged. |
-| The same over Shadow | Passes with the Shadow stream connected and disconnected. |
+| The same without a visible desktop | Passes with a remote desktop connected and disconnected. |
 
 ## Unverified
 

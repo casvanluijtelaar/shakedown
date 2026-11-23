@@ -1,7 +1,7 @@
 //! M12's tests: helpers shared from the library folder (`US-070`), a library file that does not
 //! compile (`US-071`), events recorded on every machine and waited for (`US-072`), and an awaited
 //! event that never comes (`US-073`). They drive the installed `shakedown`, CBA, both fixtures
-//! and the game, so they run only on the test machine, by hand, one at a time, with no runner
+//! and the game, so they run only on a Windows machine with Arma 3, by hand, one at a time, with no runner
 //! running:
 //!
 //!     python tools/install.py
@@ -355,7 +355,7 @@ fn machine_pids(dir: &Path) -> Vec<u64> {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_070_to_us_073_singleplayer() {
     let (dir, lib) = project("sp", None);
 
@@ -418,7 +418,7 @@ fn us_070_to_us_073_singleplayer() {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_070_to_us_073_dedicated() {
     // US-070 4: the library comes from the project's `lib`.
     let (dir, lib) = project("ded", Some("helpers"));

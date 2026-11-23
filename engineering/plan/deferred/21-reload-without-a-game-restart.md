@@ -20,7 +20,7 @@ Every change of mod code is level `game-restart` (`RLD-02`), made in one step: t
 
 ## The gap
 
-G2's loop for mod code (PRD `CR-03`: "inside the mission, by a mission restart within the session, or by a game restart") has only its last level. Each change of mod code costs a game start: about 27 s in singleplayer and 50 to 82 s on a dedicated session with two clients on the test machine.
+G2's loop for mod code (PRD `CR-03`: "inside the mission, by a mission restart within the session, or by a game restart") has only its last level. Each change of mod code costs a game start: about 27 s in singleplayer and 50 to 82 s on a dedicated session with two clients on a Windows machine with 16 GB of RAM.
 
 ## Options
 

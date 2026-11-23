@@ -21,7 +21,6 @@ sources:
   - { id: jobassign, resource: "https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-assignprocesstojobobject", read: 2026-11-04 }
   - { id: hung, resource: "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-ishungappwindow", read: 2026-11-04 }
   - { id: steamreg, resource: "https://gamedev.stackexchange.com/questions/167176 (answer 167219, read through the Stack Exchange API)", read: 2026-11-04 }
-  - { id: shadow, resource: "https://support.shadow.tech/hc/en-us/articles/32731841405073-Shadow-PC-and-the-Automatic-Shutdown (updated 2026-07-23)", read: 2026-11-04 }
   - { id: t1, resource: "engineering/research/10-prior-harness.md", read: 2026-11-04 }
   - { id: hdoc, resource: "arma-grappling-hook@3f4f7bd:docs/harness.md", read: 2026-11-04 }
   - { id: hrun, resource: "arma-grappling-hook@3f4f7bd:harness/run.ps1", read: 2026-11-04 }
@@ -42,7 +41,7 @@ A verdict can be trusted only when the run can tell the mod's failure from the e
 
 ## 1. A healthy session and a stalled one
 
-What the prior harness learned: its stall detector ended a run once no machine's RPT had grown for 90 s[^hdoc]. It missed the worst stall it met. While the Shadow stream to the test machine was cut, the game's clock `time` stood still for minutes while frames fell from 150 to 170 to 19 a second, and the game kept logging[^f002]. Every fall stopped, the game's own included, and the checks failed instead of being marked invalid[^f002]. The suite now counts a run only with the stream connected for its whole length[^areadme]. In singleplayer with ACE, three of five game starts stalled at different steps, each ended by the 90 s detector[^m01]. A `-Full` run also hung while addons loaded and was ended by nothing, because the whole machine had stopped[^cov].
+What the prior harness learned: its stall detector ended a run once no machine's RPT had grown for 90 s[^hdoc]. It missed the worst stall it met. While the remote desktop connection to the machine was cut, the game's clock `time` stood still for minutes while frames fell from 150 to 170 to 19 a second, and the game kept logging[^f002]. Every fall stopped, the game's own included, and the checks failed instead of being marked invalid[^f002]. The suite counts a run only with the connection held for its whole length[^areadme]. In singleplayer with ACE, three of five game starts stalled at different steps, each ended by the 90 s detector[^m01]. A `-Full` run also hung while addons loaded and was ended by nothing, because the whole machine had stopped[^cov].
 
 The signals the engine offers, per machine:
 
@@ -69,9 +68,9 @@ A failed health check during a check makes that check `invalid`, with the reason
 ## 2. Focus, minimised and not shown
 
 - `-noPause` keeps the game running when its window has no focus, and `-noPauseAudio` keeps its audio[^startup]. Without them a game that loses focus pauses, and `time` stops when the game is paused[^startup][^time].
-- The FPS is limited automatically when a windowed game is unfocused[^startup]. With `-noPause`, a minimised and unfocused game on the test machine kept its clock running at about 32 frames a second[^tclock].
-- With no visible desktop (the Shadow stream cut), the game went on at about 19 frames a second with its clock stopped[^f002]. Why the clock stops then is not known **(unverified)**.
-- The test machine renders a window only while the owner is connected through Shadow PC[^r14][^tmanual]. Shadow PC shuts down by itself: online, when the stream is open but no input arrives for a while, and offline, when the stream is closed or disconnected; it "relies on input from the user's peripherals to stay active", even while a program runs[^shadow]. The test machine rebooted several times during sessions, ending rounds without warning[^coord]; that this was Shadow's shutdown is **(unverified)**. The prior coordinator ran a keep-alive key every 60 s, which reached the game as a key event[^tclock].
+- The FPS is limited automatically when a windowed game is unfocused[^startup]. With `-noPause`, a minimised and unfocused game on a Windows machine kept its clock running at about 32 frames a second[^tclock].
+- With no visible desktop (the remote desktop connection cut), the game went on at about 19 frames a second with its clock stopped[^f002]. Why the clock stops then is not known **(unverified)**.
+- The machine renders a window only while someone is connected by remote desktop[^r14][^tmanual]. The machine rebooted several times during sessions, ending rounds without warning[^coord]; why is **(unverified)**. The prior coordinator ran a keep-alive key every 60 s, which reached the game as a key event[^tclock].
 - A dedicated server and headless clients need no window[^r14], so a multiplayer session whose clients render is as exposed as singleplayer, and one of only a server and headless clients is not **(inference)**.
 
 ## 3. Stopping every process
@@ -119,18 +118,18 @@ So a stop is a process that ended after the framework asked it to; a crash is a 
 1. **Log silence missed a game whose clock stopped.** Forces a heartbeat per machine with game time, real time, frame number and frame rate, judged against thresholds, plus process and window checks from outside. Touches `CR-30`, `CR-27`[^f002][^hdoc].
 2. **A health failure must not read as a check failure.** Forces every check that overlaps an unhealthy interval to be `invalid`, with the reason and each machine's last heartbeat in the result. Touches `CR-31`, `CR-51`, `G3`[^f002][^prd].
 3. **A runner that dies leaves the game running, and the machine reboots without warning.** Forces every game process into a job object with kill-on-close, started suspended, and a run record the next run clears before it starts. Touches `CR-05`, `CR-07`[^jobs][^jobassign][^coord].
-4. **The test machine's window, and maybe the machine, depend on the Shadow stream and its input.** Forces a health check that flags a stopped clock on a rendering client, sessions of only a server and headless clients where a check needs no rendering client, and a stated limit that rendering checks need the owner's stream. Touches `CR-30`, `CR-41`, `CR-25`[^shadow][^r14].
+4. **A rendering client's window depends on a visible desktop.** Forces a health check that flags a stopped clock on a rendering client, sessions of only a server and headless clients where a check needs no rendering client, and a stated limit that rendering checks need a visible desktop. Touches `CR-30`, `CR-41`, `CR-25`[^r14].
 5. **The environment fails in a few known ways: Steam not running or not logged in, a mod missing or updated, a missing addon that hangs a server.** Forces a pre-run check that names what is missing before any game starts, and a server start that watches for its warning instead of waiting out a ceiling. Touches `CR-06`, `CR-31`[^tmanual][^steamreg][^meta][^r14].
 6. **Crashes and freezes leave dumps in the profile folder.** Forces one profile folder per process start and a result that names any dump a process left. Touches `CR-24`, `CR-31`[^crash][^startup].
 7. **`-noPause` is required on every rendering client.** Without it a client that loses focus pauses and its clock stops. Forces `-noPause` and `-noPauseAudio` into every client start. Touches `CR-01`, `CR-30`[^startup][^time].
 
 ## Needs a spike
 
-- **Health thresholds.** Pass condition: over 50 passing checks in singleplayer and dedicated, record each machine's ratio of game time to real time, frame rate and heartbeat gap; set thresholds that none of the 50 crosses; then a stream cut, a frozen client (process suspended) and a killed client are each flagged `invalid` within 15 s, in 5 of 5.
+- **Health thresholds.** Pass condition: over 50 passing checks in singleplayer and dedicated, record each machine's ratio of game time to real time, frame rate and heartbeat gap; set thresholds that none of the 50 crosses; then a cut remote desktop connection, a frozen client (process suspended) and a killed client are each flagged `invalid` within 15 s, in 5 of 5.
 - **Kill-on-close.** Pass condition: the runner starts a dedicated session (server, 2 clients, 1 headless client) inside a kill-on-close job and is itself killed with `taskkill /F`; within 10 s no `arma3_x64` or `arma3server_x64` process of that run is left, in 5 of 5, and the next run clears its mission copies.
 - **Crash exit code and dumps.** Pass condition: a client is crashed on purpose (an extension that faults, or an access violation through a debug path) and the exit code, any `.mdmp` or `.bidmp` in its profile folder, and the RPT's last lines are recorded; a crash is told from a stop by the runner in 5 of 5.
 - **A fault dialog.** Pass condition: with `JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION` set, a crashed game process ends without a dialog waiting on the desktop.
-- **Shadow without the stream.** Pass condition: with the stream closed and no input, a session of a server and headless clients runs 60 minutes and its clock moves; the time until Shadow shuts the machine down, if it does, is recorded.
+- **No visible desktop.** Pass condition: with no remote desktop connected and no input, a session of a server and headless clients runs 60 minutes and its clock moves.
 
 [^startup]: https://community.bistudio.com/wiki/Arma_3:_Startup_Parameters (oldid 378577)
 [^servercfg]: https://community.bistudio.com/wiki/Arma_3:_Server_Config_File (oldid 379176)
@@ -148,7 +147,6 @@ So a stop is a process that ended after the framework asked it to; a crash is a 
 [^jobassign]: https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-assignprocesstojobobject
 [^hung]: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-ishungappwindow
 [^steamreg]: https://gamedev.stackexchange.com/questions/167176 (answer 167219, read through the Stack Exchange API)
-[^shadow]: https://support.shadow.tech/hc/en-us/articles/32731841405073-Shadow-PC-and-the-Automatic-Shutdown (updated 2026-07-23)
 [^t1]: engineering/research/10-prior-harness.md
 [^hdoc]: arma-grappling-hook@3f4f7bd:docs/harness.md
 [^hrun]: arma-grappling-hook@3f4f7bd:harness/run.ps1

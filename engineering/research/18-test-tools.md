@@ -210,7 +210,7 @@ These are candidate words, not decisions. Names are placeholders with a prefix (
 Open points for the spec, not settled here:
 - Function calls (`[...] call AT_fnc_step`) read worse than macros (`STEP("...") { ... }`), but macros need a header include and a preprocessing step that a check sent into a running game may not get. Whether a check file sent at run time is preprocessed is a T4 and T3 question.
 - Whether a check body runs scheduled (it must, to wait) and where: on the server, or on a framework controller that sends code to each machine. This decides the cost of `AT_fnc_on` and is T3's question. **Needs a spike**: pass condition, a scheduled check on the server runs a step on a named client and gets its result back within one second.
-- The default ceiling. Playwright uses 5 seconds for assertions and 30 for a test[^pw-timeouts], Maestro 7 for waits[^mae-wait], AltTester 20[^alt-commands]. A game's default needs a measurement. **Needs a spike**: pass condition, the default ceiling covers the slowest common wait (an action's effect replicated to every client) on the test machine in 95 of 100 runs.
+- The default ceiling. Playwright uses 5 seconds for assertions and 30 for a test[^pw-timeouts], Maestro 7 for waits[^mae-wait], AltTester 20[^alt-commands]. A game's default needs a measurement. **Needs a spike**: pass condition, the default ceiling covers the slowest common wait (an action's effect replicated to every client) on a Windows machine in 95 of 100 runs.
 
 [^pw-release]: Playwright releases on GitHub, v1.64.1 dated 2026-10-14.
 [^pw-actionability]: Playwright docs, Auto-waiting.

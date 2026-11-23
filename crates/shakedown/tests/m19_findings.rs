@@ -3,7 +3,7 @@
 //! game pass (`US-059`, `HLT-02`, finding m19-5), and on a dedicated session every client starts
 //! at its own start position, whatever order the clients joined in, and the reset puts it back
 //! there (`US-008`, `INT-AR-04`, `RST-02`, finding m19-6), which fails while `DEF-37` is open. They drive the installed `shakedown`
-//! and the game, so they run only on the test machine, by hand, one at a time, with no runner
+//! and the game, so they run only on a Windows machine with Arma 3, by hand, one at a time, with no runner
 //! running:
 //!
 //!     python tools/install.py
@@ -155,7 +155,7 @@ fn flag(dir: &Path, machine: &str) -> Value {
 /// then `shakedown reload`, which restarts its game; the old start's flag does not reach the
 /// checks of the new start, which pass.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn us_059_hlt_02_a_flag_of_an_earlier_start_ends_with_the_game_restart_of_a_reload() {
     let dir = project("flag");
     let _session = Session::start(&dir, "sp");
@@ -248,7 +248,7 @@ fn at_start(seen: &[(String, f64, f64, f64)], when: &str) {
 /// two clients, `p1` starts at the spawn point and `p2` 10 m east of it, facing north, whichever
 /// client joined first, and the reset puts each back there.
 #[test]
-#[ignore = "starts dedicated sessions of Arma 3; run on the test machine"]
+#[ignore = "starts dedicated sessions of Arma 3; run by hand on a Windows machine with Arma 3"]
 fn us_008_int_ar_04_every_client_starts_at_its_own_start_position() {
     let dir = project("spawn");
     for n in 1..=6 {

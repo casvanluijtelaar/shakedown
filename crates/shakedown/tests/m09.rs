@@ -2,8 +2,8 @@
 //! cannot complete (`US-010`), a machine that stops answering (`US-015`, `US-045`), a process
 //! that ends or crashes during a check, with its log and dumps kept (`US-016`, `US-043`), a game
 //! clock that stops (`US-059`), and a broken session that still answers (`US-044`). They drive the
-//! installed `shakedown`, the fixture's failures on demand and the game, so they run only on the
-//! test machine, by hand, one at a time, with no runner running:
+//! installed `shakedown`, the fixture's failures on demand and the game, so they run only on a Windows
+//! machine with Arma 3, by hand, one at a time, with no runner running:
 //!
 //!     python tools/install.py
 //!     cargo test -p shakedown --test m09 -- --ignored --nocapture --test-threads=1
@@ -247,7 +247,7 @@ fn machine<'a>(result: &'a Value, name: &str) -> &'a Value {
 
 /// `US-041` 1 and 2, `US-010`, `US-059` in singleplayer.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn us_041_us_010_us_059_outcomes_a_failed_reset_and_a_stopped_clock_in_singleplayer() {
     let dir = project("sp");
     let _session = start(&dir, "sp");
@@ -366,7 +366,7 @@ fn run_while(dir: &Path, ids: &[&str], act: impl FnOnce()) -> (i32, Value, PathB
 /// `US-015`, `US-045`, `US-044` 3 on a dedicated session with two clients: `p2` suspended during
 /// a wait on it.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn us_015_us_045_us_044_a_suspended_client_on_a_dedicated_session() {
     let dir = project("stall");
     let session = start(&dir, "ded2");
@@ -438,7 +438,7 @@ fn us_015_us_045_us_044_a_suspended_client_on_a_dedicated_session() {
 /// during a check, crashed by the fixture before a wait on it, and crashed after an assertion
 /// failed.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn us_016_us_043_us_041_a_client_ends_or_crashes_during_a_check() {
     let dir = project("crash");
 
@@ -493,7 +493,7 @@ fn us_016_us_043_us_041_a_client_ends_or_crashes_during_a_check() {
 /// `US-044` 1 and 2, `INS-01`: inspect of `p1` while `p1` runs the wait of the check's step
 /// names the run, the check and that step, as inspect of the lead does.
 #[test]
-#[ignore = "starts the game; run on the test machine"]
+#[ignore = "starts the game; run by hand on a Windows machine with Arma 3"]
 fn us_044_ins_01_inspect_of_a_client_running_a_steps_wait_names_the_step() {
     let dir = project("step");
     let _session = start(&dir, "ded2");

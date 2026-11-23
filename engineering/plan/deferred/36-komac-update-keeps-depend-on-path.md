@@ -26,7 +26,7 @@ If `komac update` drops the key, the next version's manifest makes winget link `
 
 ## Options
 
-1. **Look before the next release.** On the test machine, run `komac update` for the next version without `--submit`, and read the installer manifest it writes.
+1. **Look before the next release.** Locally, run `komac update` for the next version without `--submit`, and read the installer manifest it writes.
 2. **Check in release.yml.** Have Komac write the manifests to a folder, fail the job when the installer manifest lacks `ArchiveBinariesDependOnPath: true`, and submit only after the check.
 3. **Leave it** and read the pull request `release.yml` opens before the winget maintainers merge it.
 

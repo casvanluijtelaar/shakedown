@@ -2,7 +2,7 @@
 //! session fails to start (`US-075`), a check repeated with the spread of its outcomes (`US-076`),
 //! the session breaks during repeats (`US-077`), slow steps and slow checks flagged (`US-078`),
 //! and a slow step threshold that is not a number of seconds (`US-080`). They drive the installed
-//! `shakedown`, the fixture `@skd_fixture` and the game, so they run only on the test machine, by
+//! `shakedown`, the fixture `@skd_fixture` and the game, so they run only on a Windows machine with Arma 3, by
 //! hand, one at a time, with no runner running:
 //!
 //!     python tools/install.py
@@ -229,7 +229,7 @@ fn nothing_left(seen: &Seen) {
 const PASSES: &str = "[1, \"==\", 1, \"one is one\"] call skd_fnc_expect;\n";
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_074_one_command_runs_every_setup_and_the_agent_tool_follows_it() {
     let every = format!("// @check US-074 runs in every setup\n// @tags m00\n{PASSES}");
     let two = format!("// @check US-074 runs in two setups\n// @setups solo-fx duo\n// @tags m00\n{PASSES}");
@@ -334,7 +334,7 @@ fn us_074_one_command_runs_every_setup_and_the_agent_tool_follows_it() {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_075_a_setup_whose_session_cannot_start_costs_only_its_own_checks() {
     let every = format!("// @check US-075 runs in every setup\n{PASSES}");
     let other = format!("// @check US-075 a second check\n{PASSES}");
@@ -386,7 +386,7 @@ fn us_075_a_setup_whose_session_cannot_start_costs_only_its_own_checks() {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_076_us_078_us_080_repeats_flaky_and_slow_steps() {
     let coin = "// @check US-076 passes about one time in two\n[random 1 < 0.5, \"==\", true, \"the coin came up heads\"] call skd_fnc_expect;\n";
     let steady = format!("// @check US-076 always passes\n{PASSES}");
@@ -522,7 +522,7 @@ fn us_076_us_078_us_080_repeats_flaky_and_slow_steps() {
 }
 
 #[test]
-#[ignore = "drives the game on the test machine"]
+#[ignore = "drives the game; run by hand on a Windows machine with Arma 3"]
 fn us_077_the_session_breaks_during_repeats() {
     let waits = "// @check US-077 waits 8 s on the server\n[\"server\", {diag_tickTime > (_this select 0)}, \"8 s of real time\", 20, [diag_tickTime + 8]] call skd_fnc_waitUntil;\n";
     let setups = "[setups.duo]\nmode = \"dedicated\"\nclients = 2\nmods = [\"fixture\"]\n";

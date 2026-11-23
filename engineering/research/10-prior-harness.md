@@ -1,7 +1,7 @@
 ---
 type: Research
 title: The harness of arma-grappling-hook
-description: What the PowerShell harness and acceptance suite of arma-grappling-hook do, what they measured on the test machine, where they failed, and what the framework keeps, replaces or makes unnecessary.
+description: What the PowerShell harness and acceptance suite of arma-grappling-hook do, what they measured on a Windows machine, where they failed, and what the framework keeps, replaces or makes unnecessary.
 status: stable
 generated: { by: "claude-code/research", at: 2026-11-04T21:52:33+01:00 }
 sources:
@@ -38,7 +38,7 @@ sources:
 
 # The harness of arma-grappling-hook
 
-The harness of `arma-grappling-hook` is the only Arma 3 test harness this project has run, and the first thing the framework replaces[^prd]. It is two PowerShell scripts: `harness/run.ps1` starts the game and runs test missions[^hrun], and `acceptance/run.ps1` turns a suite file into harness runs and reports each check[^arun]. Checks are SQF inside generated missions and report through `diag_log` lines that the harness reads from each machine's RPT[^hdoc]. The mod's tech stack makes the result lines, `START`, `KILL` and the rule that a script error fails a mission its contract between missions and the harness[^tech]. All measurements below were taken on the Windows test machine, game 2.22.154089 Stable, between 2026-10-31 and 2026-11-04[^hdoc][^cov][^tauto].
+The harness of `arma-grappling-hook` is the only Arma 3 test harness this project has run, and the first thing the framework replaces[^prd]. It is two PowerShell scripts: `harness/run.ps1` starts the game and runs test missions[^hrun], and `acceptance/run.ps1` turns a suite file into harness runs and reports each check[^arun]. Checks are SQF inside generated missions and report through `diag_log` lines that the harness reads from each machine's RPT[^hdoc]. The mod's tech stack makes the result lines, `START`, `KILL` and the rule that a script error fails a mission its contract between missions and the harness[^tech]. All measurements below were taken on a Windows machine, game 2.22.154089 Stable, between 2026-10-31 and 2026-11-04[^hdoc][^cov][^tauto].
 
 ## 1. What `harness/run.ps1` does
 
@@ -119,7 +119,7 @@ A run takes minutes because of how long its missions run, not because of the sta
 
 ## 5. Where it failed or was flaky
 
-- **The Shadow stream and the stopped clock (M00-002).** In 2 of about 13 singleplayer runs, the game's clock `time` stood still for minutes while frames dropped from 150 to 170 to 19 a second; nothing fell, the game's own fall included[^f002]. The owner confirmed that the Shadow PC stream to the test machine was disconnected at both times[^f002]. The suite now counts a run only while the stream is connected for its whole length[^areadme]. A run with the game minimised and unfocused, stream connected, kept its clock running at about 32 frames a second[^tclock]. The harness's stall detector did not catch it, because the game went on logging[^f002][^hrun].
+- **The cut remote desktop connection and the stopped clock (M00-002).** In 2 of about 13 singleplayer runs, the game's clock `time` stood still for minutes while frames dropped from 150 to 170 to 19 a second; nothing fell, the game's own fall included[^f002]. The remote desktop connection to the machine was disconnected at both times[^f002]. The suite counts a run only while the connection holds for its whole length[^areadme]. A run with the game minimised and unfocused, connection held, kept its clock running at about 32 frames a second[^tclock]. The harness's stall detector did not catch it, because the game went on logging[^f002][^hrun].
 - **Clients kept across a mission change.** In about one change in two, the engine left a client in a mission it never loaded, or gave a headless client no role, after which it ran the mission as a server of its own; so every mission gets fresh client processes[^hdoc]. A machine still listed when the next mission loads keeps its slot, and a machine kicked while it still runs comes back, a headless client at once, with script errors[^hdoc]. A server that waited in the lobby (`-NoAutoInit`) went back to the first mission of its cycle once clients joined, so such a run takes one mission[^hdoc]. Making mission changes reliable took most of a 2 h 15 min harness round[^coord][^hgit].
 - **Kicks with one Steam ID.** Every client of a run shares one Steam ID, so a kick of one kept all of them out until `kickTimeout[]` was set to 0 for every kind of kick[^hdoc]. Both disconnects in `mp-disconnect` carried the same Steam UID[^tdc].
 - **ACE's random falls (M00-001).** With ACE, a 15 m fall ends healthy, incapacitated or dead at random, and from 5 m the legs read 0, 0.45, 0.5 or 0.95[^f001][^amiss]. The check compares against up to ten of the game's own falls from the same point[^amiss]. A check of game behaviour that is random needs a reference measured under the same conditions in the same run.
@@ -127,14 +127,14 @@ A run takes minutes because of how long its missions run, not because of the sta
 - **A client's last log lines can be lost** when the harness ends it, so every client check line is also sent to the server and logged there[^alib][^amiss].
 - **The server lags a move.** A unit moved with `setPosASL` reaches the server a moment later; a request sent in the same moment was refused, so checks wait until the server agrees[^amiss].
 - **Whole-machine stops.** A `-Full` run whose log stopped while addons loaded never finished; neither the stall detector nor the ceiling ended it, because the whole machine had stopped, and it was rebooted hours later[^cov]. The machine rebooted twice more during sessions and cut rounds off[^coord].
-- **Stalls with ACE.** In singleplayer with ACE, three of five game starts stalled at different steps, likely the stream, and were not chased further[^m01][^coord].
+- **Stalls with ACE.** In singleplayer with ACE, three of five game starts stalled at different steps, likely the remote desktop connection, and were not chased further[^m01][^coord].
 - **Environment.** Steam stops at reboots and sometimes at the end of a session; it is checked before every round[^coord]. A missing required addon stops a dedicated server at its warning with the process running, so a run waits out its ceiling[^r14]. Under `-autotest` that warning box does not show[^r14].
 
 ## 6. What the framework keeps, replaces, and makes unnecessary
 
 | Part | Keep, replace or drop | Why |
 |---|---|---|
-| `-autotest` for singleplayer, `server.cfg` keys, start options, `skipLobby`, generated `mission.sqm`, `HeadlessClient_F` slots | Keep | Measured working on the test machine[^hdoc][^tsmoke][^tauto]. |
+| `-autotest` for singleplayer, `server.cfg` keys, start options, `skipLobby`, generated `mission.sqm`, `HeadlessClient_F` slots | Keep | Measured working on a Windows machine[^hdoc][^tsmoke][^tauto]. |
 | Per-machine profile folders and `-name`, fresh profile per restart | Keep | Each start keeps its own RPT[^hrun]. |
 | Versions line per machine per mission | Keep | Workshop mods update themselves[^r14]. |
 | Stopping every process in `finally` | Replace | It cannot run when the runner itself dies (see `17-health.md`). |
@@ -146,7 +146,7 @@ A run takes minutes because of how long its missions run, not because of the sta
 | Calling CBA keybind handlers instead of pressing keys | Keep as the default way to act | It drives the mod's real path without input[^akeys]. |
 | Suite files, filters by check, case, run and finding | Keep the ideas | They kept the fix loop narrow[^coord]; `CR-40`, `CR-41`. |
 | Window titles per machine | Keep | Lets a person tell windows apart in manual runs[^hdoc]. |
-| Keep-alive key and "run only with the stream connected" | Replace with a health check | A person cannot watch the stream for a suite that runs unattended[^areadme]. |
+| Keep-alive key and "run only with the remote desktop connected" | Replace with a health check | A person cannot watch the connection for a suite that runs unattended[^areadme]. |
 
 ## 7. Findings and what they force
 
@@ -154,7 +154,7 @@ A run takes minutes because of how long its missions run, not because of the sta
 2. **A mission change with clients connected was unreliable about one time in two.** Forces the framework not to rely on changing missions under connected clients; a change that is needed restarts the clients, and the framework measures it again (see `14-sessions.md`). Touches `CR-01`, `CR-04`[^hdoc].
 3. **The stall detector watched logs, and logs kept growing while the clock stood still.** Forces health on in-game signals: game time against real time, frame number, every machine answering. Touches `CR-30`, `CR-31`[^f002][^tclock].
 4. **Every stall, timeout and crash was a `FAIL`.** Forces the three outcomes `pass`, `fail`, `invalid`, with the environment's faults as `invalid`. Touches `CR-31`, `G3`[^hrun].
-5. **Process cleanup ran only if the runner lived, and the machine reboots and shuts down on its own.** Forces process ownership that survives a runner crash and a record of what a run started, checked at the next start. Touches `CR-05`, `CR-07`[^hrun][^coord].
+5. **Process cleanup ran only if the runner lived, and the machine can reboot on its own.** Forces process ownership that survives a runner crash and a record of what a run started, checked at the next start. Touches `CR-05`, `CR-07`[^hrun][^coord].
 6. **Results were text lines in RPTs, and a client's last lines could be lost.** Forces a result channel per machine that returns data and confirms delivery, and RPTs kept only as logs. Touches `CR-10`, `CR-24`, `CR-51`[^alib].
 7. **`-autotest` ends a singleplayer mission when the player dies, and the work-around made a check flaky.** Forces the framework to own mission end in singleplayer, so a death is an event a check can assert, not the end of the session. Touches `CR-02`, `CR-14`[^f004].
 8. **Random game behaviour (ACE medical) and engine stepping (far AI) decide verdicts.** Forces repeat counts and an in-run baseline under the same conditions. Touches `CR-32`, `CR-34`[^f001][^f004].
@@ -164,7 +164,7 @@ A run takes minutes because of how long its missions run, not because of the sta
 ## Needs a spike
 
 - **A reset in place replaces a mission change.** Pass condition: in one dedicated session with two clients and one headless client, 20 checks run one after another with a reset between them, and every check sees the same starting state as a fresh mission (same objects, time, weather and player state), with no client lost.
-- **Whether the stream cut alone stops the clock.** Pass condition: with the stream cut on purpose for 5 minutes, a heartbeat logs game time against real time on each machine; the result says whether `time` stops, and the health check flags the run invalid within its threshold.
+- **Whether the cut connection alone stops the clock.** Pass condition: with the remote desktop connection cut on purpose for 5 minutes, a heartbeat logs game time against real time on each machine; the result says whether `time` stops, and the health check flags the run invalid within its threshold.
 
 [^hdoc]: arma-grappling-hook@3f4f7bd:docs/harness.md
 [^hrun]: arma-grappling-hook@3f4f7bd:harness/run.ps1

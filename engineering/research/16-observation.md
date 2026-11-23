@@ -116,7 +116,7 @@ What it forces:
 
 - **The screenshot check runs on a client that renders** and returns the files with what it expected to show. It has no verdict. Touches `CR-25`.
 - **The `-profiles` failure needs a spike**, because the framework runs every machine with its own profile folder. Pass condition: a client started with `-profiles=<run folder>` and default video settings returns `true` from `screenshot "t.png"` and the file exists under `<run folder>\Screenshots` within 5 s. If it fails, the framework uses an in-process window capture like arma3-mcp's, which also includes the UI. Touches `CR-25`.
-- **Screenshots are taken only while the Shadow stream is connected**, since the window renders only then (CLAUDE.md, "Machines"). A capture with no stream is reported as missing, not as an empty image. Touches `CR-25`, `CR-30`.
+- **Screenshots are taken only while the game window renders**, which on a machine reached by remote desktop may need someone connected. A capture with no rendered window is reported as missing, not as an empty image. Touches `CR-25`, `CR-30`.
 
 ## 7. Performance probes
 
