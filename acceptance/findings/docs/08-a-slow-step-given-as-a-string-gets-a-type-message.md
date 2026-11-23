@@ -3,7 +3,7 @@ type: Finding
 id: m19-8
 milestone: M19
 title: A slow_step given as the string "10" is refused with a type message, not the one the pages show for it
-description: docs/project-file.md and docs/every-setup-and-repeats.md give one message for a slow_step of -1, 0 or "10"; for "10" the build names slow_step and its line, as the contract asks, but in serde's words "invalid type: string "10", expected f64".
+description: 'docs/project-file.md and docs/every-setup-and-repeats.md give one message for a slow_step of -1, 0 or "10"; for "10" the build names slow_step and its line, as the contract asks, but as a type error of the TOML reader.'
 raised_by: test
 for: writer
 checks: []
