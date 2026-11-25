@@ -11,7 +11,7 @@ Every check starts from the state the session's mission started in, builds the s
 
 ## The session mission
 
-A session runs a mission Shakedown generates: an empty mission on the setup's `world` (`VR` by default), with `p1` at the setup's `spawn` (`[100, 100]` by default) and each further client `pN` 10 m further east per N. A check builds everything else itself. Positions in the check API are ASL: convert a position on the ground with `AGLToASL`, as `AGLToASL [100, 105, 0]`.
+A session runs a mission Shakedown generates: an empty mission on the setup's `world` (`VR` by default), with `p1` at the setup's `spawn` (`[100, 100]` by default) and each further client `pN` 10 m further east per N. On a dedicated session the clients can start in each other's places: a client takes the first free place in the order the clients joined, and the reset keeps the place each got. A check that needs a player at a given place puts it there. A check builds everything else itself. Positions in the check API are ASL: convert a position on the ground with `AGLToASL`, as `AGLToASL [100, 105, 0]`.
 
 ## Building a scene
 

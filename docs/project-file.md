@@ -142,7 +142,7 @@ Each `[setups.<name>]` table is one way to run the checks: a mode, the machines 
 | `headless` | no, default 0 | A dedicated setup's headless clients, `hc1` to `hcN`, 0 to 8. |
 | `late` | no, default 0 | A dedicated setup's late game clients, 0 to 8, named after its clients: `clients = 2` and `late = 1` make `p3` late. The session does not start them; a check joins one with `skd_fnc_join` ([Joining late, leaving and joining again](dedicated-sessions.md#joining-late-leaving-and-joining-again)). |
 | `world` | no, default `"VR"` | The world the session mission is on: a class name in `CfgWorlds`, such as `"Altis"` or `"Stratis"`. |
-| `spawn` | no, default `[100, 100]` | Where `p1` starts on the world; `pN` starts 10 m further east per N. |
+| `spawn` | no, default `[100, 100]` | Where `p1` starts on the world; `pN` starts 10 m further east per N. On a dedicated session the clients can start in each other's places ([Scenes, resets and cleanups](scenes-resets-and-cleanups.md)). |
 | `start_timeout` | no, default 180 | Seconds from the first launch to the session being ready, 30 to 1800. A dedicated start of a server, two clients and a headless client takes about 45 s, so a value below 60 cannot hold it. A start that hangs costs this whole time before it fails ([A client that hangs](starting-and-failed-starts.md#a-client-that-hangs)). |
 
 A singleplayer setup always has one game client, `p1`, and no headless client; `clients`, `headless` and `late` are ignored for it.

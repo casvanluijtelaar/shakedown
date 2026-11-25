@@ -161,6 +161,8 @@ def main():
 
     roles = {str(fm.get("id")) for _, fm in by_type.get("Role", [])}
     stories = {str(fm.get("id")): (p, fm) for p, fm in by_type.get("User Story", [])}
+    # A deprecated story is one the spec dropped, so no milestone delivers it and no check covers it.
+    live_stories = {s for s, (_, fm) in stories.items() if fm.get("status") != "deprecated"}
     milestones = {str(fm.get("id")): (p, fm) for p, fm in by_type.get("Milestone", [])}
 
     requirements = set()
@@ -262,8 +264,8 @@ def main():
         ("Open findings", open_findings),
         ("Answered findings waiting for a verify", answered),
         ("Requirements no story covers", sorted(requirements - cited)),
-        ("Stories no milestone delivers", sorted(set(stories) - set(placed))),
-        ("Stories no check covers", sorted(set(stories) - covered_by_check)),
+        ("Stories no milestone delivers", sorted(live_stories - set(placed))),
+        ("Stories no check covers", sorted(live_stories - covered_by_check)),
     ]
     for title, items in report:
         if items:

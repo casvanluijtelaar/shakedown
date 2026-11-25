@@ -4,7 +4,7 @@ title: "Dedicated clients can start in each other's slots"
 description: "A dedicated client takes the first free playable slot in the order the clients joined, so in about half of the starts with two clients p1 stands at spawn plus 10 m and p2 at the spawn point, and the reset keeps it; setting each player at its own position from the agent fixed the positions but let two soldiers kill each other in some starts, so it is not built (finding m19-6)."
 id: DEF-37
 state: open
-milestone: M19
+milestone: null
 status: stable
 ---
 
@@ -36,4 +36,4 @@ Option 2: it removes the cause instead of moving soldiers that collide. Measure 
 
 - The game test `us_008_int_ar_04_every_client_starts_at_its_own_start_position` passes, run at least twice, with no `Ragdoll` line in any server RPT of its sessions.
 - The dedicated start time stays within its `NFR-PF` ceiling.
-- Finding m19-6 gets its `addressed` entry naming the test.
+- `docs/scenes-resets-and-cleanups.md` and `docs/project-file.md` drop the sentence that the clients of a dedicated session can start in each other's places.

@@ -9,7 +9,8 @@ for: developer
 checks: []
 stories: [US-008]
 generated: { by: "claude-code/tester", at: 2026-11-23T20:13:00Z }
-addressed: []
+addressed:
+  - { by: "claude-code/developer", at: 2026-11-25T09:54:53Z, note: "Deferred as DEF-37 (engineering/plan/deferred/37-clients-start-in-each-others-slots.md): moving each player from the agent let two soldiers kill each other in some swapped starts, and fixing the join order in the runner waits for a measure of its start time. docs/scenes-resets-and-cleanups.md and docs/project-file.md say that the clients of a dedicated session can start in each other's places and that a check that needs a player at a place puts it there. The game test us_008_int_ar_04_every_client_starts_at_its_own_start_position in crates/shakedown/tests/m19_findings.rs holds the gap and fails on a swapped start." }
 verified: []
 ---
 
