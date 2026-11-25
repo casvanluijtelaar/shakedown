@@ -123,7 +123,7 @@ Every check, whatever its outcome, keeps:
 - `events`: every event the check recorded, on every machine, with its arguments and clocks ([Recording the mod's events](recording-events.md)).
 
 ```sqf
-["rope length", ["p1", { ropeLength (ropes (_this select 0) select 0) }, [_wall]] call skd_fnc_on] call skd_fnc_evidence;
+["crate contents", ["p1", { itemCargo (_this select 0) }, [_crate]] call skd_fnc_on] call skd_fnc_evidence;
 ```
 
 Everything the framework writes is redacted: a Steam ID or the Steam account's names in a log, an error or a value read `<steamid>` and `<steamname>` ([Security and privacy](security-and-privacy.md)).

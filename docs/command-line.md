@@ -7,7 +7,7 @@ status: draft
 
 # The command line
 
-One binary, `shakedown`, does everything. Every command except `list`, `guide`, `version` and `mcp` talks to the runner; `status` asks a runner that runs and starts none, and every other such command starts one when needed ([Sessions and the runner](sessions-and-the-runner.md)). The contract is [engineering/spec/contract/cli.md](../engineering/spec/contract/cli.md).
+One binary, `shakedown`, does everything. Every command except `list`, `guide`, `version` and `mcp` talks to the runner; `status` asks a runner that runs and starts none, and every other such command starts one when needed ([Sessions and the runner](sessions-and-the-runner.md)).
 
 ## Common options
 

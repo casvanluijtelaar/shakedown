@@ -1,7 +1,7 @@
 Shakedown runs automated checks of an Arma 3 mod inside the running game, in singleplayer or on a dedicated server with game clients and headless clients.
 
 THE PROJECT
-The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under the tests folder (shakedown.toml's tests, default tests/); a check's id is its path there without .sqf. Helpers shared by checks go in the library folder (tests/_lib/ by default, or shakedown.toml's lib): each file rope.sqf there is compiled on every machine into skd_lib_rope, which a check or code sent to a machine runs with call skd_lib_rope; a changed library file reaches the game with reload.
+The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under the tests folder (shakedown.toml's tests, default tests/); a check's id is its path there without .sqf. Helpers shared by checks go in the library folder (tests/_lib/ by default, or shakedown.toml's lib): each file kit.sqf there is compiled on every machine into skd_lib_kit, which a check or code sent to a machine runs with call skd_lib_kit; a changed library file reaches the game with reload.
 
 START A SESSION
 1. status: is a runner up, does a session run? It works with no game.
@@ -37,9 +37,9 @@ A check is a file tests/<id>.sqf. Its header is comment lines:
   // @reset mission        (optional: start in a restarted mission, for state a reset cannot name)
 The body is SQF run on the lead machine (server, or p1 in singleplayer), with the skd_fnc_* functions:
   ["open the crate", {
-      private _crate = ["skdfx_Crate", AGLToASL [100, 105, 0]] call skd_fnc_create;
+      private _crate = ["mymod_Crate", AGLToASL [100, 105, 0]] call skd_fnc_create;
       ["p1", _crate, "Open crate"] call skd_fnc_useAction;
-      ["server", {(_this select 0) getVariable ["skdfx_open", false]}, "crate open on the server", 10, [_crate]] call skd_fnc_waitUntil;
+      ["server", {(_this select 0) getVariable ["mymod_open", false]}, "crate open on the server", 10, [_crate]] call skd_fnc_waitUntil;
   }] call skd_fnc_step;
   ["p1", {damage player}, "<", 0.5, "p1 unhurt"] call skd_fnc_expectOn;
 - ["p2", {code}, [args]] call skd_fnc_on runs code on a machine and returns its value; code sent to a machine sees only _this, not the check's local variables.

@@ -137,9 +137,3 @@ To see what a failure does, a check or a person makes one at a known moment:
 - **An end from outside**: `taskkill /F /PID 10432`. End a game process only by the id `status` gives, never by name.
 - **A stopped clock**: pause a singleplayer game with Escape in its window.
 - **A failing assertion**: change one expected value in a check and see it fail with its step and the value it read. A suite in which nothing can fail proves nothing.
-
-With the fixture mod `@skd_fixture` of an install from source loaded ([engineering/spec/contract/fixture-mod.md](../engineering/spec/contract/fixture-mod.md)):
-
-- **A crash**: `["p2", {[0.5] call skdfx_fnc_crash}] call skd_fnc_on`. The delay places it between two steps of the check.
-- **An exit with a chosen code**: `["p2", {[0.5, 7] call skdfx_fnc_exit}] call skd_fnc_on`.
-- **A stopped clock**: `[8] call skdfx_fnc_holdClock` in singleplayer.

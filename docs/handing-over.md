@@ -7,14 +7,14 @@ status: draft
 
 # Handing over to a person
 
-Some things no check can judge: how a rope looks, how a climb feels, whether a sound plays at the right moment. A check can still do the tedious part, building the situation, and then hand it over to a person who looks at it. The person never pastes into the debug console: they are put in a game client's window at the start of the situation, with a list of what to look for.
+Some things no check can judge: how an effect looks, how a vehicle handles, whether a sound plays at the right moment. A check can still do the tedious part, building the situation, and then hand it over to a person who looks at it. The person never pastes into the debug console: they are put in a game client's window at the start of the situation, with a list of what to look for.
 
 ## Writing a check that hands over
 
 Build the scene as in any check, then call `[machine, items] call skd_fnc_handOver` with the game client and one to ten things to look for:
 
 ```sqf
-// @check US-083 The owner is handed p1 in front of the mod's crate, with three things to look for
+// @check US-083 A tester is handed p1 in front of the mod's crate, with three things to look for
 // @setups dedicated
 private _crate = ["build the scene", {
     ["p1", AGLToASL [130, 130, 0], 0] call skd_fnc_place;

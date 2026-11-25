@@ -53,12 +53,12 @@ New and deleted files and config always restart the game: file patching finds on
 The game must load a build of your files, not your files themselves, so the file you edit is never the one the game holds. Name three keys of the mod in `shakedown.toml` ([The project file](project-file.md#mods)):
 
 ```toml
-[mods.agh]
-path = 'C:\dev\arma-grappling-hook\.hemttout\build'   # the build the game loads
-patch = "agh_main"
-source = 'C:\dev\arma-grappling-hook\addons'           # your files, which reload watches
-prefix = 'z\agh\addons'
-rebuild = 'cd /d C:\dev\arma-grappling-hook && hemtt build'
+[mods.mymod]
+path = 'C:\mods\mymod\.hemttout\build'   # the build the game loads
+patch = "mymod_main"
+source = 'C:\mods\mymod\addons'           # your files, which reload watches
+prefix = 'z\mymod\addons'
+rebuild = 'cd /d C:\mods\mymod && hemtt build'
 ```
 
 - **`source`** is the folder of your addon folders. `reload` compares every file under it with the snapshot taken when the session last became ready.
@@ -83,7 +83,7 @@ The changed files are found by content: a file with new content, a new file and 
 ```
 > shakedown reload
 reload rl-20261109-140312-4 done: level mission-restart in 9.7 s
-  mission-restart  C:\dev\arma-grappling-hook\addons\climb\functions\fn_letgo.sqf: The game is made to let go of the file by reading the framework's release files, and a mission restart compiles it again. The mod's rebuild runs once no game process holds the file.
+  mission-restart  C:\mods\mymod\addons\main\functions\fn_open.sqf: The game is made to let go of the file by reading the framework's release files, and a mission restart compiles it again. The mod's rebuild runs once no game process holds the file.
   reached server, p1, p2
 ```
 
@@ -105,7 +105,7 @@ As `--json` prints it, the `reload` tool returns it and the result file's `reloa
   "id": "rl-20261109-140312-4",
   "state": "done",
   "level": "mission-restart",
-  "files": [{"path": "C:\\dev\\arma-grappling-hook\\addons\\climb\\functions\\fn_letgo.sqf", "level": "mission-restart", "reason": "The game is made to let go of the file by reading the framework's release files, and a mission restart compiles it again. The mod's rebuild runs once no game process holds the file."}],
+  "files": [{"path": "C:\\mods\\mymod\\addons\\main\\functions\\fn_open.sqf", "level": "mission-restart", "reason": "The game is made to let go of the file by reading the framework's release files, and a mission restart compiles it again. The mod's rebuild runs once no game process holds the file."}],
   "machines": ["server", "p1", "p2"],
   "reason": null,
   "started_at": "2026-11-09T14:03:12.104Z",

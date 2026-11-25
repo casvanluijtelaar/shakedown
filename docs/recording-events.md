@@ -7,7 +7,7 @@ status: draft
 
 # Recording the mod's events
 
-Many mods announce what they do through events: a CBA event raised when a rope attaches, an engine event when a unit dies. A check records those events on the machines it names, reads what each machine received with the clocks of each, and waits for one, without writing event handlers of its own. The reference is [The check API](check-api.md#recording-events).
+Many mods announce what they do through events: a CBA event raised when a crate opens, an engine event when a unit dies. A check records those events on the machines it names, reads what each machine received with the clocks of each, and waits for one, without writing event handlers of its own. The reference is [The check API](check-api.md#recording-events).
 
 An event is a **CBA event**, raised with `CBA_fnc_localEvent`, `CBA_fnc_globalEvent`, `CBA_fnc_serverEvent` or another of CBA's event functions, or an **engine mission event**, such as `EntityKilled`, that `addMissionEventHandler` takes. Its name is matched without regard to case.
 

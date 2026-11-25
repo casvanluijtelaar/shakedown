@@ -74,7 +74,7 @@ A process that exits during the start fails it at once. The reason names the mac
 
 ### The game cannot read one of its own files
 
-A start can also fail on the machine itself: the game logs `Error 20 reading file` on one of its own base-game PBOs, such as `...\expansion\addons\rocks_f_exp.pbo`, and ends with `Application terminated intentionally` a few seconds after it starts. The failed start's reason holds the last RPT lines that name the file. It is a fault of the machine, not of the framework or the mod, and a second start works.
+A start can also fail on the machine itself: the game logs `Error 20 reading file` on one of its own base-game PBOs, such as `...\expansion\addons\rocks_f_exp.pbo`, and ends with `Application terminated intentionally` a few seconds after it starts. The failed start's reason holds the last RPT lines that name the file. It does not come from the framework or the mod, and a second start usually works.
 
 ### A client that hangs
 

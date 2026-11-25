@@ -51,11 +51,11 @@ mods = ["cba", "ace", "mymod"]
 The names in a path are ACE's action names, not the text the menu shows: the first argument a mod gives `ace_interact_menu_fnc_createAction`, or the class name of an action a mod declares in config under `ACE_Actions` or `ACE_SelfActions`. Actions on an object sit under `ACE_MainActions`; a player's own actions sit under `ACE_SelfActions`. A mod that calls
 
 ```sqf
-private _a = ["agh_getOnRope", "Get on rope", "", { ... }, { ... }] call ace_interact_menu_fnc_createAction;
-["agh_Rope", 0, ["ACE_MainActions"], _a] call ace_interact_menu_fnc_addActionToClass;
+private _a = ["mymod_open", "Open crate", "", { ... }, { ... }] call ace_interact_menu_fnc_createAction;
+["mymod_Crate", 0, ["ACE_MainActions"], _a] call ace_interact_menu_fnc_addActionToClass;
 ```
 
-has the path `["ACE_MainActions", "agh_getOnRope"]` on a rope. An action nested in a folder of actions has the folder's name in between, as `["ACE_SelfActions", "agh_menu", "agh_cutRope"]`. The match is exact and case-sensitive.
+has the path `["ACE_MainActions", "mymod_open"]` on the crate. An action nested in a folder of actions has the folder's name in between, as `["ACE_SelfActions", "mymod_menu", "mymod_signal"]`. The match is exact and case-sensitive.
 
 A wrong name tells you the right ones: the failure lists every action that exists where the name was looked for. To list a menu by hand in a running session, read the class tree on the client:
 
@@ -91,7 +91,3 @@ ACE's key-up code checks neither distance nor line of sight, so neither does the
 ## The ACE version it is pinned to
 
 ACE has no public function that performs an action by its path, so the function uses ACE's interaction internals, each marked `Public: No`. It is checked against ACE3 3.21.2. An ACE that renames one of them fails the check with the version found. The project file's `version` key on the ACE mod stops a start on another ACE version before any check runs ([A mod in another version](starting-and-failed-starts.md#a-mod-in-another-version)).
-
-## Trying it with the fixture mod
-
-An install from source comes with the fixture mod `@skd_fixture_cba`, which registers three ACE actions where ACE is loaded: `["ACE_MainActions", "skdfx_aceOpen"]` on the fixture's crate `skdfx_Crate`, and `["ACE_SelfActions", "skdfx_aceSignal"]` and `["ACE_SelfActions", "skdfx_aceNever"]`, whose condition is always false, on every player ([engineering/spec/contract/fixture-mod.md](../engineering/spec/contract/fixture-mod.md)).

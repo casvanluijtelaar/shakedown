@@ -31,7 +31,7 @@ The session cannot start; missing: a running Steam client of this user (start St
 Through the [MCP tools](agent-tools.md) the same refusal is `precondition-failed`.
 
 - **Steam runs, but the start fails with `Steam is not running or not logged in (p1 exited with code 53)`.** The game exits with 53 when it cannot reach a logged-in Steam client. Make sure Steam is logged in, not only running, and is the same Windows user's.
-- **`Error 20 reading file`.** A game process logs it on one of the game's own base-game PBOs and ends with `Application terminated intentionally` a few seconds after it starts. This is a fault of the machine, not of Shakedown or your mod, and a second start works: run `session start` again.
+- **`Error 20 reading file`.** A game process logs it on one of the game's own base-game PBOs and ends with `Application terminated intentionally` a few seconds after it starts. It does not come from Shakedown or your mod, and a second start usually works: run `session start` again.
 - **The start passes its ceiling.** At `start_timeout` (180 s by default) the start fails, listing every machine that was not ready, with the last 20 RPT lines of the machine at fault. Read those lines, and each machine's RPT in its profile folder. A dedicated start with large mods may need a longer `start_timeout`. A client that hangs during its start is only seen at the ceiling, so the start waits the full time first.
 - **A start was refused, and a quick retry too.** A refused start still starts the runner, which stays up about 60 s with no session. A retry within that minute meets it; that is expected, and the retry works once the precondition holds.
 - **A mod in another version.** With `version` set on a mod, a start on any other version fails, naming the mod, the machine, the version found and the version wanted. Install that version, or set `version` to the one found.
@@ -71,7 +71,7 @@ An earlier check left state the reset does not touch: a variable, an action on a
 ## Checks fail with errors you did not cause
 
 - A `script-error` from the game's death-camera script, such as `Undefined variable ... tsw_camtargetunit`, can follow a singleplayer check in which `p1` died.
-- On a dedicated session, the server can log `Server: Object n:nnn not found` for a dead player's body the reset deletes while it still falls, about once in 40 kills. It comes from the game and the reset, not from your mod.
+- On a dedicated session, the server can log `Server: Object n:nnn not found` for a dead player's body the reset deletes while it still falls. It comes from the game and the reset, not from your mod.
 
 ## A check fails with `wait-ceiling` on something that plainly happened
 
@@ -92,7 +92,6 @@ The runner is paused, hung, or of another Shakedown version left from before an 
 ## The install or upgrade fails
 
 - **The binary is locked.** A runner or an agent's `shakedown mcp` still runs. Stop the session, wait for the runner to exit (60 s after its last session stopped), end the agent session, or end the runner by the process id `status` gives, then install again. The install script names each process that runs from its folder.
-- **A real folder named `skdfx`, `skdfx_cba` or `@skd_fixture` is in the game folder** (an install from source). The install links those names to the fixtures and will not replace a real folder. Move it away.
 - **HEMTT is missing** (an install from source). The Windows install builds the addon with HEMTT 1.23; put it on `PATH`.
 - **SmartScreen warns.** The binary is not signed; allow it.
 

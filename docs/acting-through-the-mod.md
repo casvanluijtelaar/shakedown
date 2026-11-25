@@ -50,7 +50,7 @@ An action shows only while the player is within its radius, measured from the pl
 ## CBA keybinds: `skd_fnc_pressKey`
 
 ```sqf
-["p1", "Grappling hooks", "agh_letGo"] call skd_fnc_pressKey;            // down, then up
+["p1", "mymod", "stowKit"] call skd_fnc_pressKey;                       // down, then up
 ["p1", "mymod", "signal", "down"] call skd_fnc_pressKey;                 // only the key-down code
 ["p1", "mymod", "signal", "up"] call skd_fnc_pressKey;                   // only the key-up code
 ```
@@ -70,7 +70,7 @@ A check that presses no key needs no CBA.
 
 ```sqf
 private _passed = ["p1", {
-    private _bind = ["Grappling hooks", "agh_letGo"] call CBA_fnc_getKeybind;
+    private _bind = ["mymod", "stowKit"] call CBA_fnc_getKeybind;
     private _key = (_bind select 8) param [0, _bind select 5];
     _key params ["_dik", "_mods"];
     _mods params ["_shift", "_ctrl", "_alt"];
@@ -78,7 +78,7 @@ private _passed = ["p1", {
     isNil { _out = [findDisplay 46, _dik, _shift, _ctrl, _alt] call (_bind select 3) };
     _out
 }] call skd_fnc_on;
-[_passed, "==", false, "off a rope the key passes on to the game"] call skd_fnc_expect;
+[_passed, "==", false, "away from a crate the key passes on to the game"] call skd_fnc_expect;
 ```
 
 ## Reading what the action did

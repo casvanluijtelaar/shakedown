@@ -25,15 +25,15 @@ The command prints a line when a setup's session starts, the session's lines for
 setup sp-cba: starting its session for run r-20261116-101500-1
 session s-20261116-101500: started p1 (process 4920)
 session s-20261116-101500: ready
-pass    rope/US-012-hook-holds  (13.5 s)
-setup sp-cba: 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\agh\.shakedown\runs\r-20261116-101500-1\result.json
+pass    crate/US-012-kit-in-crate  (13.5 s)
+setup sp-cba: 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\mymod\.shakedown\runs\r-20261116-101500-1\result.json
 setup dedicated-cba: starting its session for run r-20261116-101632-2
 session s-20261116-101632: started server (process 5512)
 session s-20261116-101632: started p1 (process 6120)
 session s-20261116-101632: started p2 (process 6844)
 session s-20261116-101632: ready
-pass    rope/US-012-hook-holds  (14.1 s)
-setup dedicated-cba: 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\agh\.shakedown\runs\r-20261116-101632-2\result.json
+pass    crate/US-012-kit-in-crate  (14.1 s)
+setup dedicated-cba: 1 passed, 0 failed, 0 invalid, 0 not run. Result: C:\mods\mymod\.shakedown\runs\r-20261116-101632-2\result.json
 2 setups: 2 passed, 0 failed, 0 invalid, 0 not run.
 ```
 
@@ -64,17 +64,17 @@ The command then exits 2 if no check failed elsewhere. The result file of a refu
 ## Repeating a check
 
 ```
-shakedown run rope/US-064-1 --repeat 10
+shakedown run crate/US-064-1 --repeat 10
 ```
 
 `--repeat n`, from 1 to 100, runs each selected check `n` times in a row, each time its own execution with its own reset. Each execution prints its line, the second and later with `#<repeat>`, and after the run a line per check gives its summary and the count of each outcome:
 
 ```
-pass    rope/US-064-1  (9.8 s)
-fail    rope/US-064-1 #2  (10.1 s)
+pass    crate/US-064-1  (9.8 s)
+fail    crate/US-064-1 #2  (10.1 s)
         assertion: the leg damage after the fall: expected < 0.5 on p1 within 10 s, last read 0.62.
 ...
-flaky   rope/US-064-1 in sp-cba-ace: 8 pass, 2 fail, 0 invalid, 0 not run
+flaky   crate/US-064-1 in sp-cba-ace: 8 pass, 2 fail, 0 invalid, 0 not run
 8 passed, 2 failed, 0 invalid, 0 not run. Result: ...
 ```
 
@@ -108,12 +108,12 @@ The time of every step is in the result file, on every clock. Two kinds of time 
 - a check execution whose `duration_s` is more than half its `@timeout`: the execution has `"slow": true`, and its line says `slow` after the duration.
 
 ```
-pass    rope/US-078-climb  (14.2 s)
-        slow step: climb to the top (12.1 s)
-pass    rope/US-078-long  (11.3 s, slow)
+pass    crate/US-078-carry  (14.2 s)
+        slow step: carry the crate to the truck (12.1 s)
+pass    crate/US-078-long  (11.3 s, slow)
 ```
 
-A nested step that holds a slow step is slow too, since its time holds the inner one's; its line names it by its whole path, as `slow step: climb > reach the top (12.1 s)`. `run.slow_step_s` in the result file is the threshold the run used. Through MCP, each outcome line has `slow`, `true` when the execution or one of its steps was flagged. A slow flag changes no outcome.
+A nested step that holds a slow step is slow too, since its time holds the inner one's; its line names it by its whole path, as `slow step: carry > reach the truck (12.1 s)`. `run.slow_step_s` in the result file is the threshold the run used. Through MCP, each outcome line has `slow`, `true` when the execution or one of its steps was flagged. A slow flag changes no outcome.
 
 `slow_step` is a number of seconds above 0, a whole number or a decimal. Any other value, such as `-1`, `0` or `"10"`, is refused by `list` and `run` with exit code 3, naming `slow_step` and its line, and nothing starts:
 

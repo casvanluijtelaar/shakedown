@@ -7,27 +7,27 @@ status: draft
 
 # Writing checks
 
-A check is one SQF file that sets up a situation in the running game, makes the mod act, and asserts what should follow. It needs no build step, no `#include`, no macro and no other language. This page covers the file; [The check API](check-api.md) lists every function a check can call. The contract is [engineering/spec/contract/check-api.md](../engineering/spec/contract/check-api.md).
+A check is one SQF file that sets up a situation in the running game, makes the mod act, and asserts what should follow. It needs no build step, no `#include`, no macro and no other language. This page covers the file; [The check API](check-api.md) lists every function a check can call.
 
 ## A check
 
 ```sqf
-// @check US-012 A hook thrown at a wall holds a player's weight
-// @tags US-012 smoke rope
+// @check US-012 A kit p1 stows in a crate shows on every machine
+// @tags US-012 smoke crate
 // @setups sp dedicated
 // @timeout 60
 
-private _wall = ["place a wall in front of p1", {
+private _crate = ["place a crate in front of p1", {
     ["p1", AGLToASL [100, 104, 0], 0] call skd_fnc_place;
-    ["Land_Wall_IndCnc_4_F", AGLToASL [100, 110, 0], 180] call skd_fnc_create
+    ["mymod_Crate", AGLToASL [100, 106, 0], 180] call skd_fnc_create
 }] call skd_fnc_step;
 
-["throw the hook", {
-    ["p1", "agh", "throwHook"] call skd_fnc_pressKey;
+["stow a kit with the mod's key", {
+    ["p1", "mymod", "stowKit"] call skd_fnc_pressKey;
 }] call skd_fnc_step;
 
-["every machine sees the rope", {
-    ["all", { count ropes (_this select 0) }, ">=", 1, "ropes attached to the wall", 10, [_wall]] call skd_fnc_expectEach;
+["every machine sees the kit in the crate", {
+    ["all", { count itemCargo (_this select 0) }, ">=", 1, "items in the crate", 10, [_crate]] call skd_fnc_expectEach;
 }] call skd_fnc_step;
 ```
 
@@ -38,7 +38,7 @@ A check is a file with the extension `.sqf` anywhere under the project's tests f
 | File | Check id |
 |---|---|
 | `tests\smoke.sqf` | `smoke` |
-| `tests\rope\US-012-hook-holds.sqf` | `rope/US-012-hook-holds` |
+| `tests\crate\US-012-kit-in-crate.sqf` | `crate/US-012-kit-in-crate` |
 
 The command line also takes an id with `.sqf` or with `\`, and reads it as the same check. The runner reads every check from disk at the start of each execution, so an edited check needs no reload and no restart: save it and run it again.
 
@@ -69,7 +69,7 @@ The rest of the file is the **body**. It is compiled with `compile` and runs sch
   private _pos = ["p1", { getPosASL player }] call skd_fnc_on;   // read on p1 itself
   ```
 
-- **No preprocessor.** `#include`, `#define` and macros such as `FUNC(name)` do not work: write the function's full name, such as `agh_fnc_placeHook`.
+- **No preprocessor.** `#include`, `#define` and macros such as `FUNC(name)` do not work: write the function's full name, such as `mymod_fnc_stowKit`.
 - **Comments** of both kinds, `//` to the end of the line and `/* ... */`, may stand anywhere in the file. The runner turns them into spaces before it sends the body, keeping the line breaks, so a compile message names the line of the file.
 - **Keep long data out of string literals.** The game stands still while it compiles the body, and a long string literal compiles in time that grows with the square of its length: about half a second for 100 KB, seconds beyond. Keep data longer than a few kilobytes out of a check.
 
@@ -124,27 +124,27 @@ private _limit = 3;
 
 Helper code that several checks use is written once, in the project's **library folder**: `tests\_lib\` by default, or the folder the project file's `lib` key names. Every `.sqf` file directly in that folder is a library file; a subfolder of it is not read, and `list` and `run` never take a file under it as a check.
 
-Each library file is compiled on every machine of the session after each mission start (the session's start, a mission restart, a game restart and a client's join) and after each `reload`, into the global variable `skd_lib_<file name>`: `tests\_lib\rope.sqf` becomes `skd_lib_rope`, and `call skd_lib_rope` runs the file and returns its value. The body of every check and the code sent to any machine can call it. A file name is letters, digits and `_`.
+Each library file is compiled on every machine of the session after each mission start (the session's start, a mission restart, a game restart and a client's join) and after each `reload`, into the global variable `skd_lib_<file name>`: `tests\_lib\kit.sqf` becomes `skd_lib_kit`, and `call skd_lib_kit` runs the file and returns its value. The body of every check and the code sent to any machine can call it. A file name is letters, digits and `_`.
 
 A library file follows the rules of the body: no header, no preprocessor, comments turned into spaces. A file that holds its helpers as values returns them, such as a HashMap of code values:
 
 ```sqf
-// tests\_lib\rope.sqf
+// tests\_lib\kit.sqf
 createHashMapFromArray [
-    ["anchor", { params ["_pos"]; ["Land_Wall_IndCnc_4_F", _pos, 0] call skd_fnc_create }],
-    ["length", { params ["_rope"]; ropeLength _rope }],
+    ["crate", { params ["_pos"]; ["mymod_Crate", _pos, 0] call skd_fnc_create }],
+    ["items", { params ["_crate"]; count itemCargo _crate }],
     ["settle", { params ["_unit"]; waitUntil { vectorMagnitude velocity _unit < 0.1 }; true }]
 ]
 ```
 
 ```sqf
-// @check US-012 A hook holds on the wall the library builds
-private _rope = call skd_lib_rope;
-private _wall = [AGLToASL [100, 110, 0]] call (_rope get "anchor");     // in the body, on the lead
-["p1", { [player] call ((call skd_lib_rope) get "settle") }] call skd_fnc_on;   // on p1 too
+// @check US-012 A kit stows in the crate the library builds
+private _kit = call skd_lib_kit;
+private _crate = [AGLToASL [100, 106, 0]] call (_kit get "crate");      // in the body, on the lead
+["p1", { [player] call ((call skd_lib_kit) get "settle") }] call skd_fnc_on;   // on p1 too
 ```
 
-A helper that calls `skd_fnc_*`, such as `anchor` above, works only in the body. A file that defines global variables when it is called defines them on the machine that calls it: `["p1", { call skd_lib_kit }] call skd_fnc_on` defines them on `p1`.
+A helper that calls `skd_fnc_*`, such as `crate` above, works only in the body. A file that defines global variables when it is called defines them on the machine that calls it: `["p1", { call skd_lib_kit }] call skd_fnc_on` defines them on `p1`.
 
 The runner reads the library folder when the session starts and at each `reload`, not before each check as it reads a check file. A changed library file reaches the game with `shakedown reload`, which lists it at level `none` and restarts nothing ([Reloading changed mod files](reloading.md)).
 
@@ -161,7 +161,7 @@ A broken check ends `fail` with reason `check-error` and a message that says wha
 | Mistake | Message |
 |---|---|
 | No `@check` line | `The check header is wrong, the header has no @check line. Start the file with `// @check <story or requirement ID> <what it proves>`. ...` |
-| `// @check A hook holds` | `... line 1: @check must start with the story or requirement ID the check proves, such as US-012 or NFR-PF-02, then a short sentence; it starts with `A`.` |
+| `// @check A kit stows` | `... line 1: @check must start with the story or requirement ID the check proves, such as US-012 or NFR-PF-02, then a short sentence; it starts with `A`.` |
 | `// @check` with nothing after it | `... line 1: @check has no name. Give the story or requirement ID it proves, then a short sentence.` |
 | `// @timeout fast` | `... line 2: @timeout must be a whole number of seconds from 1 to 3600, got `fast`.` |
 | `// @reset fresh` | `... line 2: @reset must be `in-place` or `mission`, got `fresh`.` |

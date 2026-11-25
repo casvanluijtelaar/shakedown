@@ -7,7 +7,7 @@ status: draft
 
 # AI agents and the MCP tools
 
-`shakedown mcp` is an MCP server on stdio that gives an AI agent, such as Claude Code, every command of the command line as a tool. A tool asks the runner the same requests as its command and returns the same JSON that the command prints with `--json`, so whatever these docs say of a command holds for its tool. The contract is [engineering/spec/contract/mcp-tools.md](../engineering/spec/contract/mcp-tools.md).
+`shakedown mcp` is an MCP server on stdio that gives an AI agent, such as Claude Code, every command of the command line as a tool. A tool asks the runner the same requests as its command and returns the same JSON that the command prints with `--json`, so whatever these docs say of a command holds for its tool.
 
 With it an agent can start and stop sessions, list and run checks, read results, script errors and each machine's logs, run SQF on any machine and inspect it, reload changed files and rerun, and write checks: the `guide` tool tells it how.
 
@@ -53,7 +53,7 @@ The session belongs to the runner, not to the agent: when the agent's session en
 
 ## What every tool keeps to
 
-- **Structured results.** Each tool has an `inputSchema` and an `outputSchema`, and returns `structuredContent` and the same JSON as one text block. The shapes a tool shares with the result file, such as `ScriptError`, are those of [result.schema.json](../engineering/spec/contract/result.schema.json).
+- **Structured results.** Each tool has an `inputSchema` and an `outputSchema`, and returns `structuredContent` and the same JSON as one text block. The shapes a tool shares with the result file, such as `ScriptError`, are those of the result file ([Results](results.md)).
 - **No call past 60 s.** `exec`, `wait_until` and `expect` take a `ceiling` of at most 50 s, default 10; `run_status` a `wait_s` of at most 50. A call that waits sends `notifications/progress` every 4 s when the request carries a progress token. A run never holds a call: `run_start` returns at once. An order sent to a machine whose mission restarts waits for the machine before its own ceiling starts, so on a dedicated session such a call can last longer than 60 s.
 - **Cancelling stops the work.** When the client cancels `exec`, `wait_until`, `expect` or `inspect`, the server closes the call's connection to the runner, and the runner stops the code on the machine; `inspect` then lists no script of it. A session start or a reset goes on when its call is cancelled; stop a session with `session_stop`. A run never holds a call; stop it with `run_stop`.
 - **Long results go to a file.** A result over 20,000 characters is written to `.shakedown\results\` in the project and the tool returns `{"result_path": <path>}`. With no project, the file goes to a `shakedown-results` folder in the system's temp folder. `logs` keeps its own lines under the limit and names the file with all of them in `path`.
@@ -103,7 +103,7 @@ A failure of the framework itself is a JSON-RPC error, not a tool result.
 Shakedown runs automated checks of an Arma 3 mod inside the running game, in singleplayer or on a dedicated server with game clients and headless clients.
 
 THE PROJECT
-The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under the tests folder (shakedown.toml's tests, default tests/); a check's id is its path there without .sqf. Helpers shared by checks go in the library folder (tests/_lib/ by default, or shakedown.toml's lib): each file rope.sqf there is compiled on every machine into skd_lib_rope, which a check or code sent to a machine runs with call skd_lib_rope; a changed library file reaches the game with reload.
+The project is the folder holding shakedown.toml. It names the game, the mods, and the setups: a setup is a mode (singleplayer or dedicated), its clients and headless clients, and the mods it loads. Checks are .sqf files under the tests folder (shakedown.toml's tests, default tests/); a check's id is its path there without .sqf. Helpers shared by checks go in the library folder (tests/_lib/ by default, or shakedown.toml's lib): each file kit.sqf there is compiled on every machine into skd_lib_kit, which a check or code sent to a machine runs with call skd_lib_kit; a changed library file reaches the game with reload.
 
 START A SESSION
 1. status: is a runner up, does a session run? It works with no game.
@@ -139,9 +139,9 @@ A check is a file tests/<id>.sqf. Its header is comment lines:
   // @reset mission        (optional: start in a restarted mission, for state a reset cannot name)
 The body is SQF run on the lead machine (server, or p1 in singleplayer), with the skd_fnc_* functions:
   ["open the crate", {
-      private _crate = ["skdfx_Crate", AGLToASL [100, 105, 0]] call skd_fnc_create;
+      private _crate = ["mymod_Crate", AGLToASL [100, 105, 0]] call skd_fnc_create;
       ["p1", _crate, "Open crate"] call skd_fnc_useAction;
-      ["server", {(_this select 0) getVariable ["skdfx_open", false]}, "crate open on the server", 10, [_crate]] call skd_fnc_waitUntil;
+      ["server", {(_this select 0) getVariable ["mymod_open", false]}, "crate open on the server", 10, [_crate]] call skd_fnc_waitUntil;
   }] call skd_fnc_step;
   ["p1", {damage player}, "<", 0.5, "p1 unhurt"] call skd_fnc_expectOn;
 - ["p2", {code}, [args]] call skd_fnc_on runs code on a machine and returns its value; code sent to a machine sees only _this, not the check's local variables.

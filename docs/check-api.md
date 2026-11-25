@@ -7,7 +7,7 @@ status: draft
 
 # The check API
 
-A check's body calls these functions, each as `[arguments] call skd_fnc_name`. This page is the reference: every function, its arguments in order, what it returns, an example and how it fails. The pages linked from each section show the functions at work. The contract is [engineering/spec/contract/check-api.md](../engineering/spec/contract/check-api.md).
+A check's body calls these functions, each as `[arguments] call skd_fnc_name`. This page is the reference: every function, its arguments in order, what it returns, an example and how it fails. The pages linked from each section show the functions at work.
 
 ## Rules for every function
 
@@ -76,7 +76,7 @@ The code runs scheduled, so it may `waitUntil`. A script error it raises does no
 | `skd_fnc_tryWaitUntil` | Same as `skd_fnc_waitUntil`. | `true` if the condition held within the ceiling, `false` if not. | Never on the ceiling. |
 
 ```sqf
-["p1", { player getVariable ["agh_climbState", "OFF"] == "OFF" }, "p1 is off the rope", 5] call skd_fnc_waitUntil;
+["p1", { player getVariable ["mymod_state", "IDLE"] == "IDLE" }, "p1 is idle again", 5] call skd_fnc_waitUntil;
 private _landed = ["p1", { isTouchingGround player }, "p1 landed", 3] call skd_fnc_tryWaitUntil;
 ```
 
@@ -94,7 +94,7 @@ The condition is evaluated on that machine every frame. There is no sleep in the
 ```sqf
 [_n, "==", 0, "no box is left"] call skd_fnc_expect;
 ["p1", { damage player }, "<", 0.1, "p1 is unhurt"] call skd_fnc_expectOn;
-["all", { count ropes (_this select 0) }, ">=", 1, "every machine sees the rope", 10, [_anchor]] call skd_fnc_expectEach;
+["all", { count itemCargo (_this select 0) }, ">=", 1, "every machine sees the kit in the crate", 10, [_crate]] call skd_fnc_expectEach;
 ["all", { getPosASL (_this select 0) }, "every machine agrees where p1 is", 0.1, 10, [["p1"] call skd_fnc_player]] call skd_fnc_expectAgree;
 ```
 
@@ -143,7 +143,7 @@ See [Scenes, resets and cleanups](scenes-resets-and-cleanups.md).
 
 ```sqf
 ["p1", _crate, "Open crate"] call skd_fnc_useAction;
-["p1", "Grappling hooks", "agh_letGo"] call skd_fnc_pressKey;
+["p1", "mymod", "stowKit"] call skd_fnc_pressKey;
 ["p1", "mymod", "signal", "down"] call skd_fnc_pressKey;
 ["p1", _crate, ["ACE_MainActions", "mymod_open"]] call skd_fnc_useAceAction;
 ["p1", "p1", ["ACE_SelfActions", "mymod_signal"]] call skd_fnc_useAceAction;   // p1's own menu
@@ -199,7 +199,7 @@ See [Recording the mod's events](recording-events.md).
 [{ player allowDamage true }, [], "p1"] call skd_fnc_cleanup;     // undone on p1, where it lives
 
 ["boxes", _n] call skd_fnc_evidence;
-if (isNil "agh_fnc_placeHook") then { ["arma-grappling-hook is not loaded"] call skd_fnc_invalid };
+if (isNil "mymod_fnc_stowKit") then { ["mymod is not loaded"] call skd_fnc_invalid };
 if (_n > 3) then { ["too many boxes"] call skd_fnc_fail };
 ```
 

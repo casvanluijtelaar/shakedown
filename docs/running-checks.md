@@ -11,11 +11,11 @@ status: draft
 
 ```
 > shakedown list
-rope/US-012-hook-holds  US-012 A hook thrown at a wall holds a player's weight  [US-012 smoke rope]
-rope/US-013-hook-misses  US-013 A hook thrown into the air falls back  [US-013 rope]
+crate/US-012-kit-in-crate  US-012 A kit p1 stows in a crate shows on every machine  [US-012 smoke crate]
+crate/US-013-locked-crate  US-013 A locked crate takes no kit  [US-013 crate]
 broken  (header error: line 1: @check must start with the story or requirement ID the check proves, such as US-012 or NFR-PF-02, then a short sentence; it starts with `A`.)
 > shakedown list --tag smoke
-rope/US-012-hook-holds  US-012 A hook thrown at a wall holds a player's weight  [US-012 smoke rope]
+crate/US-012-kit-in-crate  US-012 A kit p1 stows in a crate shows on every machine  [US-012 smoke crate]
 ```
 
 `shakedown list [<id>...] [--tag <tag>]...` reads the check files and prints each selected check once: its id, its name and its tags. It needs no game and no runner, and it works on macOS and Linux too. A check whose header is wrong is listed with what is wrong. With `--json` it prints each check's `id`, `name`, `tags`, `setups` (`null` for every setup), `timeout_s`, `reset` and `error`.
@@ -33,7 +33,7 @@ shakedown run --setup sp
 ```
 shakedown session start --setup sp
 shakedown run
-shakedown run rope/US-012-hook-holds
+shakedown run crate/US-012-kit-in-crate
 shakedown session stop
 ```
 
@@ -58,7 +58,7 @@ A run against a session you started leaves it `ready`, and what the last check l
 | `shakedown run` | Every check. |
 | `shakedown run a b` | The checks `a` and `b`, in that order. |
 | `shakedown run --tag smoke` | Every check tagged `smoke`. |
-| `shakedown run --tag smoke --tag rope` | Every check tagged `smoke` or `rope`. |
+| `shakedown run --tag smoke --tag crate` | Every check tagged `smoke` or `crate`. |
 | `shakedown run a --tag smoke` | `a`, then every check tagged `smoke` that is not `a`. |
 | `shakedown run a a b` | `a`, `a`, then `b`: an id given twice runs twice. |
 | `shakedown run a --repeat 10` | `a` ten times in a row ([Repeating a check](every-setup-and-repeats.md#repeating-a-check)). |
@@ -70,8 +70,8 @@ A check whose `@setups` leaves out the session's setup is not run, and is listed
 An unknown id or a tag no check carries is refused, exit 3, with what exists:
 
 ```
-No check has the id `rope/US-99`. The checks are: broken, rope/US-012-hook-holds, rope/US-013-hook-misses.
-No check carries the tag nosuch. The tags that exist are: US-012, US-013, rope, smoke. Select checks by one of those; `shakedown list` shows each check's tags.
+No check has the id `crate/US-99`. The checks are: broken, crate/US-012-kit-in-crate, crate/US-013-locked-crate.
+No check carries the tag nosuch. The tags that exist are: US-012, US-013, crate, smoke. Select checks by one of those; `shakedown list` shows each check's tags.
 ```
 
 `run` with the one word `stop` and nothing else is always `run stop`, which stops the active run; a check named `stop` runs with `--tag` or beside another id ([Stopping a run](unattended-runs.md#stopping-a-run-by-hand)).
@@ -81,13 +81,13 @@ No check carries the tag nosuch. The tags that exist are: US-012, US-013, rope, 
 One line per check execution as it ends, then a summary with the path of the result file:
 
 ```
-pass    rope/US-012-hook-holds  (13.5 s)
-fail    rope/US-013-hook-misses  (10.1 s)
-        assertion: the hook fell back: expected == true on p1 within 10 s, last read false.
-pass    rope/US-012-hook-holds #2  (13.2 s)
-pass    rope/US-078-climb  (14.2 s)
-        slow step: climb to the top (12.1 s)
-invalid rope/US-079-long  (61.3 s, slow)
+pass    crate/US-012-kit-in-crate  (13.5 s)
+fail    crate/US-013-locked-crate  (10.1 s)
+        assertion: the crate refused the kit: expected == true on p1 within 10 s, last read false.
+pass    crate/US-012-kit-in-crate #2  (13.2 s)
+pass    crate/US-078-carry  (14.2 s)
+        slow step: carry the crate to the truck (12.1 s)
+invalid crate/US-079-long  (61.3 s, slow)
         machine-lost: p2 stopped answering: ...
 3 passed, 1 failed, 1 invalid, 0 not run. Result: C:\mods\mymod\.shakedown\runs\r-20261105-161317-1\result.json
 ```

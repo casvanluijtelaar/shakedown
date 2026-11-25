@@ -7,7 +7,7 @@ status: draft
 
 # The project file
 
-A project is a folder with a `shakedown.toml` file. Every command finds it by looking in the current folder and then upward, or takes `--project <dir>`. The file is read fresh by every command, so an edit takes effect at the next command; a running session keeps the setup it was started with until it is stopped. The full contract is [engineering/spec/contract/cli.md](../engineering/spec/contract/cli.md).
+A project is a folder with a `shakedown.toml` file. Every command finds it by looking in the current folder and then upward, or takes `--project <dir>`. The file is read fresh by every command, so an edit takes effect at the next command; a running session keeps the setup it was started with until it is stopped.
 
 ## A complete example
 
@@ -27,27 +27,27 @@ version = "3.19.0.260808"    # optional: refuse a start on any other version
 path = 'C:\Program Files (x86)\Steam\steamapps\workshop\content\107410\463939057'
 patch = "ace_main"
 
-[mods.agh]
+[mods.mymod]
 path = '..\.hemttout\build'  # the build the game loads, relative to the project folder
-patch = "agh_main"
+patch = "mymod_main"
 source = '..\addons'         # makes the mod watched by reload
-prefix = 'z\agh\addons'      # the game path of source
+prefix = 'z\mymod\addons'    # the game path of source
 rebuild = "hemtt build"      # run by a reload while the game lets go of the files
 
 [setups.sp]
 mode = "singleplayer"
-mods = ["cba", "agh"]
+mods = ["cba", "mymod"]
 
 [setups.sp-ace]
 mode = "singleplayer"
-mods = ["cba", "ace", "agh"]
+mods = ["cba", "ace", "mymod"]
 
 [setups.dedicated]
 mode = "dedicated"
 clients = 2            # p1 and p2
 headless = 1           # hc1
 late = 1               # p3, which a check makes join
-mods = ["cba", "agh"]
+mods = ["cba", "mymod"]
 world = "VR"
 spawn = [100, 100]
 start_timeout = 180
@@ -85,7 +85,7 @@ Each `[mods.<name>]` table declares one mod. A setup loads it by that name.
 | `patch` | no | A `CfgPatches` class of the mod. The result file records its `versionStr` as each machine loaded it, under `session.machines[].mods`. |
 | `version` | no, needs `patch` | The `versionStr` of `patch` every machine must load, as the exact string the result file records. A start in which any machine loaded another version, or does not load `patch` at all, fails before any check runs ([A mod in another version](starting-and-failed-starts.md#a-mod-in-another-version)). Without it any version is taken. |
 | `source` | no | The folder of your own files of the mod, the one holding its addon folders, which `reload` watches ([Reloading changed mod files](reloading.md)). |
-| `prefix` | with `source` | The game path of `source`, such as `'z\agh\addons'`. |
+| `prefix` | with `source` | The game path of `source`, such as `'z\mymod\addons'`. |
 | `rebuild` | no | A command line that makes the build the game loads from your files, such as `hemtt build`, or copies the changed files into it. A `game-restart` reload runs it with `cmd /C` in the project folder, after every game process has ended and before any starts again; a `mission-restart` reload runs it once no game process holds a changed file, while the game still holds the mod's PBOs and every other file it read, so a rebuild that serves both writes only the loose files that changed ([Setting a mod up for reload](reloading.md#setting-a-mod-up-for-reload)). It must end within 120 s with exit code 0. It is read fresh at each reload, so adding it needs no new session. |
 
 ### CBA
@@ -151,7 +151,7 @@ A singleplayer setup always has one game client, `p1`, and no headless client; `
 
 - Mod and setup names are letters, digits and `-`, starting with a letter: `sp`, `dedicated-2`, `sp-ace`.
 - Single quotes keep backslashes in Windows paths as they are. In double quotes, write `\\`.
-- A relative path is relative to the project folder, and may climb out of it. With the project in `acceptance\shakedown\` of the mod's repository, `path = '..\..\.hemttout\build'` names the repository's build. Shakedown resolves `.` and `..` before it starts the game, which refuses a `-mod` folder whose path holds `..`, so a committed `shakedown.toml` needs no absolute path to the mod.
+- A relative path is relative to the project folder, and may climb out of it. With the project in `tests\shakedown\` of the mod's repository, `path = '..\..\.hemttout\build'` names the repository's build. Shakedown resolves `.` and `..` before it starts the game, which refuses a `-mod` folder whose path holds `..`, so a committed `shakedown.toml` needs no absolute path to the mod.
 
 ## Mistakes
 

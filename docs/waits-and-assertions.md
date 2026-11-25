@@ -7,12 +7,12 @@ status: draft
 
 # Waits and assertions
 
-Arma 3 is a live simulation: a rope takes a frame to appear, a value takes a moment to reach a client. Shakedown has no sleep. Every wait has a condition and a ceiling, and passes the moment the condition holds. The reference is [The check API](check-api.md#waits).
+Arma 3 is a live simulation: an object takes a frame to appear, a value takes a moment to reach a client. Shakedown has no sleep. Every wait has a condition and a ceiling, and passes the moment the condition holds. The reference is [The check API](check-api.md#waits).
 
 ## Waits
 
 ```sqf
-["p1", { player getVariable ["agh_climbState", "OFF"] == "OFF" }, "p1 is off the rope", 5] call skd_fnc_waitUntil;
+["p1", { player getVariable ["mymod_state", "IDLE"] == "IDLE" }, "p1 is idle again", 5] call skd_fnc_waitUntil;
 private _landed = ["p1", { isTouchingGround player }, "p1 landed", 3] call skd_fnc_tryWaitUntil;
 if (!_landed) then { ["landing", "p1 was still in the air"] call skd_fnc_evidence };
 ```
@@ -27,19 +27,19 @@ if (!_landed) then { ["landing", "p1 was still in the air"] call skd_fnc_evidenc
 - Write the description as the state you wait for, so the failure reads well:
 
   ```
-  skd_fnc_waitUntil: "p1 is off the rope" was not met on p1 within its ceiling of 5 s.
+  skd_fnc_waitUntil: "p1 is idle again" was not met on p1 within its ceiling of 5 s.
   ```
 
 - A condition that raises a script error ends the check at that evaluation, with no retry, `fail` / `script-error`:
 
   ```
-  skd_fnc_waitUntil: the condition for "p1 is off the rope" on p1 raised a script error: Undefined variable in expression: _state. Fix the condition or the code it calls.
+  skd_fnc_waitUntil: the condition for "p1 is idle again" on p1 raised a script error: Undefined variable in expression: _state. Fix the condition or the code it calls.
   ```
 
 - A condition that returns anything but `true` or `false` ends it `fail` / `check-error`, naming what it returned:
 
   ```
-  skd_fnc_waitUntil: the condition for "p1 is off the rope" on p1 returned a String ("OFF"), not a Boolean. Make it return true or false.
+  skd_fnc_waitUntil: the condition for "p1 is idle again" on p1 returned a String ("IDLE"), not a Boolean. Make it return true or false.
   ```
 
 - `skd_fnc_tryWaitUntil` ends the check the same two ways; it returns `false` only at its ceiling.
@@ -49,7 +49,7 @@ if (!_landed) then { ["landing", "p1 was still in the air"] call skd_fnc_evidenc
 ```sqf
 [_n, "==", 0, "no box is left"] call skd_fnc_expect;
 ["p1", { damage player }, "<", 0.1, "p1 is unhurt"] call skd_fnc_expectOn;
-["all", { count ropes (_this select 0) }, ">=", 1, "every machine sees the rope", 10, [_anchor]] call skd_fnc_expectEach;
+["all", { count itemCargo (_this select 0) }, ">=", 1, "every machine sees the kit in the crate", 10, [_crate]] call skd_fnc_expectEach;
 ["all", { getPosASL (_this select 0) }, "every machine agrees where p1 is", 0.1, 10, [["p1"] call skd_fnc_player]] call skd_fnc_expectAgree;
 ```
 
@@ -105,7 +105,7 @@ p1 is unhurt: expected < 0.1 on p1 within 10 s, last read 0.35.
 For `skd_fnc_expectEach`, with every machine's last value and the machines that did not meet it:
 
 ```
-every machine sees the rope: expected >= 1 on every machine within 10 s; last read server 1, p1 1, p2 0; not met on p2.
+every machine sees the kit in the crate: expected >= 1 on every machine within 10 s; last read server 1, p1 1, p2 0; not met on p2.
 ```
 
 For `skd_fnc_expectAgree`, with what each machine that differs read where the first machine read its value:

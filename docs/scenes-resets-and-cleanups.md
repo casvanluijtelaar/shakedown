@@ -91,8 +91,8 @@ private _id = ["p1", { player addAction ["Wave", {}] }] call skd_fnc_on;
 ["p1", { player allowDamage false }] call skd_fnc_on;
 [{ player allowDamage true }, [], "p1"] call skd_fnc_cleanup;
 
-["server", { mymod_setting_ropeLength = 30 }] call skd_fnc_on;
-[{ mymod_setting_ropeLength = 15 }] call skd_fnc_cleanup;    // on the lead: the server, or p1 in singleplayer
+["server", { mymod_setting_maxItems = 30 }] call skd_fnc_on;
+[{ mymod_setting_maxItems = 15 }] call skd_fnc_cleanup;    // on the lead: the server, or p1 in singleplayer
 ```
 
 `[code, args, machine] call skd_fnc_cleanup` registers code that runs on `machine` at the start of the next reset, each machine's last registered first. It runs whatever the check's outcome, so a check that fails half way leaves no such state to the next.

@@ -7,7 +7,7 @@ status: draft
 
 # Results and the result file
 
-Every run writes exactly one result file, also when it was stopped or its session broke. It is the full record of the run, for a person and for a program; `run --json` and the MCP tool `run_result` give a summary and its path. Its shape is the JSON Schema [result.schema.json](../engineering/spec/contract/result.schema.json), and the contract is [engineering/spec/contract/result-file.md](../engineering/spec/contract/result-file.md).
+Every run writes exactly one result file, also when it was stopped or its session broke. It is the full record of the run, for a person and for a program; `run --json` and the MCP tool `run_result` give a summary and its path.
 
 ## The run folder
 
@@ -36,7 +36,7 @@ A run of one check on a dedicated session, which failed:
   },
   "session": {
     "id": "s-20261104-213512",
-    "setup": { "name": "dedicated-2", "mode": "dedicated", "clients": 2, "headless": 0, "world": "VR", "mods": ["cba", "agh"] },
+    "setup": { "name": "dedicated-2", "mode": "dedicated", "clients": 2, "headless": 0, "world": "VR", "mods": ["cba", "mymod"] },
     "machines": [
       { "name": "server", "kind": "server", "start": 1, "game_version": "2.22.154089 stable",
         "mods": [{ "mod": "cba", "patch": "cba_main", "version": "3.19.0.260811" }], "end_state": "ready" },
@@ -49,21 +49,21 @@ A run of one check on a dedicated session, which failed:
   "summary": { "total": 1, "pass": 0, "fail": 1, "invalid": 0, "not_run": 0 },
   "checks": [
     {
-      "check_id": "rope/US-012-hook-holds", "name": "US-012 A hook thrown at a wall holds a player's weight",
+      "check_id": "crate/US-012-kit-in-crate", "name": "US-012 A kit p1 stows in a crate shows on every machine",
       "tags": ["US-012", "smoke"], "repeat": 1, "outcome": "fail",
-      "reason": { "kind": "assertion", "message": "ropes attached to the wall: expected >= 1 on every machine within 10 s; last read server 1, p1 1, p2 0; not met on p2.", "machine": "p2", "at": "2026-11-04T21:37:19.650Z" },
+      "reason": { "kind": "assertion", "message": "items in the crate: expected >= 1 on every machine within 10 s; last read server 1, p1 1, p2 0; not met on p2.", "machine": "p2", "at": "2026-11-04T21:37:19.650Z" },
       "started_at": "2026-11-04T21:37:06.200Z", "ended_at": "2026-11-04T21:37:19.700Z", "duration_s": 13.5,
       "reload": "full", "slow": false,
       "steps": [
-        { "path": ["every machine sees the rope"], "machine": "server", "state": "failed",
+        { "path": ["every machine sees the kit in the crate"], "machine": "server", "state": "failed",
           "start": { "utc": "2026-11-04T21:37:09.600Z", "tick": 412.5, "time": 301.2, "frame": 20311 },
           "end": { "utc": "2026-11-04T21:37:19.650Z", "tick": 422.6, "time": 311.3, "frame": 20817 },
-          "duration_s": 10.05, "error": "ropes attached to the wall: p2 read 0", "slow": true }
+          "duration_s": 10.05, "error": "items in the crate: p2 read 0", "slow": true }
       ],
       "errors": [],
       "events": [],
       "evidence": {
-        "failed_step": ["every machine sees the rope"],
+        "failed_step": ["every machine sees the kit in the crate"],
         "observed": { "server": 1, "p1": 1, "p2": 0 },
         "attached": [],
         "logs": { "server": "checks/1/server.log", "p1": "checks/1/p1.log", "p2": "checks/1/p2.log" }
