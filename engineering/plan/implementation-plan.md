@@ -64,7 +64,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 15. **One failure story per two feature stories, after the MVP.** A phase 2 milestone has at least one story of another kind for every two `feature` stories it holds, rounded up, each for the way a feature of the milestone most plausibly fails (the owner's decision of 2026-11-13). `malicious intent` stories still wait for the `CR-13` work.
 16. **Deferred work rides with the milestone whose path it lies on.** A deferred concept is taken up by a phase 2 milestone when it is that milestone's demo (`DEF-04`, `DEF-30`), removes what the demo works around (`DEF-27`), or lies in the code the milestone changes (`DEF-28`, `DEF-29`). The rest stay deferred until use shows they matter.
 17. **A patch version per milestone, a minor version per phase.** As in phase 1, each milestone of a phase raises the patch version and the phase's last milestone raises the minor: M11 to M18 are 0.1.1 to 0.1.8, and M19 is release 0.2.0 (the owner's decisions of 2026-11-13 and 2026-11-21).
-18. **A spike that decides whether a milestone is built runs as a research round ahead of it.** `SPK-19` runs beside M11, so M14 is built against its result or closed without work before its place comes (the owner's decision of 2026-11-13).
+18. **A spike that decides whether a milestone is built runs as a research round ahead of it.** `SPK-19` runs beside M11, so M14 is built against its result or closed without work before its place comes (the owner's decision of 2026-11-13). `SPK-24` runs the same way, ahead of any milestone that would build a hosted mode (`DEF-38`).
 
 ## Where each spike lands
 
@@ -92,6 +92,7 @@ Phase 2 is ordered by what use on arma-grappling-hook shows matters (PRD section
 | `SPK-20` | M16 | Yes: `SES-10`'s connect ceiling is dropped and `DEF-28` stays open; the reason in `session.json` holds. |
 | `SPK-21` | M17; passed (research `35-spikes-ace-and-keys.md`) | No: the framework runs the ACE action's condition and statement itself. |
 | `SPK-22` | M18 | Yes: frame rate and answer time show in `status` and flag no check. |
+| `SPK-24` | A research round ahead of any milestone that would build a hosted mode (rule 18), when the owner wants hosted sessions tested (`DEF-38`) | No: no story promises a hosted session. H9 stays and `DEF-38` is closed as its first option. |
 
 ## Which milestone completes each must requirement of the PRD
 
@@ -163,5 +164,6 @@ Work found while planning that no story promises is in [deferred/](deferred/). P
 - `DEF-34` (game client windows take the foreground when they start) is optional: the windows are a nuisance to whoever uses the machine, not a defect in what a check proves. It waits for the owner, and its spike gates the change.
 - `DEF-35` (the one-line install takes its script from the latest release) and `DEF-36` (a winget update may drop `ArchiveBinariesDependOnPath`) ride with the next release: the first at its pre-release, the second before its tag.
 - `DEF-37` (dedicated clients can start in each other's places) waits for a measure of the start time that a fixed join order costs against `NFR-PF`; until then the docs say a check places a player it needs at a given place.
+- `DEF-38` (player-hosted sessions) waits for the owner to want hosted sessions tested. `SPK-24` runs first, as a research round ahead of any milestone that would build the mode (rule 18), and H9 stays until it passes.
 - `DEF-32` (a reload on a dedicated session costs a client start) and `DEF-33` (a mod's rebuild does not know its reload level) wait until a mod's reload on a dedicated session or its PBO build shows they matter.
 - `DEF-24` (ceilings count a paused runner), `DEF-14`, `DEF-22`, `DEF-23` and `DEF-25` (the reset around a player's death and a stop), `DEF-01`, `DEF-02`, `DEF-03`, `DEF-07`, `DEF-08`, `DEF-11`, `DEF-13`, `DEF-15` to `DEF-20`: no run of the port met them; each moves into a milestone when use shows it matters.

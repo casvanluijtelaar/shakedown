@@ -39,7 +39,7 @@ Out of scope, as the PRD says: Arma Reforger, Arma 4 and DayZ; CI/CD; unit tests
 
 Also out, by the owner's answers in `engineering/research/02-gaps.md`:
 
-- A player-hosted (non-dedicated host) session, until a spike shows an unattended way to start one (H9).
+- A player-hosted (non-dedicated host) session, until a spike shows an unattended way to start one (H9, spike `SPK-24`, `DEF-38`).
 - A Linux dedicated server, deferred; the extension is written so it builds for Linux (H10).
 - ACE interaction menu actions, a `should` after the MVP (H7, Q6).
 
